@@ -1,14 +1,17 @@
+import * as React from "react"
 import {
   BuildingIcon,
   ClockIcon,
   FileTextIcon,
   LayoutGridIcon,
   LogOutIcon,
+  MenuIcon,
   SettingsIcon,
   ShieldCheckIcon,
   UploadCloudIcon,
+  XIcon,
 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
@@ -62,29 +65,48 @@ export interface NavProps {
 
 export function Nav({ active, onNewUploadClick }: NavProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuth()
+  const [mobileOpen, setMobileOpen] = React.useState(false)
   const displayName = user?.full_name || user?.email || ""
 
+  // Close mobile drawer when route changes
+  React.useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  // Close mobile drawer on Escape key
+  React.useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false)
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [])
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => NAV_VISIBLE[item.id](user))
+
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-200/90 bg-white px-6 py-2.5">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between">
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 bg-white/95 backdrop-blur-md px-3 sm:px-6 py-2.5 transition-all">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-2 sm:gap-4">
+        {/* Left: Logo + Desktop Links */}
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
           {/* Logo mark + wordmark */}
-          <Link to="/" className="group flex items-center gap-2.5">
-            <img src="/logo.png" alt="" className="size-9 shrink-0 rounded-xl shadow-sm shadow-blue-500/30" />
-            <div>
-              <div className="text-[15px] font-bold leading-tight tracking-tight text-slate-900">
+          <Link to="/" className="group flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <img src="/logo.png" alt="" className="size-8 sm:size-9 shrink-0 rounded-xl shadow-sm shadow-blue-500/30" />
+            <div className="min-w-0">
+              <div className="text-sm sm:text-[15px] font-bold leading-tight tracking-tight text-slate-900 truncate">
                 {APP_NAME}
               </div>
-              <div className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-400">
+              <div className="hidden sm:block text-[9.5px] font-semibold uppercase tracking-wider text-slate-400 truncate">
                 {APP_FULL_NAME}
               </div>
             </div>
           </Link>
 
-          {/* Nav links */}
+          {/* Desktop Nav links (visible on xl screens >= 1280px) */}
           <nav aria-label="Main navigation" className="hidden items-center gap-1 xl:flex">
-            {NAV_ITEMS.filter((item) => NAV_VISIBLE[item.id](user)).map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = item.id === active
               const Icon = item.icon
               const className = cn(
@@ -103,46 +125,112 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: Actions & User Info */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {user && (
             <div className="hidden text-right leading-tight lg:block">
-              <div className="text-[11px] font-semibold text-slate-700">
+              <div className="text-[11px] font-semibold text-slate-700 max-w-[160px] truncate">
                 {user.is_platform_admin ? "Platform" : user.company_name}
               </div>
               <div className="text-[10px] text-slate-400">{user.role_label}</div>
             </div>
           )}
+
           {!user?.is_platform_admin && (
-          <button
-            type="button"
-            onClick={onNewUploadClick ?? (() => navigate("/cases/new"))}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0b1930] hover:bg-[#14233e] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition"
-          >
-            <UploadCloudIcon className="size-3.5" />
-            New upload
-          </button>
+            <button
+              type="button"
+              onClick={onNewUploadClick ?? (() => navigate("/cases/new"))}
+              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-[#0b1930] hover:bg-[#14233e] px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-white shadow-sm transition active:scale-95"
+            >
+              <UploadCloudIcon className="size-3.5" />
+              <span className="hidden xs:inline sm:inline">New upload</span>
+            </button>
           )}
 
           {user && (
             <div
               title={displayName}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700"
+              className="flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700"
             >
               {initialsFor(displayName)}
             </div>
           )}
+
+          {/* Desktop Sign Out */}
           <button
             type="button"
             aria-label="Sign out"
             title="Sign out"
             onClick={logout}
-            className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             <LogOutIcon className="size-3.5" />
-            Sign out
+            <span>Sign out</span>
+          </button>
+
+          {/* Mobile / Tablet Hamburger Toggle (visible < xl) */}
+          <button
+            type="button"
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((prev) => !prev)}
+            className="flex xl:hidden size-8 sm:size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition active:scale-95"
+          >
+            {mobileOpen ? <XIcon className="size-4" /> : <MenuIcon className="size-4" />}
           </button>
         </div>
       </div>
+
+      {/* Mobile & Tablet Drawer Menu (< xl: 1280px) */}
+      {mobileOpen && (
+        <div className="xl:hidden mt-2.5 border-t border-slate-200/80 pt-3 pb-2 space-y-3 animate-in slide-in-from-top-2 duration-150">
+          {/* User badge on mobile */}
+          {user && (
+            <div className="flex items-center justify-between px-2 py-2 rounded-xl bg-slate-50 border border-slate-200/60">
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 truncate">
+                  {displayName}
+                </div>
+                <div className="text-[11px] text-slate-500 truncate">
+                  {user.is_platform_admin ? "Platform Admin" : `${user.company_name} · ${user.role_label}`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 transition"
+              >
+                <LogOutIcon className="size-3" />
+                Sign out
+              </button>
+            </div>
+          )}
+
+          {/* Mobile Navigation Links */}
+          <nav aria-label="Mobile navigation" className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {visibleNavItems.map((item) => {
+              const isActive = item.id === active
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.id}
+                  to={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition",
+                    isActive
+                      ? "border border-blue-200 bg-blue-50 text-blue-700 shadow-xs"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                  )}
+                >
+                  <Icon className={cn("size-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

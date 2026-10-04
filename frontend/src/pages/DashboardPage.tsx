@@ -60,7 +60,7 @@ export function DashboardPage() {
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       <Nav active="dashboard" />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 w-full space-y-6 flex-grow">
+      <main className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-8 w-full space-y-5 sm:space-y-6 flex-grow">
         <CompanyPicker />
         {/* PageHeaderTitleArea */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -68,72 +68,72 @@ export function DashboardPage() {
             <span className="text-[11px] font-bold tracking-widest uppercase text-blue-600">
               Operational Dashboard
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1930] tracking-tight mt-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#0b1930] tracking-tight mt-1">
               Integrity at a glance
             </h1>
-            <p className="text-sm text-slate-500 font-normal mt-1.5">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1.5 max-w-2xl">
               Template-free extraction, cross-document validation, and explainable risk scoring.
             </p>
           </div>
         </div>
 
         {/* StatCardsRow */}
-        <section aria-label="Key Performance Indicators" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section aria-label="Key Performance Indicators" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: Documents in queue */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">Documents in queue</span>
               <ClockIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-4">
-              <div className="text-3xl font-extrabold text-[#0b1930] tracking-tight">{documentsInQueue}</div>
+            <div className="mt-3 sm:mt-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0b1930] tracking-tight">{documentsInQueue}</div>
               <div className="text-xs font-medium text-slate-500 mt-1">across {totalCases} case{totalCases === 1 ? "" : "s"}</div>
             </div>
           </div>
 
           {/* Card 2: Escalated to L2 */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">Escalated</span>
               <FileTextIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-4">
-              <div className="text-3xl font-extrabold text-[#0b1930] tracking-tight">{escalatedCount}</div>
+            <div className="mt-3 sm:mt-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#0b1930] tracking-tight">{escalatedCount}</div>
               <div className="text-xs font-medium text-slate-500 mt-1">open cases with a Reviewer L2</div>
             </div>
           </div>
 
           {/* Card 3: High-risk flagged */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">High-risk flagged</span>
               <ShieldAlertIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-4">
-              <div className="text-3xl font-extrabold text-red-600 tracking-tight">{highRiskCount}</div>
+            <div className="mt-3 sm:mt-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight">{highRiskCount}</div>
               <div className="text-xs font-medium text-red-500 mt-1">{mediumRiskCount} more at medium risk</div>
             </div>
           </div>
 
           {/* Card 4: Clean cases */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">Low-risk cases</span>
               <ShieldCheckIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-4">
-              <div className="text-3xl font-extrabold text-emerald-600 tracking-tight">{lowRiskCount}</div>
+            <div className="mt-3 sm:mt-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">{lowRiskCount}</div>
               <div className="text-xs font-medium text-slate-500 mt-1">below the medium-risk threshold</div>
             </div>
           </div>
         </section>
 
         {/* TwoColumnDashboardSection */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
           {/* Left Column: Case Flag Distribution */}
           <section
             aria-labelledby="risk-distribution-heading"
-            className="bg-white rounded-2xl p-6 border border-slate-200/80 custom-shadow-card flex flex-col justify-between"
+            className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 custom-shadow-card flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between">

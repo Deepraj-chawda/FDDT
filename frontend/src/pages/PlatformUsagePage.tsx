@@ -72,7 +72,7 @@ export function PlatformUsagePage() {
         </button>
       }
     >
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs">
         <label className="text-xs font-semibold text-slate-600">
           Period
           <select
@@ -100,7 +100,7 @@ export function PlatformUsagePage() {
 
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[750px]">
             <thead>
               <tr className="border-b border-slate-200/70 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <th className="px-5 py-3.5">Company</th>

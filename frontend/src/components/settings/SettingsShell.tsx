@@ -37,20 +37,20 @@ export function SettingsShell({
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       <Nav active="settings" />
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 py-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-5 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 sm:mb-6">
           <div>
             <div className="text-[11px] font-bold tracking-widest text-blue-600 uppercase mb-1">
               {companyTab ? "Company configuration" : "Platform administration"}
             </div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{heading}</h1>
-            <p className="text-sm text-slate-500 mt-1 max-w-2xl">{description}</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{heading}</h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">{description}</p>
           </div>
-          {actions && <div className="flex items-center gap-3">{actions}</div>}
+          {actions && <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">{actions}</div>}
         </div>
 
-        <div className="border-b border-slate-200/90 mb-6">
-          <nav className="flex space-x-8" aria-label="Settings Tabs">
+        <div className="border-b border-slate-200/90 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <nav className="flex overflow-x-auto no-scrollbar scroll-smooth gap-4 sm:gap-8 pb-px" aria-label="Settings Tabs">
             {TABS.filter((t) => isPlatformAdmin || !t.platformOnly).map(({ id, label, href, icon: Icon }) => {
               const isActive = id === active
               return (
@@ -60,8 +60,8 @@ export function SettingsShell({
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive
-                      ? "border-b-2 border-blue-600 py-3.5 px-1 text-sm font-bold text-blue-600 flex items-center space-x-2"
-                      : "border-b-2 border-transparent py-3.5 px-1 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:border-slate-300 flex items-center space-x-2 transition-colors"
+                      ? "border-b-2 border-blue-600 py-3 sm:py-3.5 px-1 text-xs sm:text-sm font-bold text-blue-600 flex items-center space-x-2 shrink-0 whitespace-nowrap"
+                      : "border-b-2 border-transparent py-3 sm:py-3.5 px-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 hover:border-slate-300 flex items-center space-x-2 shrink-0 whitespace-nowrap transition-colors"
                   }
                 >
                   <Icon className={isActive ? "w-4 h-4 text-blue-600" : "w-4 h-4 text-slate-400"} />

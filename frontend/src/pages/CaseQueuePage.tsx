@@ -247,10 +247,10 @@ export function CaseQueuePage() {
       <Nav active="cases" />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 py-7">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-3.5 sm:px-6 py-5 sm:py-7">
         <CompanyPicker />
         {/* Page Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 sm:mb-6">
           <div>
             <div className="text-[11px] font-bold tracking-widest text-blue-600 uppercase mb-1">
               CASE INVESTIGATIONS
@@ -264,15 +264,15 @@ export function CaseQueuePage() {
           </div>
 
           {/* Quick Metrics & Export */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-medium text-slate-700">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <div className="inline-flex items-center gap-2 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-medium text-slate-700">
               <span className="text-slate-400 font-normal">Active cases:</span>
               <span className="font-bold text-slate-900">{activeCasesCount}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
               <span className="text-rose-600 font-semibold">{highRiskCount} High risk</span>
             </div>
             <button
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition active:scale-95"
               type="button"
             >
               <DownloadIcon className="w-3.5 h-3.5 text-slate-400" />
@@ -282,9 +282,9 @@ export function CaseQueuePage() {
         </div>
 
         {/* 4 Top Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
           {/* Card 1: Active cases */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active cases</span>
               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
@@ -292,7 +292,7 @@ export function CaseQueuePage() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{activeCasesCount}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{activeCasesCount}</div>
               <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                 <span className="font-medium text-slate-600">{awaitingReviewCount}</span> awaiting review
               </div>
@@ -300,7 +300,7 @@ export function CaseQueuePage() {
           </div>
 
           {/* Card 2: High-risk flagged */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">High-risk flagged</span>
               <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
@@ -308,7 +308,7 @@ export function CaseQueuePage() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-rose-600 tracking-tight">{highRiskCount}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 tracking-tight">{highRiskCount}</div>
               <div className="text-xs text-rose-600 font-medium mt-1 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 <span>{escalatedCount} escalated to L2</span>
@@ -317,7 +317,7 @@ export function CaseQueuePage() {
           </div>
 
           {/* Card 3: Awaiting review */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Awaiting review</span>
               <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
@@ -325,7 +325,7 @@ export function CaseQueuePage() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">{awaitingReviewCount}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{awaitingReviewCount}</div>
               <div className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1">
                 <span>Not yet actioned by a reviewer</span>
               </div>
@@ -333,7 +333,7 @@ export function CaseQueuePage() {
           </div>
 
           {/* Card 4: Cleared rate */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 custom-shadow-card flex flex-col justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Approved rate</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
@@ -341,7 +341,7 @@ export function CaseQueuePage() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 {autoClearedRate === null ? "—" : `${autoClearedRate}%`}
               </div>
               <div className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1">
@@ -354,7 +354,7 @@ export function CaseQueuePage() {
         {/* Table Container Card */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 custom-shadow-card overflow-hidden">
           {tabs.length > 0 && (
-            <div role="tablist" aria-label="Queue view" className="flex gap-1 border-b border-slate-100 px-4 pt-3 sm:px-5">
+            <div role="tablist" aria-label="Queue view" className="flex gap-1 border-b border-slate-100 px-3 pt-2 sm:px-5 overflow-x-auto no-scrollbar scroll-smooth">
               {tabs.map((t) => {
                 const count = allCases.filter((c) => inView(c, t.view)).length
                 const selected = activeView === t.view
@@ -365,7 +365,7 @@ export function CaseQueuePage() {
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setView(t.view)}
-                    className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold transition ${
+                    className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold shrink-0 whitespace-nowrap transition ${
                       selected ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                   >
@@ -378,9 +378,9 @@ export function CaseQueuePage() {
             </div>
           )}
           {/* Filters Bar */}
-          <div className="p-4 sm:p-5 border-b border-slate-100 bg-white flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5">
+          <div className="p-3.5 sm:p-5 border-b border-slate-100 bg-white flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-3.5">
             {/* Search Field */}
-            <div className="relative flex-1 min-w-[260px] max-w-md">
+            <div className="relative flex-1 min-w-0 max-w-full lg:max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <SearchIcon className="h-4 w-4 text-slate-400" />
               </div>
@@ -394,16 +394,16 @@ export function CaseQueuePage() {
             </div>
 
             {/* Filter Dropdowns Group */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap items-center gap-2 sm:gap-2.5">
               {/* Status Dropdown */}
-              <div className="relative">
+              <div className="relative w-full">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   aria-label="Filter by status"
-                  className="text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
                 >
-                  <option value="">Status: All Statuses</option>
+                  <option value="">Status: All</option>
                   <option value="Analyzing">Analyzing</option>
                   <option value="Awaiting Review">Awaiting Review</option>
                   <option value="Escalated">Escalated (L2)</option>
@@ -414,14 +414,14 @@ export function CaseQueuePage() {
               </div>
 
               {/* Type Dropdown */}
-              <div className="relative">
+              <div className="relative w-full">
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   aria-label="Filter by document type"
-                  className="text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
                 >
-                  <option value="">Type: All Types</option>
+                  <option value="">Type: All</option>
                   <option value="invoice">Commercial Invoice</option>
                   <option value="contract">Vendor Contract</option>
                   <option value="bank">Bank Statement</option>
@@ -432,14 +432,14 @@ export function CaseQueuePage() {
               </div>
 
               {/* Flag Dropdown */}
-              <div className="relative">
+              <div className="relative w-full col-span-2 sm:col-span-1">
                 <select
                   value={flagFilter}
                   onChange={(e) => setFlagFilter(e.target.value)}
                   aria-label="Filter by flag"
-                  className="text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
                 >
-                  <option value="">Risk: All Tiers</option>
+                  <option value="">Risk: All</option>
                   <option value="High risk">High risk</option>
                   <option value="Medium risk">Medium risk</option>
                   <option value="Low risk">Low risk</option>
@@ -451,7 +451,7 @@ export function CaseQueuePage() {
               {/* Reset Action */}
               <button
                 onClick={resetFilters}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-1.5 transition"
+                className="col-span-2 sm:col-span-3 lg:col-span-1 text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-2 text-center rounded-xl border border-slate-200 lg:border-transparent hover:bg-slate-50 transition"
                 type="button"
               >
                 Reset

@@ -75,24 +75,24 @@ export function LoginPage() {
       <div aria-hidden className="hidden sm:block sm:h-4 lg:h-6" />
 
       <main className="mx-auto w-full max-w-[460px]">
-        <div className="rounded-3xl border border-accent/15 bg-card p-8 shadow-card sm:p-10">
-          <header className="mb-8 text-center">
-            <div className="mb-5 flex items-center justify-center gap-3">
-              <img src="/logo.png" alt="" className="size-10 rounded-xl shadow-sm shadow-accent/20" />
+        <div className="rounded-3xl border border-accent/15 bg-card p-5 sm:p-8 md:p-10 shadow-card">
+          <header className="mb-6 sm:mb-8 text-center">
+            <div className="mb-4 sm:mb-5 flex items-center justify-center gap-3">
+              <img src="/logo.png" alt="" className="size-9 sm:size-10 rounded-xl shadow-sm shadow-accent/20" />
               <div className="text-left">
-                <span className="block text-xl font-bold leading-tight tracking-tight text-foreground">
+                <span className="block text-lg sm:text-xl font-bold leading-tight tracking-tight text-foreground">
                   {APP_NAME}
                 </span>
-                <span className="block text-[9.5px] font-bold uppercase tracking-widest text-muted-foreground">
+                <span className="block text-[9px] sm:text-[9.5px] font-bold uppercase tracking-widest text-muted-foreground">
                   {APP_FULL_NAME}
                 </span>
               </div>
             </div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-accent">
+            <p className="mb-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-accent">
               Secure access portal
             </p>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Sign in to your account</h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Sign in to your account</h1>
+            <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
               Review submitted claims and their document authenticity checks.
             </p>
           </header>

@@ -155,20 +155,20 @@ function PdfOverlayViewerInner({
             type="button"
             variant="outline"
             size="icon"
-            className="size-7"
+            className="size-7 shrink-0"
             disabled={pageNumber <= 1}
             onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
           >
             <ChevronLeftIcon className="size-3.5" />
           </Button>
-          <span className="text-xs tabular-nums text-muted-foreground">
+          <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
             Page {pageNumber} of {numPages || "…"}
           </span>
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="size-7"
+            className="size-7 shrink-0"
             disabled={numPages === 0 || pageNumber >= numPages}
             onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
           >
@@ -176,9 +176,9 @@ function PdfOverlayViewerInner({
           </Button>
         </div>
         {legendColors.length > 0 && (
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-muted-foreground">
             {legendColors.map((color) => (
-              <span key={color} className="flex items-center gap-1.5">
+              <span key={color} className="flex items-center gap-1.5 shrink-0">
                 <span className={cn("size-2.5 rounded-sm border-2", OVERLAY_COLOR_CLASSES[color])} />
                 {OVERLAY_COLOR_LEGEND[color]}
               </span>
@@ -193,8 +193,8 @@ function PdfOverlayViewerInner({
         </div>
       ) : (
         <div
-          className="relative mx-auto overflow-hidden rounded-md border bg-muted/20"
-          style={pageSize ? { width: pageSize.width, height: pageSize.height } : undefined}
+          className="relative mx-auto overflow-hidden rounded-md border bg-muted/20 max-w-full"
+          style={pageSize ? { width: Math.min(containerWidth, pageSize.width), height: pageSize.height } : undefined}
         >
           <Document
             file={fileUrl}

@@ -86,7 +86,7 @@ function ThresholdsCard() {
             A case's score is the sum of its triggered rule weights, capped at 100. These two cutoffs turn that score into a tier.
           </p>
         </div>
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-wrap items-end gap-3 sm:gap-4">
           <div className="text-center">
             <div className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-600">
               <span className="size-2 rounded-full bg-emerald-500" /> Low
@@ -109,7 +109,7 @@ function ThresholdsCard() {
             type="button"
             disabled={!dirty || !valid || save.isPending}
             onClick={() => save.mutate()}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
           >
             {save.isPending && <Loader2Icon className="size-3.5 animate-spin" />}
             Save thresholds
@@ -404,34 +404,34 @@ export function SettingsRiskRulesPage() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active rules</div>
-            <div className="mt-2 text-3xl font-extrabold text-slate-900">{activeCount}</div>
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Active rules</div>
+            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">{activeCount}</div>
             <div className="mt-1 text-xs text-slate-500">of {rules.length} total</div>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><FileCheckIcon className="size-5" /></div>
+          <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shrink-0"><FileCheckIcon className="size-4 sm:size-5" /></div>
         </div>
-        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tuned since seed</div>
-            <div className="mt-2 text-3xl font-extrabold text-slate-900">{tunedCount}</div>
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Tuned since seed</div>
+            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">{tunedCount}</div>
             <div className="mt-1 text-xs text-slate-500">rules with more than one version</div>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><SlidersIcon className="size-5" /></div>
+          <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shrink-0"><SlidersIcon className="size-4 sm:size-5" /></div>
         </div>
-        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+        <div className="flex items-start justify-between rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Combined weight</div>
-            <div className="mt-2 text-3xl font-extrabold text-slate-900">{maxAchievable}</div>
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Combined weight</div>
+            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">{maxAchievable}</div>
             <div className="mt-1 text-xs text-slate-500">if every active rule fired (score caps at 100)</div>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><ZapIcon className="size-5" /></div>
+          <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shrink-0"><ZapIcon className="size-4 sm:size-5" /></div>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs md:flex-row">
+      <div className="mb-4 flex flex-col items-stretch sm:items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs md:flex-row">
         <div className="relative w-full md:w-80">
           <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
@@ -447,7 +447,7 @@ export function SettingsRiskRulesPage() {
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             aria-label="Filter by category"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+            className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
           >
             <option value="">Category: all</option>
             {CATEGORY_ORDER.map((c) => (
@@ -470,7 +470,7 @@ export function SettingsRiskRulesPage() {
         <div className="space-y-6">
           {grouped.map(([category, list]) => (
             <section key={category} aria-label={`${CATEGORY_LABELS[category] ?? category} rules`} className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
-              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-5 py-3">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 sm:px-5 py-3">
                 <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
                   <ShieldAlertIcon className="size-4 text-slate-400" />
                   {CATEGORY_LABELS[category] ?? category}
@@ -480,7 +480,7 @@ export function SettingsRiskRulesPage() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
+                <table className="w-full border-collapse text-left text-xs min-w-[620px]">
                   <thead>
                     <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       <th className="px-5 py-2.5">Rule &amp; reason shown to reviewers</th>

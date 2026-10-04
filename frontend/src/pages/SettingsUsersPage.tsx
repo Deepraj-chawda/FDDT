@@ -113,21 +113,21 @@ export function SettingsUsersPage() {
       }
       description={`Every account on ${APP_NAME}, across all companies. Only the platform team creates accounts and assigns each to a company and role — companies cannot manage users and there is no self-service sign-up. Role and status changes apply immediately.`}
     >
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {[
           { label: "Accounts", value: counts.total },
           { label: "Active", value: counts.active },
           { label: "Reviewers", value: counts.reviewers },
           { label: "Platform admins", value: counts.admins },
         ].map((c) => (
-          <div key={c.label} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{c.label}</div>
-            <div className="mt-2 text-3xl font-extrabold text-slate-900">{c.value}</div>
+          <div key={c.label} className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
+            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">{c.label}</div>
+            <div className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900">{c.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:w-80">
           <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
@@ -138,29 +138,31 @@ export function SettingsUsersPage() {
             className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as UserRole | "")}
-          aria-label="Filter by role"
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-        >
-          <option value="">Role: all</option>
-          {ROLE_OPTIONS.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-        <select
-          value={companyFilter}
-          onChange={(e) => setCompanyFilter(e.target.value)}
-          aria-label="Filter by company"
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-        >
-          <option value="">Company: all</option>
-          <option value="platform">Platform team (no company)</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as UserRole | "")}
+            aria-label="Filter by role"
+            className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            <option value="">Role: all</option>
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+          <select
+            value={companyFilter}
+            onChange={(e) => setCompanyFilter(e.target.value)}
+            aria-label="Filter by company"
+            className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            <option value="">Company: all</option>
+            <option value="platform">Platform team (no company)</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="mb-3 space-y-2">
@@ -169,7 +171,7 @@ export function SettingsUsersPage() {
 
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-xs">
+          <table className="w-full border-collapse text-left text-xs min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-200/70 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <th className="px-5 py-3.5">User</th>

@@ -191,13 +191,13 @@ export function NewCasePage() {
   return (
     <div className="min-h-svh bg-background">
       <Nav active="cases" />
-      <main className="mx-auto flex max-w-[1440px] flex-col gap-6 px-6 py-7">
+      <main className="mx-auto flex max-w-[1440px] flex-col gap-5 sm:gap-6 px-3.5 sm:px-6 py-5 sm:py-7">
         <PageHeader
           eyebrow="Secure intake"
           title="Analyze new documents"
           description="Upload related evidence together for cross-document verification."
         />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
+        <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[1fr_420px]">
           {/* Left column — upload card */}
           <Card>
             <CardHeader>

@@ -120,7 +120,7 @@ function ActionDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isPending) onClose()
       }}
@@ -129,15 +129,15 @@ function ActionDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="decision-dialog-title"
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
       >
-        <div className="border-b border-border px-5 py-4">
+        <div className="border-b border-border px-4 sm:px-5 py-3 sm:py-4">
           <h2 id="decision-dialog-title" className="text-base font-bold text-foreground">
             {title}
           </h2>
           <div className="mt-1 text-xs text-muted-foreground">{description}</div>
         </div>
-        <div className="flex flex-col gap-3 overflow-y-auto p-5">
+        <div className="flex flex-col gap-3 overflow-y-auto p-4 sm:p-5">
           {children}
           <label htmlFor="decision-note" className="text-sm font-medium text-foreground">
             {fieldLabel} {required && <span className="text-destructive">*</span>}

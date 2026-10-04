@@ -25,17 +25,17 @@ function Limiter({ label, stats }: { label: string; stats?: LimiterStats }) {
 function QueueCard({ q }: { q: QueueStatus }) {
   const backlog = q.waiting > 0 && (q.oldest_waiting_seconds ?? 0) > 60
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-bold text-slate-900">{q.queue}</div>
           <div className="text-[11px] text-slate-500">{q.service} · {q.rate_limit}</div>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${backlog ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold shrink-0 ${backlog ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
           {backlog ? "Backlog" : "Healthy"}
         </span>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
         {[
           { label: "Waiting", value: String(q.waiting) },
           { label: "Running", value: String(q.running) },
@@ -46,7 +46,7 @@ function QueueCard({ q }: { q: QueueStatus }) {
         ].map((m) => (
           <div key={m.label}>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{m.label}</div>
-            <div className="text-lg font-extrabold tabular-nums text-slate-900">{m.value}</div>
+            <div className="text-base sm:text-lg font-extrabold tabular-nums text-slate-900">{m.value}</div>
           </div>
         ))}
       </div>

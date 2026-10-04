@@ -100,9 +100,9 @@ export function MyCasesPage() {
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       <Nav active="my_cases" />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {/* PageHeader */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 block mb-1">
               Submission Tracker
@@ -115,9 +115,9 @@ export function MyCasesPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
               type="button"
             >
               <DownloadIcon className="w-3.5 h-3.5 text-slate-500" />
@@ -125,7 +125,7 @@ export function MyCasesPage() {
             </button>
             <button
               onClick={() => navigate("/cases/new")}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-semibold text-white shadow-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-semibold text-white shadow-sm transition-colors active:scale-95"
               type="button"
             >
               <PlusIcon className="w-3.5 h-3.5" />
@@ -135,8 +135,8 @@ export function MyCasesPage() {
         </div>
 
         {/* SummaryStats */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-slate-500 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Total Submitted
@@ -150,7 +150,7 @@ export function MyCasesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-slate-500 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Under Review
@@ -164,7 +164,7 @@ export function MyCasesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-slate-500 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Cleared / Verified
@@ -178,7 +178,7 @@ export function MyCasesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between text-slate-500 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Action Required
@@ -194,7 +194,7 @@ export function MyCasesPage() {
         </section>
 
         {/* SearchAndFilters */}
-        <section className="bg-white p-4 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col md:flex-row items-center gap-3">
+        <section className="bg-white p-3.5 sm:p-4 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
           <div className="relative flex-1 w-full">
             <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -206,12 +206,12 @@ export function MyCasesPage() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-            <div className="relative">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="py-2 pl-3 pr-8 bg-slate-50 text-xs border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white appearance-none cursor-pointer"
+                className="w-full sm:w-auto py-2 pl-3 pr-8 bg-slate-50 text-xs border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white appearance-none cursor-pointer"
               >
                 <option value="">Status: All Statuses</option>
                 <option value="Cleared">Cleared</option>
@@ -227,7 +227,7 @@ export function MyCasesPage() {
                 setSearch("")
                 setStatusFilter("")
               }}
-              className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-2 transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-2 transition-colors shrink-0"
               type="button"
             >
               Reset

@@ -200,7 +200,7 @@ export function CaseDetailPage() {
     <div className="min-h-screen flex flex-col font-sans bg-[#F1F5FA] text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
       <Nav active="cases" />
 
-      <section className="px-6 pt-5 pb-3 max-w-[1680px] w-full mx-auto">
+      <section className="px-3.5 sm:px-6 pt-4 sm:pt-5 pb-3 max-w-[1680px] w-full mx-auto">
         <Link
           to="/cases"
           className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors mb-2"
@@ -209,12 +209,12 @@ export function CaseDetailPage() {
           <span>Back to queue</span>
         </Link>
 
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold tracking-widest text-blue-700 uppercase">
               Case Investigation
             </p>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
               {isCaseLoading ? "Loading..." : caseDetail?.case_number ?? "—"}
             </h1>
             {caseDetail && (
@@ -228,21 +228,50 @@ export function CaseDetailPage() {
             )}
           </div>
 
-          <div className="flex items-start space-x-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {canExport && caseId && token && <CaseReportExport caseId={caseId} token={token} />}
             {caseDetail && <TierBadge tier={caseDetail.assigned_tier} />}
           </div>
         </div>
       </section>
 
-      <main className="max-w-[1680px] w-full mx-auto px-6 py-4 flex-1 flex flex-col gap-6">
+      <main className="max-w-[1680px] w-full mx-auto px-3.5 sm:px-6 py-4 flex-1 flex flex-col gap-5 sm:gap-6">
         {isSupportView && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-900">
             <span className="font-semibold">Support view — read-only.</span> You are viewing another company's
             case as a platform admin. This access is recorded in the platform audit log (the company does not see it).
           </div>
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* Mobile / Tablet Evidence Switcher (< lg) */}
+        {documents.length > 1 && (
+          <div className="lg:hidden flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+              Evidence:
+            </span>
+            {documents.map((doc, idx) => {
+              const isSelected = selectedDocIndex === idx
+              const failed = doc.checks?.some((c) => c.status === "failed")
+              return (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => setSelectedDocIndex(idx)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 whitespace-nowrap transition border ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className={`size-1.5 rounded-full ${isSelected ? "bg-white" : failed ? "bg-rose-500" : "bg-emerald-500"}`} />
+                  <span className="max-w-[140px] truncate">{doc.original_filename}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
           {/* LEFT SIDEBAR: Documents & Case Flags */}
           <aside aria-label="Documents in Case" className="lg:col-span-3 flex flex-col space-y-4">
             {isCaseLoading && (
@@ -277,7 +306,7 @@ export function CaseDetailPage() {
               </div>
             )}
 
-            <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex flex-col flex-1">
+            <div className="hidden lg:flex bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm flex-col flex-1">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Documents ({documents.length})
@@ -399,7 +428,7 @@ export function CaseDetailPage() {
                             Classification confidence: {(activeDoc.extracted_fields.document_type_confidence * 100).toFixed(1)}%
                           </span>
                         </div>
-                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                           <div>
                             <dt className="text-[10px] uppercase font-bold text-slate-400">Issuer</dt>
                             <dd className="font-semibold text-slate-800 truncate">
@@ -463,7 +492,7 @@ export function CaseDetailPage() {
                   </div>
 
                   {/* Bottom Metadata Strip */}
-                  <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-slate-100 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 mt-3 border-t border-slate-100 text-xs">
                     <InfoChip
                       caption="File integrity"
                       icon={CheckCircle2Icon}
