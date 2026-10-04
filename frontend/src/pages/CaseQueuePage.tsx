@@ -380,70 +380,70 @@ export function CaseQueuePage() {
           {/* Filters Bar */}
           <div className="p-3.5 sm:p-5 border-b border-slate-100 bg-white flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-3.5">
             {/* Search Field */}
-            <div className="relative flex-1 min-w-0 max-w-full lg:max-w-md">
+            <div className="relative w-full lg:w-80 shrink-0">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <SearchIcon className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-9 pr-3.5 py-2 text-xs sm:text-[13px] bg-slate-50/70 border border-slate-200 rounded-xl placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                className="block w-full pl-9 pr-4 py-2 text-xs sm:text-[13px] bg-slate-50/60 border border-slate-200/90 rounded-full placeholder-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
                 placeholder="Filter cases by ID or issuer..."
                 type="text"
               />
             </div>
 
             {/* Filter Dropdowns Group */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap items-center gap-2 sm:gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-2 sm:gap-2.5 lg:gap-3">
               {/* Status Dropdown */}
-              <div className="relative w-full">
+              <div className="relative w-full sm:w-auto">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   aria-label="Filter by status"
-                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
-                  <option value="">Status: All</option>
-                  <option value="Analyzing">Analyzing</option>
-                  <option value="Awaiting Review">Awaiting Review</option>
-                  <option value="Escalated">Escalated (L2)</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
+                  <option value="">Status: All Statuses</option>
+                  <option value="Analyzing">Status: Analyzing</option>
+                  <option value="Awaiting Review">Status: Awaiting Review</option>
+                  <option value="Escalated">Status: Escalated (L2)</option>
+                  <option value="Approved">Status: Approved</option>
+                  <option value="Rejected">Status: Rejected</option>
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
 
               {/* Type Dropdown */}
-              <div className="relative w-full">
+              <div className="relative w-full sm:w-auto">
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   aria-label="Filter by document type"
-                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
-                  <option value="">Type: All</option>
-                  <option value="invoice">Commercial Invoice</option>
-                  <option value="contract">Vendor Contract</option>
-                  <option value="bank">Bank Statement</option>
-                  <option value="identity">Identity Proof</option>
-                  <option value="tax">Tax Clearance</option>
+                  <option value="">Type: All Types</option>
+                  <option value="invoice">Type: Commercial Invoice</option>
+                  <option value="contract">Type: Vendor Contract</option>
+                  <option value="bank">Type: Bank Statement</option>
+                  <option value="identity">Type: Identity Proof</option>
+                  <option value="tax">Type: Tax Clearance</option>
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
 
-              {/* Flag Dropdown */}
-              <div className="relative w-full col-span-2 sm:col-span-1">
+              {/* Risk / Flag Dropdown */}
+              <div className="relative w-full col-span-2 sm:col-span-1 sm:w-auto">
                 <select
                   value={flagFilter}
                   onChange={(e) => setFlagFilter(e.target.value)}
-                  aria-label="Filter by flag"
-                  className="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition appearance-none"
+                  aria-label="Filter by risk tier"
+                  className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
-                  <option value="">Risk: All</option>
-                  <option value="High risk">High risk</option>
-                  <option value="Medium risk">Medium risk</option>
-                  <option value="Low risk">Low risk</option>
-                  <option value="Analyzing">Analyzing</option>
+                  <option value="">Risk: All Tiers</option>
+                  <option value="High risk">Risk: High</option>
+                  <option value="Medium risk">Risk: Medium</option>
+                  <option value="Low risk">Risk: Low</option>
+                  <option value="Analyzing">Risk: Analyzing</option>
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
@@ -451,7 +451,7 @@ export function CaseQueuePage() {
               {/* Reset Action */}
               <button
                 onClick={resetFilters}
-                className="col-span-2 sm:col-span-3 lg:col-span-1 text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-2 text-center rounded-xl border border-slate-200 lg:border-transparent hover:bg-slate-50 transition"
+                className="col-span-2 sm:col-span-3 lg:col-span-1 text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-2 text-center rounded-full lg:rounded-none transition cursor-pointer shrink-0"
                 type="button"
               >
                 Reset

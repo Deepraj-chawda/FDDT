@@ -194,30 +194,30 @@ export function MyCasesPage() {
         </section>
 
         {/* SearchAndFilters */}
-        <section className="bg-white p-3.5 sm:p-4 rounded-2xl border border-blue-100/70 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
-          <div className="relative flex-1 w-full">
-            <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <section className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-3.5">
+          <div className="relative w-full lg:w-80 shrink-0">
+            <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50/60 focus:bg-white text-xs sm:text-[13px] border border-slate-200/90 rounded-full text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
               placeholder="Search by Case ID or filename..."
               type="text"
             />
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-initial">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-auto py-2 pl-3 pr-8 bg-slate-50 text-xs border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white appearance-none cursor-pointer"
+                className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
               >
                 <option value="">Status: All Statuses</option>
-                <option value="Cleared">Cleared</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Awaiting Review">Awaiting Review</option>
-                <option value="Action Required">Action Required</option>
+                <option value="Cleared">Status: Cleared</option>
+                <option value="In Progress">Status: In Progress</option>
+                <option value="Awaiting Review">Status: Awaiting Review</option>
+                <option value="Action Required">Status: Action Required</option>
               </select>
               <ChevronDownIcon className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
@@ -227,7 +227,7 @@ export function MyCasesPage() {
                 setSearch("")
                 setStatusFilter("")
               }}
-              className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-2 transition-colors shrink-0"
+              className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-2 transition shrink-0 cursor-pointer"
               type="button"
             >
               Reset

@@ -145,19 +145,19 @@ export function AuditHistoryPage() {
           ))}
         </section>
 
-        <section className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <section className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-3.5">
+          <div className="relative w-full lg:w-80 shrink-0">
+            <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search audit history"
-              className="w-full pl-10 pr-4 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50/60 border border-slate-200/90 rounded-full text-xs sm:text-[13px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
               placeholder="Search by case number, person or event type…"
               type="text"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <div className="relative flex-1 sm:flex-none">
               <select
                 value={eventType}
@@ -166,7 +166,7 @@ export function AuditHistoryPage() {
                   setPage(0)
                 }}
                 aria-label="Filter by event type"
-                className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3 pr-8 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer transition"
+                className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
               >
                 <option value="">Event type: all events</option>
                 {eventTypes.map((t) => (
@@ -182,7 +182,7 @@ export function AuditHistoryPage() {
                 setEventType("")
                 setPage(0)
               }}
-              className="text-xs font-medium text-slate-500 hover:text-slate-800 px-3 py-2 transition rounded-lg hover:bg-slate-100"
+              className="text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-2 transition cursor-pointer shrink-0"
               type="button"
             >
               Reset
