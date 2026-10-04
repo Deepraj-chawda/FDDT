@@ -1,0 +1,186 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens — extracted from 12 reference screens generated in Stitch
+ * (Google's AI UI tool): stitch_docauth_document_review_platform/.
+ * Canonical references: docauth_sign_in, docauth_case_queue, docauth_case_detail.
+ *
+ * Two-tone brand system: NAVY for solid CTA buttons (sign-in submit,
+ * "New upload", auth card) and BLUE for links/active-nav/focus/logo mark.
+ * --primary is navy; --accent carries the blue interactive role.
+ *
+ * To add a new semantic color: add the variable to :root (light) and
+ * .dark, then register it below in @theme inline as
+ * --color-<name>: var(--<name>).
+ */
+
+:root {
+  --radius: 0.75rem; /* Stitch's dominant card/button radius is Tailwind's rounded-xl (12px) */
+
+  --background: #EDF2FA; /* case_queue body background */
+  --foreground: #0F172A; /* slate-900 */
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+
+  --primary: #0B1930; /* navy — Sign-in submit, "New upload" button */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9; /* slate-100 — secondary buttons, subtle fills */
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B; /* slate-500 — caption/label color */
+  --accent: #2563EB; /* blue-600 — links, active-nav pill, logo mark, focus rings */
+  --accent-foreground: #FFFFFF;
+  --accent-light: #EBF0FF; /* faint blue tint for active nav-pill bg, stat-card icon chips */
+
+  /* Status/severity colors */
+  --destructive: #DC2626; /* red-600 */
+  --destructive-foreground: #FFFFFF;
+  --warning: #D97706; /* amber-600 */
+  --success: #059669; /* emerald-600 */
+  --info: #2563EB;
+
+  /* Status badge backgrounds — light tinted backgrounds for flag/status chips */
+  --status-destructive-bg: #FEF2F2; /* red-50 */
+  --status-warning-bg: #FFFBEB; /* amber-50 */
+  --status-success-bg: #ECFDF5; /* emerald-50 */
+  --status-info-bg: #EFF6FF; /* blue-50 */
+
+  --border: #E2E8F0; /* slate-200 */
+  --input: #E2E8F0;
+  --ring: #3B82F6; /* blue-500 */
+
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.18 0.04 260);
+  --sidebar-foreground: oklch(0.92 0.01 250);
+  --sidebar-primary: #0B1930;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: oklch(0.24 0.05 260);
+  --sidebar-accent-foreground: oklch(0.99 0 0);
+  --sidebar-border: oklch(0.28 0.04 260);
+  --sidebar-ring: #3B82F6;
+}
+
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --accent-light: oklch(0.25 0.03 260);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.208 0.042 265.755);
+  --sidebar-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.279 0.041 260.031);
+  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  --status-destructive-bg: oklch(0.25 0.05 25);
+  --status-warning-bg: oklch(0.25 0.05 85);
+  --status-success-bg: oklch(0.25 0.05 160);
+  --status-info-bg: oklch(0.25 0.05 260);
+}
+
+@theme inline {
+  /* Plus Jakarta Sans primary, Inter fallback */
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Card elevation — softer, more layered shadow */
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.02);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-light: var(--accent-light);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-status-destructive-bg: var(--status-destructive-bg);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+.custom-shadow-card {
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.02);
+}
+
+.glow-cyan-box {
+  box-shadow: 0 0 15px 2px rgba(56, 189, 248, 0.45);
+}

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#f8fafc]" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DocAuth - Settings (Users)</title>
+<!-- Tailwind CSS v3 with forms & container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef6ff',
+              100: '#e0edfe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+            },
+            dark: {
+              900: '#0f172a',
+              950: '#0b1120',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+<style data-purpose="custom-typography">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+<style data-purpose="scrollbar-and-utilities">
+    /* Subtle polish and outline overrides */
+    .custom-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col text-slate-800 bg-[#f8fafc]">
+<!-- BEGIN: TopNavigationBar -->
+<header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+<div class="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
+<!-- Brand & Main Nav Links -->
+<div class="flex items-center space-x-9">
+<!-- Logo -->
+<a class="flex items-center space-x-3 group" href="#">
+<div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm group-hover:bg-blue-700 transition">
+            D
+          </div>
+<div class="flex flex-col">
+<span class="font-extrabold text-slate-900 tracking-tight leading-none text-base">DocAuth</span>
+<span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mt-0.5">DOCUMENT INTEGRITY</span>
+</div>
+</a>
+<!-- Main Navigation Links -->
+<nav aria-label="Main Navigation" class="hidden md:flex items-center space-x-1">
+<a class="flex items-center space-x-2 px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center space-x-2 px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Review queue</span>
+</a>
+<a class="flex items-center space-x-2 px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>My Cases</span>
+</a>
+<a class="flex items-center space-x-2 px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Audit history</span>
+</a>
+<a class="flex items-center space-x-2 px-3.5 py-2 text-sm font-semibold text-blue-600 bg-blue-50/90 rounded-lg transition" href="#">
+<svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Right Actions & Indicators -->
+<div class="flex items-center space-x-4">
+<!-- Live System Metric Pill -->
+<div class="hidden lg:flex items-center space-x-2 bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-full text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>4,182 docs scanned today</span>
+</div>
+<!-- Global Quick Search -->
+<button aria-label="Search documents" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Notification Bell with Alert Dot -->
+<button aria-label="Notifications" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 relative transition" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+</button>
+<!-- Upload CTA -->
+<button class="inline-flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition" type="button">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>+ New upload</span>
+</button>
+</div>
+</div>
+</header>
+<!-- END: TopNavigationBar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 max-w-[1520px] w-full mx-auto px-6 py-8 space-y-6">
+<!-- Page Title & Top Actions -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div>
+<p class="text-[11px] font-bold tracking-wider uppercase text-blue-600 mb-1">
+          SYSTEM ADMINISTRATION &amp; ACCESS CONTROL
+        </p>
+<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Platform Settings
+        </h1>
+<p class="text-sm text-slate-500 mt-1">
+          Manage team member access roles, reviewer permissions, and platform security credentials.
+        </p>
+</div>
+<div class="flex items-center space-x-3">
+<!-- Export CSV Button -->
+<button class="inline-flex items-center space-x-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xs transition" type="button">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Export CSV</span>
+</button>
+<!-- Primary Invite User Button -->
+<button class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>+ Invite User</span>
+</button>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="border-b border-slate-200">
+<nav aria-label="Settings Tabs" class="flex space-x-8">
+<!-- Tab 1 -->
+<a class="group inline-flex items-center py-3.5 px-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300" href="#">
+<svg class="mr-2.5 h-4 w-4 text-slate-400 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Issuer Registry</span>
+<span class="ml-2 py-0.5 px-2 rounded-full text-xs font-medium bg-slate-100 text-slate-600">48</span>
+</a>
+<!-- Tab 2 -->
+<a class="group inline-flex items-center py-3.5 px-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300" href="#">
+<svg class="mr-2.5 h-4 w-4 text-slate-400 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Risk Rules</span>
+<span class="ml-2 py-0.5 px-2 rounded-full text-xs font-medium bg-slate-100 text-slate-600">14 active</span>
+</a>
+<!-- Tab 3 (ACTIVE) -->
+<a aria-current="page" class="inline-flex items-center py-3.5 px-1 border-b-2 border-blue-600 text-sm font-semibold text-blue-600" href="#">
+<svg class="mr-2.5 h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Users</span>
+<span class="ml-2 py-0.5 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">24 active</span>
+</a>
+<!-- Tab 4 -->
+<a class="group inline-flex items-center py-3.5 px-1 border-b-2 border-transparent text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300" href="#">
+<svg class="mr-2.5 h-4 w-4 text-slate-400 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Notifications</span>
+</a>
+</nav>
+</div>
+<!-- BEGIN: MetricSummaryCards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Card 1: Total Users -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition">
+<div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Users</span>
+<div class="text-3xl font-extrabold text-slate-900 mt-1">24</div>
+<span class="text-xs font-semibold text-emerald-600 mt-1 inline-block">+3 this month</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Card 2: Document Reviewers -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition">
+<div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Document Reviewers</span>
+<div class="text-3xl font-extrabold text-slate-900 mt-1">14</div>
+<span class="text-xs font-medium text-slate-500 mt-1 inline-block">Active triage &amp; verification</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Card 3: System Admins -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition">
+<div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">System Admins</span>
+<div class="text-3xl font-extrabold text-slate-900 mt-1">4</div>
+<span class="text-xs font-medium text-slate-500 mt-1 inline-block">Full platform &amp; rule control</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Card 4: Pending Invites -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between hover:border-slate-300 transition">
+<div>
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pending Invites</span>
+<div class="text-3xl font-extrabold text-slate-900 mt-1">2</div>
+<span class="text-xs font-medium text-slate-500 mt-1 inline-block">Awaiting SSO acceptance</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- END: MetricSummaryCards -->
+<!-- BEGIN: SearchAndFilterBar -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+<!-- Search Input Container -->
+<div class="relative w-full md:max-w-md">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+<svg class="h-4 w-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<input class="block w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-slate-50/60 border border-slate-200 rounded-xl placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition" placeholder="Search users by name, email, or department..." type="text"/>
+</div>
+<!-- Filters & Reset Action -->
+<div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+<!-- Role Filter Dropdown -->
+<div class="relative inline-block text-left min-w-[150px]">
+<select class="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 cursor-pointer appearance-none">
+<option>Role: All Roles</option>
+<option>Admin</option>
+<option>Reviewer</option>
+<option>User</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Status Filter Dropdown -->
+<div class="relative inline-block text-left min-w-[150px]">
+<select class="w-full text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 cursor-pointer appearance-none">
+<option>Status: All Statuses</option>
+<option>Active</option>
+<option>Pending Invite</option>
+<option>Suspended</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Reset Button -->
+<button class="text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-2 transition" type="button">
+          Reset
+        </button>
+</div>
+</div>
+<!-- END: SearchAndFilterBar -->
+<!-- BEGIN: UsersDataTable -->
+<div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+<div class="overflow-x-auto custom-scroll">
+<table class="min-w-full divide-y divide-slate-100 text-left text-xs text-slate-600">
+<!-- Table Header -->
+<thead class="bg-slate-50/75 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+<tr>
+<th class="py-3.5 px-6" scope="col">User Name</th>
+<th class="py-3.5 px-6" scope="col">Email</th>
+<th class="py-3.5 px-6" scope="col">Role</th>
+<th class="py-3.5 px-6" scope="col">Status</th>
+<th class="py-3.5 px-6" scope="col">Date Added</th>
+<th class="py-3.5 px-6 text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<!-- Table Body -->
+<tbody class="divide-y divide-slate-100 font-normal">
+<!-- Row 1: Jessica Reyes -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    JR
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Jessica Reyes</div>
+<div class="text-[11px] text-slate-400">Lead Forensic Analyst</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                j.reyes@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+<svg class="w-3 h-3 mr-1 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  Reviewer
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Oct 14, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 2: Marcus Sterling -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    MS
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Marcus Sterling</div>
+<div class="text-[11px] text-slate-400">Head of Fraud &amp; Risk</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                m.sterling@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+<svg class="w-3 h-3 mr-1 text-purple-600" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+                  Admin
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Sep 02, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 3: Elena Vance -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    EV
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Elena Vance</div>
+<div class="text-[11px] text-slate-400">Document Compliance Analyst</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                e.vance@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+<svg class="w-3 h-3 mr-1 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  Reviewer
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Aug 19, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 4: David Chen -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    DC
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">David Chen</div>
+<div class="text-[11px] text-slate-400">Platform Security Architect</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                d.chen@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+<svg class="w-3 h-3 mr-1 text-purple-600" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+                  Admin
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Jul 11, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 5: Sarah Lindqvist -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    SL
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Sarah Lindqvist</div>
+<div class="text-[11px] text-slate-400">External Operations Submitter</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                s.lindqvist@meridian.com
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  User
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Oct 20, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 6: Tariq Al-Mansoor -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    TA
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Tariq Al-Mansoor</div>
+<div class="text-[11px] text-slate-400">Senior Verification Officer</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                t.almansoor@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+<svg class="w-3 h-3 mr-1 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  Reviewer
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Oct 04, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 7: Clara Moreau (Pending Invite) -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    CM
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Clara Moreau</div>
+<div class="text-[11px] text-slate-400">Junior Compliance Reviewer</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                c.moreau@docauth.internal
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+<svg class="w-3 h-3 mr-1 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  Reviewer
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/60">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>
+                  Pending Invite
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Oct 24, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-blue-600 hover:text-blue-800 transition mr-3" type="button">
+                  Resend
+                </button>
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+<!-- Row 8: Robert Kowalski -->
+<tr class="hover:bg-slate-50/70 transition">
+<td class="py-4 px-6 whitespace-nowrap">
+<div class="flex items-center space-x-3.5">
+<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center tracking-tight flex-shrink-0">
+                    RK
+                  </div>
+<div>
+<div class="font-bold text-slate-900 text-sm">Robert Kowalski</div>
+<div class="text-[11px] text-slate-400">Vendor Portal Intake</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 whitespace-nowrap font-mono text-xs text-slate-600 hover:text-blue-600 cursor-pointer">
+                r.kowalski@apexlogistics.de
+              </td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  User
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap">
+<span class="inline-flex items-center text-xs font-medium text-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                  Active
+                </span>
+</td>
+<td class="py-4 px-6 whitespace-nowrap text-slate-500">
+                Sep 15, 2024
+              </td>
+<td class="py-4 px-6 whitespace-nowrap text-right text-xs">
+<button class="font-semibold text-slate-600 hover:text-blue-600 transition" type="button">
+                  Edit
+                </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Container -->
+<div class="border-t border-slate-100 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+<div>
+          Showing <span class="font-semibold text-slate-900">1</span> to <span class="font-semibold text-slate-900">8</span> of <span class="font-semibold text-slate-900">24</span> team members
+        </div>
+<div class="inline-flex items-center space-x-1">
+<button class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 font-medium cursor-not-allowed" disabled="" type="button">
+            Previous
+          </button>
+<button class="w-8 h-8 rounded-lg bg-blue-600 text-white font-semibold flex items-center justify-center shadow-xs" type="button">
+            1
+          </button>
+<button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium flex items-center justify-center transition" type="button">
+            2
+          </button>
+<button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium flex items-center justify-center transition" type="button">
+            3
+          </button>
+<button class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition" type="button">
+            Next
+          </button>
+</div>
+</div>
+</div>
+<!-- END: UsersDataTable -->
+<!-- BEGIN: RolePermissionsSummaryCard -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+<div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<h2 class="text-sm font-bold text-slate-900">Enterprise Role-Based Access Control (RBAC)</h2>
+<p class="text-xs text-slate-500">Privileges and security scopes enforced across forensic verification workflows.</p>
+</div>
+</div>
+<span class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">
+          Manage Custom Roles →
+        </span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Admin Info -->
+<div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60">
+<div class="flex items-center justify-between mb-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+              Admin
+            </span>
+<span class="text-[11px] font-bold text-slate-400">4 ASSIGNED</span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+            Full platform privileges including risk weight overrides, issuer registry write access, audit export, and team credential revocation.
+          </p>
+</div>
+<!-- Reviewer Info -->
+<div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60">
+<div class="flex items-center justify-between mb-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+              Reviewer
+            </span>
+<span class="text-[11px] font-bold text-slate-400">14 ASSIGNED</span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+            Authorized to adjudicate flagged forensic anomalies, accept/reject flagged invoices and diplomas, and annotate case dossiers.
+          </p>
+</div>
+<!-- User Info -->
+<div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60">
+<div class="flex items-center justify-between mb-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              User
+            </span>
+<span class="text-[11px] font-bold text-slate-400">6 ASSIGNED</span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+            Intake and submission level access. Restricted to batch uploading documents, tracking submission status, and receiving verification receipts.
+          </p>
+</div>
+</div>
+</div>
+<!-- END: RolePermissionsSummaryCard -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: BottomFooterBar -->
+<footer class="bg-white border-t border-slate-200 mt-auto">
+<div class="max-w-[1520px] mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+<div class="flex items-center space-x-2">
+<span>DocAuth Platform v2.4 · Enterprise Document Forensics</span>
+<span>|</span>
+<span>Server Node: US-East-1 (Encrypted)</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>SHA-256 Trusted Registry Root Synchronized</span>
+</div>
+</div>
+</footer>
+<!-- END: BottomFooterBar -->
+</body></html>

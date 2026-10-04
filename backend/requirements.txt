@@ -1,0 +1,65 @@
+# --- Web framework ---
+fastapi==0.121.0
+uvicorn[standard]==0.38.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+email-validator==2.2.0
+
+# --- Database ---
+sqlalchemy==2.0.52
+psycopg2-binary==2.9.13
+alembic==1.14.0
+
+# --- Auth ---
+pyjwt==2.10.1
+bcrypt==4.2.1
+
+# --- File upload / storage ---
+python-multipart==0.0.32
+azure-storage-blob==12.30.1
+
+# --- OCR / layout extraction (Azure Document Intelligence) ---
+azure-ai-documentintelligence==1.0.2
+
+# --- LLM (Azure OpenAI, behind app/services/llm_service.py's LLMService
+# abstraction — see that module for why) ---
+openai==1.109.1
+
+# --- Async task queue (Redis broker) ---
+celery==5.4.0
+redis==5.2.1
+
+# --- Issuer registry fuzzy matching ---
+rapidfuzz==3.14.6
+
+# --- Case workflow state machine (app/services/workflow_service.py) ---
+transitions==0.9.3
+
+# --- PDF forensics (metadata, xref/incremental-update analysis) ---
+pikepdf==10.13.0.post1
+pymupdf==1.28.2
+
+# --- Image forensics (ELA + copy-move detection — app/services/
+# forensics/ela.py, copy_move.py, pdf_render.py). Headless build: this
+# runs on a server/worker with no display, and the regular opencv-python
+# wheel pulls in GUI (Qt/libGL) dependencies this never uses. numpy is
+# also a direct import in all three modules above, not just an
+# opencv/pymupdf transitive dependency — pinned explicitly rather than
+# left implicit.
+opencv-python-headless==4.10.0.84
+numpy==2.5.3
+
+# --- Duplicate/near-duplicate detection (perceptual hashing —
+# app/services/forensics/duplicate_check.py). Pillow is already a
+# transitive dependency (via imagehash itself and others) but is a
+# direct import here (BGR->RGB page image -> PIL.Image for imagehash.phash),
+# so it's pinned explicitly rather than left implicit.
+imagehash==4.3.2
+pillow==12.3.0
+
+# --- Config / env ---
+python-dotenv==1.0.1
+
+# --- Testing ---
+pytest==8.3.4
+httpx==0.28.1

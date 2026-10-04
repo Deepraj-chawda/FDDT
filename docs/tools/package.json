@@ -1,0 +1,14 @@
+{
+  "name": "fddt-docs-pdf",
+  "private": true,
+  "type": "module",
+  "description": "Builds docs-pdf/ from the Markdown in docs/ (see README.md).",
+  "scripts": {
+    "build": "node build-pdfs.mjs"
+  },
+  "dependencies": {
+    "marked": "18.0.14",
+    "mermaid": "12.0.0",
+    "puppeteer-core": "25.12.0"
+  }
+}

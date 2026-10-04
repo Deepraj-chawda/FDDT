@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DocAuth - Analyze New Documents</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brandNavy: '#0B1930',
+            brandBlue: '#2563EB',
+            brandSurface: '#DCE7F6',
+            brandCardBg: '#EEF4FC',
+            brandBorder: '#C9DCF2',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-layout">
+    body {
+      background-color: #dbe8f7;
+      background-image: 
+        radial-gradient(at 15% 10%, rgba(219, 234, 254, 0.9) 0px, transparent 60%),
+        radial-gradient(at 85% 20%, rgba(224, 231, 255, 0.8) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(219, 234, 254, 0.7) 0px, transparent 60%);
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 antialiased flex flex-col min-h-screen">
+<!-- BEGIN: MainHeader -->
+<header class="w-full bg-white/70 backdrop-blur-md border-b border-blue-100/60 sticky top-0 z-50">
+<div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+<!-- Brand & Primary Nav -->
+<div class="flex items-center space-x-8">
+<!-- Logo -->
+<a class="flex items-center space-x-3 group" data-purpose="brand-logo" href="#">
+<div class="w-9 h-9 flex-shrink-0">
+<svg class="w-full h-full drop-shadow-sm" fill="none" viewbox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+<rect fill="#2563EB" height="40" rx="12" width="40"></rect>
+<path d="M12 14C12 12.8954 12.8954 12 14 12H23L28 17V26C28 27.1046 27.1046 28 26 28H14C12.8954 28 12 27.1046 12 26V14Z" fill="white" fill-opacity="0.2"></path>
+<path d="M15 20L19 24L26 16" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold tracking-tight text-slate-900 leading-tight">DocAuth</span>
+<span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase leading-tight">DOCUMENT INTEGRITY</span>
+</div>
+</a>
+<!-- Main Navigation Links -->
+<nav class="hidden md:flex items-center space-x-1" data-purpose="header-nav">
+<a class="px-3.5 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 transition flex items-center gap-2" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+            Dashboard
+          </a>
+<a class="px-3.5 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 transition flex items-center gap-2" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+            Review queue
+          </a>
+<a class="px-3.5 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 transition flex items-center gap-2" href="#">
+<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+            Cases
+          </a>
+</nav>
+</div>
+<!-- Right Header Actions -->
+<div class="flex items-center space-x-4">
+<!-- Live Counter Pill -->
+<div class="hidden sm:flex items-center space-x-2 bg-white/80 border border-slate-200/90 rounded-full px-3.5 py-1 text-xs font-medium text-slate-600 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>4,182 docs scanned today</span>
+</div>
+<!-- Search Icon Button -->
+<button aria-label="Search" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-full transition" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Notification Bell -->
+<button aria-label="Notifications" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-full transition relative" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-white"></span>
+</button>
+<!-- New Upload CTA -->
+<button class="inline-flex items-center space-x-2 bg-brandNavy hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-sm" type="button">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>New upload</span>
+</button>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-grow max-w-[1240px] w-full mx-auto px-6 py-10">
+<!-- Page Header & Title Section -->
+<div class="mb-8" data-purpose="page-title">
+<p class="text-[11px] font-bold tracking-widest text-blue-600 uppercase mb-1.5">SECURE INTAKE</p>
+<h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Analyze new documents</h1>
+<p class="text-sm text-slate-500 font-normal">Upload related evidence together for cross-document verification.</p>
+</div>
+<!-- Layout Grid: 2 Columns -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Left Column: Upload Dropzone & Staged Items (Approx ~65% width) -->
+<section class="lg:col-span-7 bg-white rounded-3xl p-6 shadow-sm border border-blue-100/70" data-purpose="upload-workspace">
+<!-- Dashed Drag & Drop Zone -->
+<div class="border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/20 hover:bg-blue-50/40 rounded-2xl py-12 px-6 flex flex-col items-center justify-center text-center cursor-pointer transition group" data-purpose="dropzone">
+<div class="w-14 h-14 rounded-2xl bg-blue-100/70 flex items-center justify-center mb-4 text-blue-600 group-hover:scale-105 transition-transform duration-200">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<h2 class="text-base font-bold text-slate-800 mb-1.5">Drop documents here or browse</h2>
+<p class="text-xs text-slate-400 font-medium">PDF, PNG, or JPG · up to 25 MB each</p>
+</div>
+<!-- Staged Document Files List -->
+<div class="mt-4 space-y-2.5" data-purpose="file-queue">
+<!-- Staged Item 1 -->
+<div class="bg-blue-50/50 border border-blue-100/60 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-blue-50/70 transition">
+<div class="flex items-center space-x-3 truncate">
+<div class="text-blue-500 bg-white p-2 rounded-lg border border-blue-100/60 shadow-xs flex-shrink-0">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xs font-semibold text-slate-700 truncate">INV-20419.pdf</span>
+</div>
+<div class="flex items-center space-x-3 flex-shrink-0 ml-3">
+<span class="text-xs font-semibold text-emerald-600">Ready</span>
+<button aria-label="Remove INV-20419.pdf" class="text-slate-400 hover:text-slate-600 transition p-1 rounded-md" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- Staged Item 2 -->
+<div class="bg-blue-50/50 border border-blue-100/60 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-blue-50/70 transition">
+<div class="flex items-center space-x-3 truncate">
+<div class="text-blue-500 bg-white p-2 rounded-lg border border-blue-100/60 shadow-xs flex-shrink-0">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xs font-semibold text-slate-700 truncate">purchase-order-8821.pdf</span>
+</div>
+<div class="flex items-center space-x-3 flex-shrink-0 ml-3">
+<span class="text-xs font-semibold text-emerald-600">Ready</span>
+<button aria-label="Remove purchase-order-8821.pdf" class="text-slate-400 hover:text-slate-600 transition p-1 rounded-md" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Primary Call to Action Button -->
+<div class="mt-6">
+<button class="w-full bg-brandNavy hover:bg-slate-900 active:scale-[0.99] text-white py-3.5 px-4 rounded-xl font-semibold text-xs transition flex items-center justify-center space-x-2 shadow-sm" type="button">
+<svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Start integrity analysis</span>
+</button>
+</div>
+</section>
+<!-- Right Column: Pipeline & Integrity Card (~35% width) -->
+<aside class="lg:col-span-5 space-y-4" data-purpose="pipeline-and-integrity">
+<!-- Card 1: Analysis Pipeline Steps -->
+<div class="bg-white rounded-3xl p-6 shadow-sm border border-blue-100/70" data-purpose="analysis-pipeline">
+<h2 class="text-base font-bold text-slate-900 mb-6">Analysis pipeline</h2>
+<ul class="space-y-4 text-xs font-medium text-slate-600">
+<!-- Step 1 (Completed) -->
+<li class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="text-slate-700 font-semibold">Secure original &amp; verify hash</span>
+</li>
+<!-- Step 2 (Completed) -->
+<li class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="text-slate-700 font-semibold">Extract layout and fields</span>
+</li>
+<!-- Step 3 (Pending) -->
+<li class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                3
+              </span>
+<span>Validate issuer and consistency</span>
+</li>
+<!-- Step 4 (Pending) -->
+<li class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                4
+              </span>
+<span>Run forensic checks</span>
+</li>
+<!-- Step 5 (Pending) -->
+<li class="flex items-center space-x-3">
+<span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                5
+              </span>
+<span>Calculate explainable risk</span>
+</li>
+</ul>
+</div>
+<!-- Card 2: Evidence Integrity Soft Blue Tinted Card -->
+<div class="bg-blue-100/50 rounded-2xl p-5 border border-blue-200/60 shadow-xs" data-purpose="integrity-notice">
+<p class="text-[10px] font-bold tracking-wider text-blue-600 uppercase mb-1">EVIDENCE INTEGRITY</p>
+<h3 class="text-sm font-bold text-slate-800 mb-1.5">Originals remain unchanged</h3>
+<p class="text-xs text-slate-500 leading-relaxed font-normal">
+            Every uploaded file is preserved with a verifiable integrity hash and complete audit history.
+          </p>
+</div>
+</aside>
+</div>
+</main>
+<!-- END: MainContent -->
+</body></html>

@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: docauth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-docauth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docauth}
+      POSTGRES_DB: ${POSTGRES_DB:-docauth}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docauth} -d ${POSTGRES_DB:-docauth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: docauth-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # PgBouncer, transaction pooling (pgbouncer/pgbouncer.ini). The app's roles
+  # connect on :6432 when DATABASE_POOLER_HOST is set. userlist.txt holds the
+  # LOCAL DEV passwords only — production uses SCRAM secrets from a vault.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p3
+    container_name: docauth-pgbouncer
+    restart: unless-stopped
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    ports:
+      - "${PGBOUNCER_PORT:-6432}:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Processing workers (optional, local) — one service per queue so each scales
+  # on its own, e.g.:
+  #   docker compose --profile workers up -d --scale forensics-worker=3
+  # These are Linux containers: forensics runs Celery's PREFORK pool (one
+  # process per core — real parallelism, no GIL contention), the two Azure
+  # queues run threads (I/O-bound).
+  # Same image as the API (backend/Dockerfile); Azure keys etc. come from
+  # backend/.env, with hostnames pointed at the compose services. Sizes are
+  # the *_WORKER_CONCURRENCY env vars (see backend/start-worker.sh).
+  # ---------------------------------------------------------------------------
+  extraction-worker: &worker
+    profiles: ["workers"]
+    build: ./backend
+    image: fddt-backend:local
+    command: ["sh", "start-worker.sh", "extraction"]
+    env_file: ./backend/.env
+    environment: &worker_env
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-docauth}:${POSTGRES_PASSWORD:-docauth}@postgres:5432/${POSTGRES_DB:-docauth}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      # Through PgBouncer (transaction pooling); each process keeps no pool.
+      DATABASE_POOLER_HOST: pgbouncer
+      DATABASE_POOLER_PORT: "6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  vision-worker:
+    <<: *worker
+    command: ["sh", "start-worker.sh", "vision"]
+
+  forensics-worker:
+    <<: *worker
+    command: ["sh", "start-worker.sh", "forensics"]
+    # CPU per replica; start-worker.sh runs one prefork process per CPU of
+    # this limit (cgroup cpu.max), so `--scale forensics-worker=N` adds real
+    # cores rather than oversubscribing the host. Size N x cpus to the cores
+    # available (e.g. 2 replicas x 2 CPUs on a 4-core host).
+    cpus: ${FORENSICS_WORKER_CPUS:-2}
+
+  beat:
+    <<: *worker
+    command: ["sh", "start-beat.sh"]
+
+volumes:
+  postgres_data:
+  redis_data:

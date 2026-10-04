@@ -1,0 +1,3 @@
+"fddt_app" "fddt_app_local"
+"fddt_platform" "fddt_platform_local"
+"pgbouncer_admin" "pgbouncer_admin_local"

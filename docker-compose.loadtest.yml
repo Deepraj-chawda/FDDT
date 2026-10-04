@@ -1,0 +1,72 @@
+# Load-test overlay: the real API + Celery workers in LINUX containers, with
+# only Azure Document Intelligence / Azure OpenAI / Blob Storage stubbed
+# (backend/loadtest/stubs.py). Database traffic goes through PgBouncer.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml up -d \
+#       --scale lt-forensics=2 lt-api lt-extraction lt-vision lt-forensics
+#   cd backend && python -m loadtest.load_test --api http://127.0.0.1:8100
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml down   # (keeps your data volumes)
+#
+# Azure OpenAI quotas are simulated at 10x this deployment's real quota by
+# default so a run takes minutes (override with LT_RPM_CAP / LT_TPM_CAP /
+# LT_AZURE_RPM / LT_AZURE_TPM, e.g. 85 / 85000 / 100 / 100000 for the real
+# gpt-4.1-mini quota); Document Intelligence uses the real 15 TPS quota.
+
+x-lt: &lt
+  image: fddt-backend:local
+  profiles: ["loadtest"]
+  env_file: ./backend/.env
+  environment: &lt_env
+    DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-docauth}:${POSTGRES_PASSWORD:-docauth}@postgres:5432/${POSTGRES_DB:-docauth}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/1
+    DATABASE_POOLER_HOST: pgbouncer
+    DATABASE_POOLER_PORT: "6432"
+    AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE: "${LT_RPM_CAP:-850}"
+    AZURE_OPENAI_MAX_TOKENS_PER_MINUTE: "${LT_TPM_CAP:-850000}"
+    AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND: "10"
+    LOADTEST_AZURE_OPENAI_RPM: "${LT_AZURE_RPM:-1000}"
+    LOADTEST_AZURE_OPENAI_TPM: "${LT_AZURE_TPM:-1000000}"
+    LOADTEST_AZURE_DI_TPS: "15"
+    LOADTEST_DI_LATENCY: "1.5"
+    LOADTEST_LLM_LATENCY: "1.0"
+    LOADTEST_STORAGE_DIR: /blobs
+    LOADTEST_API_HOST: 0.0.0.0
+    PYTHONUNBUFFERED: "1"
+  volumes:
+    - ./backend/loadtest:/app/loadtest:ro
+    - lt_blobs:/blobs
+  depends_on:
+    pgbouncer:
+      condition: service_started
+    redis:
+      condition: service_healthy
+
+services:
+  lt-api:
+    <<: *lt
+    command: ["python", "-m", "loadtest.run_api", "8100"]
+    ports:
+      - "8100:8100"
+
+  lt-extraction:
+    <<: *lt
+    command: ["python", "-m", "loadtest.run_worker", "extraction", "16"]
+
+  lt-vision:
+    <<: *lt
+    command: ["python", "-m", "loadtest.run_worker", "vision", "16"]
+
+  lt-forensics:
+    <<: *lt
+    # Prefork, one process per CPU of this replica's limit — scale replicas
+    # with --scale lt-forensics=N.
+    command: ["python", "-m", "loadtest.run_worker", "forensics", "auto"]
+    environment:
+      <<: *lt_env
+      LOADTEST_POOL: prefork
+    cpus: 2
+
+volumes:
+  lt_blobs:
