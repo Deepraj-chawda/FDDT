@@ -6,6 +6,7 @@ import { ApiError } from "@/api/client"
 import { createRiskRule, getRiskRuleOptions } from "@/api/settings"
 import { Modal } from "@/components/settings/Modal"
 import { StatusLine } from "@/components/settings/SettingsShell"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
 import type { RiskRuleCreate, RuleMatchKind, RuleSeverity } from "@/types/settings"
@@ -15,13 +16,26 @@ const inputClass =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
 const RULE_ID_PATTERN = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/
 
-function Field({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  htmlFor?: string
+  hint?: string
+  error?: string | null
+  children: React.ReactNode
+}) {
   return (
     <div>
       <label htmlFor={htmlFor} className="mb-1 block text-xs font-semibold text-slate-700">
         {label}
       </label>
       {children}
+      <FieldError id={htmlFor ? `${htmlFor}-error` : undefined} message={error} />
       {hint && <p className="mt-1 text-[11px] text-slate-400">{hint}</p>}
     </div>
   )
@@ -109,15 +123,22 @@ export function AddRuleModal({
     (match === "sub_check" && subCheck !== "") ||
     (match === "cross_document" && fieldName !== "") ||
     (match === "signature_match" && signatureResult !== "")
-  const problem = !RULE_ID_PATTERN.test(ruleId.trim())
-    ? "Name the rule with lower-case words and one dot, e.g. custom.hidden_layers."
-    : !parametersOk
-      ? "Choose what the rule should react to."
-      : weight.trim() === "" || !Number.isFinite(w) || w < -100 || w > 100
+  // Each problem is shown in red under its own field once Create rule was clicked.
+  const [attempted, setAttempted] = React.useState(false)
+  const fieldErrors = {
+    ruleId: RULE_ID_PATTERN.test(ruleId.trim())
+      ? null
+      : "Name the rule with lower-case words and one dot, e.g. custom.hidden_layers.",
+    parameters: parametersOk ? null : "Choose what the rule should react to.",
+    weight:
+      weight.trim() === "" || !Number.isFinite(w) || w < -100 || w > 100
         ? "The weight must be a number from -100 to 100."
-        : reason.trim().length < 3
-          ? "Write the reason reviewers will read when this rule fires."
-          : null
+        : null,
+    reason: reason.trim().length < 3 ? "Write the reason reviewers will read when this rule fires (at least 3 characters)." : null,
+  }
+  const problem = Object.values(fieldErrors).some(Boolean)
+  const shown = (field: keyof typeof fieldErrors) => (attempted ? fieldErrors[field] : null)
+  const withError = (base: string, field: keyof typeof fieldErrors) => (shown(field) ? `${base} ${invalidFieldClass}` : base)
 
   const toggleSeverity = (s: RuleSeverity) =>
     setSeverityIn((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
@@ -150,16 +171,18 @@ export function AddRuleModal({
       ) : (
         <form
           className="flex flex-col gap-4"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault()
             setError(null)
-            if (problem) return setError(problem)
+            setAttempted(true)
+            if (problem) return
             create.mutate()
           }}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Rule name" htmlFor="rule-id" hint="A stable key: lower-case words, one dot.">
-              <input id="rule-id" className={`${inputClass} font-mono`} value={ruleId} onChange={(e) => setRuleId(e.target.value)} autoFocus />
+            <Field label="Rule name" htmlFor="rule-id" error={shown("ruleId")} hint="A stable key: lower-case words, one dot.">
+              <input id="rule-id" aria-invalid={Boolean(shown("ruleId"))} aria-describedby="rule-id-error" className={withError(`${inputClass} font-mono`, "ruleId")} value={ruleId} onChange={(e) => setRuleId(e.target.value)} autoFocus />
             </Field>
             <Field label="Category" htmlFor="rule-category">
               <select id="rule-category" className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -173,7 +196,7 @@ export function AddRuleModal({
           <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
             <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">When this happens</div>
             <div className="flex flex-col gap-3">
-              <Field label="Rule type" htmlFor="rule-match" hint={options.match_kinds.find((m) => m.value === match)?.help}>
+              <Field label="Rule type" htmlFor="rule-match" error={shown("parameters")} hint={options.match_kinds.find((m) => m.value === match)?.help}>
                 <select id="rule-match" className={inputClass} value={match} onChange={(e) => changeMatch(e.target.value as RuleMatchKind)}>
                   {options.match_kinds.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
@@ -255,8 +278,8 @@ export function AddRuleModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Field label="Weight" htmlFor="rule-weight" hint="Points added to the score (-100 to 100).">
-              <input id="rule-weight" type="number" step="0.5" min={-100} max={100} className={`${inputClass} font-mono`} value={weight} onChange={(e) => setWeight(e.target.value)} />
+            <Field label="Weight" htmlFor="rule-weight" error={shown("weight")} hint="Points added to the score (-100 to 100).">
+              <input id="rule-weight" type="number" step="0.5" min={-100} max={100} aria-invalid={Boolean(shown("weight"))} aria-describedby="rule-weight-error" className={withError(`${inputClass} font-mono`, "weight")} value={weight} onChange={(e) => setWeight(e.target.value)} />
             </Field>
             <Field label="Severity" htmlFor="rule-severity">
               <select id="rule-severity" className={inputClass} value={severity} onChange={(e) => setSeverity(e.target.value as RuleSeverity)}>
@@ -276,13 +299,16 @@ export function AddRuleModal({
           <Field
             label="Reason shown to reviewers"
             htmlFor="rule-reason"
+            error={shown("reason")}
             hint={`You can use ${options.placeholders.map((p) => `{${p}}`).join(" ")} — they are filled in when the rule fires.`}
           >
             <textarea
               id="rule-reason"
               rows={3}
               maxLength={1024}
-              className={inputClass}
+              aria-invalid={Boolean(shown("reason"))}
+              aria-describedby="rule-reason-error"
+              className={withError(inputClass, "reason")}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="'{document}' has hidden layers. {description}"

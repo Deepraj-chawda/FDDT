@@ -22,7 +22,7 @@ sequenceDiagram
     FE->>API: POST /cases {case_type}
     API->>DB: INSERT cases (status=submitted) + audit case_created
     loop one request per file
-        FE->>API: POST /cases/{id}/documents (multipart, PDF up to 10 MB)
+        FE->>API: POST /cases/{id}/documents (multipart, PDF within the company's limit)
         API->>API: validate (size, %PDF- header, extension, parse, password)
         Note over API: a rejected file stops here: 4xx {code, message},<br/>nothing stored, nothing queued
         API->>BL: upload original (write-once, companies/{company}/cases/...)
@@ -92,8 +92,8 @@ incremented in the same transaction.
 
 ### 2. Upload (one file per request)
 The frontend (`NewCasePage`) calls the upload endpoint once per file with an XHR so it can show
-progress (and refuses non-PDF, empty and over-10 MB files before sending). The endpoint first
-**validates** the file (PDF only by its header bytes, at most 10 MB, not corrupted, not
+progress (and refuses non-PDF, empty and over-limit files before sending; the limit is the company's own, from `GET /auth/me/upload-limits`). The endpoint first
+**validates** the file (PDF only by its header bytes, within the company's per-file limit, not corrupted, not
 password-protected) and rejects a bad one with a specific `{code, message}` before anything is stored or
 queued. A valid file is hashed (SHA-256), stored in Blob Storage, its `documents` row inserted,
 `document_uploaded` written and the company's usage counters bumped; then **six tasks** are enqueued

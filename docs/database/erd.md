@@ -1,6 +1,6 @@
 # Entity-relationship diagram
 
-<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head c9e3a1b5d7f4).
+<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head e8b4c2d9f6a1).
      Only key columns are drawn to stay readable; the full column list is in schema.md. -->
 
 Every tenant-owned table also references `companies` through `company_id`. Those edges are left out of
@@ -13,12 +13,16 @@ erDiagram
     users |o--o{ audit_log : "actor_user_id"
     cases |o--o{ audit_log : "case_id"
     documents |o--o{ audit_log : "document_id"
+    bulk_uploads ||--o{ bulk_upload_cases : "bulk_upload_id"
+    cases |o--o{ bulk_upload_cases : "case_id"
+    users ||--o{ bulk_uploads : "uploaded_by_user_id"
     users |o--o{ case_actions : "actor_user_id"
     cases ||--o{ case_actions : "case_id"
     cases ||--o{ case_reports : "case_id"
     users ||--o{ case_reports : "generated_by_user_id"
     case_risk_assessments |o--o{ case_reports : "risk_assessment_id"
     cases ||--o{ case_risk_assessments : "case_id"
+    bulk_uploads |o--o{ cases : "bulk_upload_id"
     users ||--o{ cases : "submitted_by_user_id"
     cases ||--o{ cross_document_findings : "case_id"
     documents ||--o{ document_checks : "document_id"
@@ -41,6 +45,7 @@ erDiagram
     cases {
         uuid id PK
         uuid submitted_by_user_id FK
+        uuid bulk_upload_id FK
     }
     documents {
         uuid id PK
@@ -111,6 +116,15 @@ erDiagram
         uuid case_id FK
         uuid signature_reference_id FK
     }
+    bulk_upload_cases {
+        uuid id PK
+        uuid bulk_upload_id FK
+        uuid case_id FK
+    }
+    bulk_uploads {
+        uuid id PK
+        uuid uploaded_by_user_id FK
+    }
 ```
 
 ## Tenancy — what belongs to a company
@@ -137,5 +151,7 @@ drawn, the fan-out from `companies` is too wide to read).
 | `audit_log` | `company_id` | yes | on |
 | `signature_references` | `company_id` | no | on |
 | `signature_matches` | `company_id` | no | on |
+| `bulk_upload_cases` | `company_id` | no | on |
+| `bulk_uploads` | `company_id` | no | on |
 
 `users.company_id` and `audit_log.company_id` are nullable: NULL marks a platform admin and a platform-level event respectively. `risk_rule_templates` has no `company_id` — it is platform-level and only reachable by the platform database role.

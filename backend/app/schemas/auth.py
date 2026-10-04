@@ -28,3 +28,12 @@ class CurrentUserResponse(BaseModel):
     is_platform_admin: bool = Field(description="True for platform admins, who belong to no company.")
     company_id: uuid.UUID | None = Field(description="The user's company; null for a platform admin.")
     company_name: str | None = Field(description="Display name of the user's company.")
+
+
+class UploadLimitsResponse(BaseModel):
+    """The calling company's upload limits, as enforced on its next upload."""
+
+    max_file_size_mb: int = Field(description="Largest document, in MB (1 MB = 1,048,576 bytes).")
+    max_zip_size_mb: int = Field(description="Largest bulk-upload zip, in MB.")
+    max_file_size_bytes: int
+    max_zip_size_bytes: int

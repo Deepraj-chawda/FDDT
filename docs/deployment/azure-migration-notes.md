@@ -27,7 +27,7 @@
 | Redis (broker, fair-share counters, rate limiter) | Docker `redis:7-alpine`, no auth | **Azure Managed Redis**, *Non-Clustered* policy | Azure Cache for Redis no longer accepts new customers and retires 2028-09-30. Use `rediss://…:10000/0` for **both** Celery URLs (database 0 only) |
 | FastAPI app | `uvicorn --reload` on the host | Container App with internal ingress (`backend/Dockerfile`) | `uvicorn … --workers 2`; not `start-api.sh` (it migrates and re-seeds on every start) |
 | Celery workers | one local worker | Three Container Apps (`start-worker.sh extraction|vision|forensics`) + one beat | Forensics runs prefork, one process per vCPU of its container; the Azure queues run threads, sized to the rate caps |
-| Frontend | Vite dev server + `/api` proxy | Container App `fddt-web` (`frontend/Dockerfile`: nginx serves the build and proxies `/api/*` to the API's internal FQDN) | One origin, so no CORS. nginx caps request bodies at 11 MB |
+| Frontend | Vite dev server + `/api` proxy | Container App `fddt-web` (`frontend/Dockerfile`: nginx serves the build and proxies `/api/*` to the API's internal FQDN) | One origin, so no CORS. nginx caps request bodies (`UPLOAD_BODY_LIMIT`, default 11m; `BULK_UPLOAD_BODY_LIMIT` for bulk zips, default 301m) |
 | Secrets | `backend/.env` file | **Key Vault** referenced by the Container Apps | `JWT_SECRET_KEY`, owner / `fddt_app` / `fddt_platform` passwords, storage connection string, Document Intelligence and OpenAI keys, Redis key, seed password |
 | Azure credentials | Long-lived keys / connection string | **Managed identity** + RBAC (Storage Blob Data Contributor, Cognitive Services User) | The code authenticates with keys/connection strings only; switching to `DefaultAzureCredential` is a code change in `storage_service.py`, `ocr_service.py`, `llm_service.py` (each already sits behind an interface). Note the SAS generation currently needs an account key — with managed identity use *user delegation* SAS |
 | Health/readiness | `GET /health` (does not touch dependencies) | Probe target | Consider a readiness probe that checks Postgres and Redis |
@@ -52,8 +52,10 @@ These are pre-deployment blockers found while documenting, not deployment tasks 
    "8+ characters" on admin-created accounts.
 6. **Issuer registry.** Each company's registry starts empty (the migrated "Default Company" has fake test
    issuers); load the client's real data, or most documents will fail issuer verification.
-7. **Upload limits.** PDF only (by header bytes), 10 MB, corruption and password-protection checks exist
-   (`services/upload_validation.py`), and the nginx proxy refuses bodies over 11 MB. Still missing: a
+7. **Upload limits.** PDF only (by header bytes), per-company size limits (10 MB / 300 MB zip by default,
+   set by a platform admin), corruption and password-protection checks exist (`services/upload_validation.py`,
+   `services/upload_limits.py`). The nginx proxy's body caps (`UPLOAD_BODY_LIMIT` / `BULK_UPLOAD_BODY_LIMIT`)
+   must cover the largest limit any company is given. Still missing: a
    page-count limit, a malware scan (e.g. Defender for Storage malware scanning) and a Blob
    lifecycle/quarantine policy.
 8. **Stuck-work recovery.** If Redis is down at upload time the document stays `pending` forever; there

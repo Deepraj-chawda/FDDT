@@ -8,6 +8,7 @@ import { PlatformShell } from "@/components/platform/PlatformShell"
 import { AddRuleModal } from "@/components/settings/AddRuleModal"
 import { StatusLine } from "@/components/settings/SettingsShell"
 import { useAuth } from "@/hooks/useAuth"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import type { RuleSeverity } from "@/types/settings"
 
 const SEVERITIES: RuleSeverity[] = ["low", "medium", "high"]
@@ -32,7 +33,9 @@ function TemplateRow({ t, onSaved }: { t: RuleTemplate; onSaved: (msg: string) =
   }, [t.updated_at, t.weight, t.severity, t.is_active, t.reason_template])
 
   const w = Number(weight)
-  const valid = weight.trim() !== "" && Number.isFinite(w) && w >= -100 && w <= 100 && reason.trim().length >= 3
+  const weightOk = weight.trim() !== "" && Number.isFinite(w) && w >= -100 && w <= 100
+  const reasonOk = reason.trim().length >= 3
+  const valid = weightOk && reasonOk
   const dirty = w !== t.weight || severity !== t.severity || active !== t.is_active || reason.trim() !== t.reason_template
 
   const save = useMutation({
@@ -65,18 +68,22 @@ function TemplateRow({ t, onSaved }: { t: RuleTemplate; onSaved: (msg: string) =
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={2}
-          className="w-full min-w-[260px] rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-700"
+          className={`w-full min-w-[260px] rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-700 ${reasonOk ? "" : invalidFieldClass}`}
           aria-label={`Reason text for ${t.rule_id}`}
+          aria-invalid={!reasonOk}
         />
+        {!reasonOk && <FieldError message="Write the reason reviewers will read (at least 3 characters)." />}
         {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
       </td>
       <td className="px-3 py-3 align-top">
         <input
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
-          className="w-16 rounded-md border border-slate-200 px-2 py-1 text-xs tabular-nums"
+          className={`w-16 rounded-md border border-slate-200 px-2 py-1 text-xs tabular-nums ${weightOk ? "" : invalidFieldClass}`}
           aria-label={`Weight for ${t.rule_id}`}
+          aria-invalid={!weightOk}
         />
+        {!weightOk && <FieldError message="-100 to 100" />}
       </td>
       <td className="px-3 py-3 align-top">
         <select

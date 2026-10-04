@@ -9,6 +9,7 @@ import { Modal } from "@/components/settings/Modal"
 import { SettingsShell, StatusLine } from "@/components/settings/SettingsShell"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import type { RiskRule, RuleSeverity } from "@/types/settings"
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -97,13 +98,13 @@ function ThresholdsCard() {
             <label htmlFor="medium-threshold" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-600">
               <span className="size-2 rounded-full bg-amber-500" /> Medium from
             </label>
-            <input id="medium-threshold" type="number" min={1} max={99} value={medium} onChange={(e) => setMedium(e.target.value)} className={inputClass} />
+            <input id="medium-threshold" type="number" min={1} max={99} value={medium} onChange={(e) => setMedium(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
           </div>
           <div className="text-center">
             <label htmlFor="high-threshold" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-600">
               <span className="size-2 rounded-full bg-rose-500" /> High from
             </label>
-            <input id="high-threshold" type="number" min={2} max={100} value={high} onChange={(e) => setHigh(e.target.value)} className={inputClass} />
+            <input id="high-threshold" type="number" min={2} max={100} value={high} onChange={(e) => setHigh(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
           </div>
           <button
             type="button"
@@ -116,7 +117,7 @@ function ThresholdsCard() {
           </button>
         </div>
       </div>
-      {!valid && data && <p className="mt-3 text-xs text-rose-600">Use whole numbers with the medium cutoff below the high cutoff (1–100).</p>}
+      {!valid && data && <FieldError message="Use whole numbers with the medium cutoff below the high cutoff (1–100)." className="mt-3 text-xs" />}
       {data?.updated_by_name && (
         <p className="mt-3 text-[11px] text-slate-400">
           Last changed by {data.updated_by_name} on {formatWhen(data.updated_at)}.
@@ -269,6 +270,7 @@ function RuleRow({ rule, onHistory }: { rule: RiskRule; onHistory: (rule: RiskRu
           aria-label={`Weight for ${rule.rule_id}`}
           className={`w-20 rounded-lg border bg-white px-2.5 py-1.5 text-center font-mono text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${weightValid ? "border-slate-200 text-slate-900 focus:border-blue-500" : "border-rose-400 text-rose-700"}`}
         />
+        {!weightValid && <FieldError message="Enter a number from -100 to 100." className="max-w-[9rem]" />}
       </td>
       <td className="px-4 py-4">
         <select

@@ -136,7 +136,7 @@ Other scripts: `npm run build` (type-check + production build into `dist/`, rout
 1. Sign in as a company `user` or reviewer → **New case** → pick a case type → drop PDFs from
    `sample-documents/` (e.g. the `Sample9`, `Sample11` Arabic pairs, or the PDFs inside
    `tampered_test_samples/tampered_test_samples.zip`; the `_Invoice`/`_Evidence` pairs share a case).
-   Only PDFs up to 10 MB are accepted; images, password-protected and corrupted PDFs are refused with a
+   Only PDFs within the company's limit (10 MB by default) are accepted; images, password-protected and corrupted PDFs are refused with a
    specific message.
 2. Open the case; the page polls every 5 s until *Analyzing* becomes a risk tier and *Approve* unlocks.
 3. Optionally, on the upload screen, **Set reference signature** to trigger signature comparison.
@@ -170,7 +170,7 @@ The rate-limiter tests need Redis on `localhost:6379`. `backend/loadtest/` holds
 | Symptom | Cause / fix |
 |---|---|
 | Documents stuck at `pending` | No worker is consuming that queue, or Redis is unreachable. Check **Platform › Processing queues** |
-| Upload rejected with a message | Working as designed: PDF only, ≤ 10 MB, not empty, not corrupted, not password-protected ([01](../pipeline/01-upload-intake.md#upload-validation)) |
+| Upload rejected with a message | Working as designed: PDF only, within the company's size limit, not empty, not corrupted, not password-protected ([01](../pipeline/01-upload-intake.md#upload-validation)) |
 | Upload returns 503 | `AZURE_STORAGE_CONNECTION_STRING` missing/invalid |
 | Document shows `failed` with an Azure error | Check the document's `processing_error`, and the Document Intelligence / OpenAI keys, endpoint and deployment name |
 | Visual review / signature checks fail, extraction works | The OpenAI deployment is not vision-capable (must contain `gpt-4o`, `gpt-4.1`, `gpt-4-turbo` or `gpt-4-vision`) |

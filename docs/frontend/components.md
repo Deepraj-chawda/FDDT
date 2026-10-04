@@ -108,8 +108,14 @@ Tailwind (class-variance-authority, `cn()` from `lib/utils`).
   and `API_BASE_URL` (`VITE_API_BASE_URL` or `/api`). Uploads use `XMLHttpRequest` instead, purely for
   progress events.
 - `api/auth.ts`, `api/cases.ts`, `api/settings.ts`, `api/platform.ts` — one function per endpoint.
-- `lib/uploadLimits.ts` — `MAX_UPLOAD_BYTES` (10 MB, keep in step with the backend's
-  `MAX_UPLOAD_SIZE_BYTES`), `ACCEPTED_UPLOAD_TYPES` (PDF), `clientUploadProblem(file)`.
+- `lib/uploadLimits.ts` — `ACCEPTED_UPLOAD_TYPES` (PDF), `clientUploadProblem(file, maxBytes)`,
+  `clientZipProblem(file, maxBytes)`, `estimateZipCaseCount(file)`. No size is hardcoded: the limits are per
+  company and come from `hooks/useUploadLimits.ts` (`GET /auth/me/upload-limits`, re-read whenever an upload
+  screen opens).
+- `components/ui/field-error.tsx` — `FieldError` (a red message directly under a field, always visible,
+  never a hover tooltip) and `invalidFieldClass` (red border). Forms keep their submit button enabled; a
+  click with a problem marks the field(s) instead of doing nothing, and forms set `noValidate` so the
+  browser's own hover bubbles never replace these messages.
 - Every page except Login is a lazy route chunk (`App.tsx`).
 - `types/` — hand-written TypeScript mirrors of the backend schemas (`types/case.ts` includes
   `SignatureMatchResult`, `getDocumentRole` — **kept in sync with the backend by hand**, so a new backend

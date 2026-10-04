@@ -123,7 +123,8 @@ writes the audit log. A future external case-management integration would be one
 state machine.
 
 ### 4. Immutable, validated originals
-Only PDFs are accepted, and every upload is validated **before** it is stored: at most 10 MB, not empty,
+Only PDFs are accepted, and every upload is validated **before** it is stored: within the company's own size limit (per-company, set by a
+platform admin; 10 MB by default), not empty,
 a PDF by its header bytes, not corrupted, not password-protected
 ([pipeline/01-upload-intake.md](../pipeline/01-upload-intake.md#upload-validation)). A valid file is
 written to Blob Storage exactly once, at
@@ -181,7 +182,9 @@ What each capability area does today, and what is intentionally outside the curr
 | 2 | Signature/stamp detection | Azure OpenAI vision model locates signature and stamp regions (presence/placement only) | `services/signature_detection_service.py` |
 | 3 | AI-generated-content assessment | One question inside the visual-review vision call; experimental, one signal among several. There is no separate content-detection service | `services/visual_inconsistency_service.py` |
 | 4 | Metadata forensics | pikepdf + PyMuPDF read the PDF's own object model | `services/forensics/metadata_forensics.py` |
-| 5 | Accepted file types | **PDF only**, ≤ 10 MB, validated at upload (type by header bytes, corruption, password). Every forensic check is PDF-based | `services/upload_validation.py` |
+| 5 | Accepted file types | **PDF only**, within the company's per-file limit (10 MB by default), validated at upload (type by header bytes, corruption, password). Every forensic check is PDF-based | `services/upload_validation.py` |
+| 5a | Bulk upload | One zip (within the company's zip limit, 300 MB by default) with one folder per case. Ingested in the background case by case, each document validated like a single upload and queued as soon as its case exists. Partial success, live per-case summary | `services/bulk_upload_service.py` |
+| 5b | Upload limits | Per company (`companies.max_file_size_mb` / `max_zip_size_mb`), changed only by a platform admin, audited old → new, effective on the next upload; one source for every upload path | `services/upload_limits.py` |
 | 6 | Error Level Analysis | Runs only on pages containing an embedded raster image; born-digital text pages return `not_applicable` | `services/forensics/ela.py` |
 | 7 | Case workflow | Statuses in use: `submitted`, `pending_manual_review`, `approved`, `rejected`. Every scored case goes to the reviewer queue; nothing auto-approves. Escalation moves the case to the L2 reviewer tier (`assigned_tier`), not a status | `services/workflow_service.py` |
 | 8 | Low-confidence fields | The per-field `uncertain` flag is stored and displayed to the reviewer; it does not change routing, because every case reaches manual review | `services/llm_service.py` |
@@ -224,7 +227,7 @@ What each capability area does today, and what is intentionally outside the curr
   signature during upload**, so the case owner may use them, as may any reviewer; a stranger gets a 404.
   Covered by `tests/test_case_authorization.py`. A submitter can still read their own case's signature
   comparison results (`GET …/signature-matches`), unlike the risk assessment, which is withheld.
-- **Uploads are validated before storage** (PDF only, ≤ 10 MB, not corrupted, not password-protected),
+- **Uploads are validated before storage** (PDF only, within the company's size limit, not corrupted, not password-protected),
   so a malformed file never reaches Blob Storage, a worker or an Azure API.
 - Tokens are stored in `localStorage` and there is no server-side logout, refresh or password-reset
   endpoint. `JWT_SECRET_KEY` defaults to `changeme-in-.env` — production must set it (see

@@ -27,6 +27,7 @@ import { CheckCircle2Icon, FlameIcon, Loader2Icon, XCircleIcon } from "lucide-re
 import { approveCase, escalateCase, rejectCase } from "@/api/cases"
 import { ApiError } from "@/api/client"
 import { Button } from "@/components/ui/button"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import { cn } from "@/lib/utils"
 import { hasRank, type UserRole } from "@/types/auth"
 import type { CaseAction, CaseDetail } from "@/types/case"
@@ -109,6 +110,13 @@ function ActionDialog({
   const [text, setText] = React.useState("")
   const trimmed = text.trim()
   const valid = required ? trimmed.length >= minLength : true
+  const [attempted, setAttempted] = React.useState(false)
+  const fieldError =
+    attempted && !valid
+      ? trimmed.length === 0
+        ? `${fieldLabel} is required.`
+        : `${fieldLabel} must be at least ${minLength} characters (currently ${trimmed.length}).`
+      : null
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -150,8 +158,14 @@ function ActionDialog({
             disabled={isPending}
             onChange={(e) => setText(e.target.value)}
             placeholder={fieldPlaceholder}
-            className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
+            aria-invalid={Boolean(fieldError)}
+            aria-describedby="decision-note-error"
+            className={cn(
+              "w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary",
+              fieldError && invalidFieldClass,
+            )}
           />
+          <FieldError id="decision-note-error" message={fieldError} className="mt-0" />
           {fieldHint && (
             <p className="text-[11px] text-muted-foreground">
               {fieldHint}
@@ -173,8 +187,11 @@ function ActionDialog({
             </Button>
             <Button
               type="button"
-              disabled={!valid || isPending}
-              onClick={() => onConfirm(trimmed)}
+              disabled={isPending}
+              onClick={() => {
+                setAttempted(true)
+                if (valid) onConfirm(trimmed)
+              }}
               className={confirmClassName}
             >
               {isPending && <Loader2Icon className="size-4 animate-spin" />}

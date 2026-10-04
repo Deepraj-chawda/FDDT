@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2Icon, PlusIcon } from "lucide-react"
 
 import { ApiError } from "@/api/client"
-import { createCompany, listCompanies, updateCompany, type Company } from "@/api/platform"
+import { createCompany, listCompanies, updateCompany, type Company, type CompanyUpdatePayload } from "@/api/platform"
 import { PlatformShell } from "@/components/platform/PlatformShell"
 import { Modal } from "@/components/settings/Modal"
 import { StatusLine } from "@/components/settings/SettingsShell"
 import { useAuth } from "@/hooks/useAuth"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 
 function errorText(err: unknown): string {
   return err instanceof ApiError ? err.message : "Something went wrong. Please try again."
@@ -18,9 +19,12 @@ export function PlatformCompaniesPage() {
   const queryClient = useQueryClient()
   const [adding, setAdding] = React.useState(false)
   const [name, setName] = React.useState("")
+  const [createAttempted, setCreateAttempted] = React.useState(false)
+  const createNameError = createAttempted && name.trim().length < 2 ? "Enter the company's name (at least 2 characters)." : null
   const [notice, setNotice] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [confirmSuspend, setConfirmSuspend] = React.useState<Company | null>(null)
+  const [editing, setEditing] = React.useState<Company | null>(null)
 
   const { data: companies = [], isLoading, isError } = useQuery({
     queryKey: ["companies", token],
@@ -54,6 +58,21 @@ export function PlatformCompaniesPage() {
     },
   })
 
+  const save = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: CompanyUpdatePayload }) =>
+      updateCompany(id, payload, token as string),
+    onSuccess: (c) => {
+      setEditing(null)
+      setError(null)
+      setNotice(
+        `Saved ${c.name}: max file size ${c.max_file_size_mb} MB, max zip size ${c.max_zip_size_mb} MB. ` +
+          "New limits apply to the company's next upload.",
+      )
+      void queryClient.invalidateQueries({ queryKey: ["companies"] })
+    },
+    onError: (err) => setError(errorText(err)),
+  })
+
   return (
     <PlatformShell
       active="companies"
@@ -62,7 +81,7 @@ export function PlatformCompaniesPage() {
       actions={
         <button
           type="button"
-          onClick={() => { setNotice(null); setError(null); setAdding(true) }}
+          onClick={() => { setNotice(null); setError(null); setCreateAttempted(false); setAdding(true) }}
           className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm"
         >
           <PlusIcon className="w-3.5 h-3.5" /> New company
@@ -77,6 +96,7 @@ export function PlatformCompaniesPage() {
               <tr className="border-b border-slate-200/70 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <th className="px-5 py-3.5">Company</th>
                 <th className="px-4 py-3.5">Users</th>
+                <th className="px-4 py-3.5">Upload limits</th>
                 <th className="px-4 py-3.5">Status</th>
                 <th className="px-4 py-3.5">Created</th>
                 <th className="px-5 py-3.5 text-right">Actions</th>
@@ -84,16 +104,19 @@ export function PlatformCompaniesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr><td colSpan={5} className="py-12 text-center text-sm text-slate-400">Loading companies…</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">Loading companies…</td></tr>
               ) : isError ? (
-                <tr><td colSpan={5} className="py-12 text-center text-sm text-rose-600">Couldn't load companies.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-sm text-rose-600">Couldn't load companies.</td></tr>
               ) : companies.length === 0 ? (
-                <tr><td colSpan={5} className="py-12 text-center text-sm text-slate-400">No companies yet.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">No companies yet.</td></tr>
               ) : (
                 companies.map((c) => (
                   <tr key={c.id} className={c.is_active ? "" : "bg-slate-50/60"}>
                     <td className="px-5 py-4 font-bold text-slate-900">{c.name}</td>
                     <td className="px-4 py-4 text-slate-600">{c.user_count}</td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {c.max_file_size_mb} MB / file · {c.max_zip_size_mb} MB / zip
+                    </td>
                     <td className="px-4 py-4">
                       {c.is_active ? (
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600"><span className="size-1.5 rounded-full bg-emerald-500" /> Active</span>
@@ -104,7 +127,14 @@ export function PlatformCompaniesPage() {
                     <td className="px-4 py-4 text-slate-500">
                       {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => { setNotice(null); setError(null); setEditing(c) }}
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-50"
+                      >
+                        Edit
+                      </button>
                       {c.is_active ? (
                         <button type="button" onClick={() => setConfirmSuspend(c)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50">
                           Suspend
@@ -127,9 +157,11 @@ export function PlatformCompaniesPage() {
         <Modal title="New company" description="Creates an isolated tenant seeded with the default risk rules." onClose={() => setAdding(false)} busy={create.isPending}>
           <form
             className="flex flex-col gap-4"
+            noValidate
             onSubmit={(e) => {
               e.preventDefault()
-              if (name.trim().length < 2) return setError("Enter the company's name.")
+              setCreateAttempted(true)
+              if (name.trim().length < 2) return
               create.mutate()
             }}
           >
@@ -140,8 +172,11 @@ export function PlatformCompaniesPage() {
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                aria-invalid={Boolean(createNameError)}
+                aria-describedby="company-name-error"
+                className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 ${createNameError ? invalidFieldClass : ""}`}
               />
+              <FieldError id="company-name-error" message={createNameError} />
             </div>
             <StatusLine error={error} />
             <div className="flex justify-end gap-2">
@@ -152,6 +187,16 @@ export function PlatformCompaniesPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {editing && (
+        <EditCompanyModal
+          company={editing}
+          busy={save.isPending}
+          error={error}
+          onCancel={() => { setEditing(null); setError(null) }}
+          onSave={(payload) => save.mutate({ id: editing.id, payload })}
+        />
       )}
 
       {confirmSuspend && (
@@ -170,5 +215,94 @@ export function PlatformCompaniesPage() {
         </Modal>
       )}
     </PlatformShell>
+  )
+}
+
+function EditCompanyModal({
+  company,
+  busy,
+  error,
+  onCancel,
+  onSave,
+}: {
+  company: Company
+  busy: boolean
+  error: string | null
+  onCancel: () => void
+  onSave: (payload: CompanyUpdatePayload) => void
+}) {
+  const [name, setName] = React.useState(company.name)
+  const [fileMb, setFileMb] = React.useState(String(company.max_file_size_mb))
+  const [zipMb, setZipMb] = React.useState(String(company.max_zip_size_mb))
+  const inputClass =
+    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+
+  const [attempted, setAttempted] = React.useState(false)
+  const file = Number(fileMb)
+  const zip = Number(zipMb)
+  const fieldErrors = {
+    name: name.trim().length < 2 ? "Enter the company's name (at least 2 characters)." : null,
+    file: fileMb.trim() === "" || !Number.isInteger(file) || file < 1 ? "Enter a whole number of MB, at least 1." : null,
+    zip: zipMb.trim() === "" || !Number.isInteger(zip) || zip < 1 ? "Enter a whole number of MB, at least 1." : null,
+  }
+  const shown = (field: keyof typeof fieldErrors) => (attempted ? fieldErrors[field] : null)
+  const cls = (field: keyof typeof fieldErrors) => (shown(field) ? `${inputClass} ${invalidFieldClass}` : inputClass)
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setAttempted(true)
+    if (fieldErrors.name || fieldErrors.file || fieldErrors.zip) return
+    // Send only what changed (each change is audited old -> new).
+    const payload: CompanyUpdatePayload = {}
+    if (name.trim() !== company.name) payload.name = name.trim()
+    if (file !== company.max_file_size_mb) payload.max_file_size_mb = file
+    if (zip !== company.max_zip_size_mb) payload.max_zip_size_mb = zip
+    if (Object.keys(payload).length === 0) return onCancel()
+    onSave(payload)
+  }
+
+  return (
+    <Modal
+      title={`Edit ${company.name}`}
+      description="Upload limits are a per-company capacity setting. A change applies to the company's next upload; its users don't need to sign in again."
+      onClose={onCancel}
+      busy={busy}
+    >
+      <form className="flex flex-col gap-4" onSubmit={submit} noValidate>
+        <div>
+          <label htmlFor="edit-company-name" className="mb-1 block text-xs font-semibold text-slate-700">Company name</label>
+          <input id="edit-company-name" value={name} onChange={(e) => setName(e.target.value)} className={cls("name")}
+            aria-invalid={Boolean(shown("name"))} aria-describedby="edit-company-name-error" />
+          <FieldError id="edit-company-name-error" message={shown("name")} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="edit-max-file" className="mb-1 block text-xs font-semibold text-slate-700">Max file size (MB)</label>
+            <input id="edit-max-file" type="number" min={1} step={1} inputMode="numeric" value={fileMb}
+              onChange={(e) => setFileMb(e.target.value)} className={cls("file")}
+              aria-invalid={Boolean(shown("file"))} aria-describedby="edit-max-file-error" />
+            <FieldError id="edit-max-file-error" message={shown("file")} />
+          </div>
+          <div>
+            <label htmlFor="edit-max-zip" className="mb-1 block text-xs font-semibold text-slate-700">Max zip size (MB)</label>
+            <input id="edit-max-zip" type="number" min={1} step={1} inputMode="numeric" value={zipMb}
+              onChange={(e) => setZipMb(e.target.value)} className={cls("zip")}
+              aria-invalid={Boolean(shown("zip"))} aria-describedby="edit-max-zip-error" />
+            <FieldError id="edit-max-zip-error" message={shown("zip")} />
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-500">
+          Max file size applies to every PDF, uploaded on its own or inside a bulk zip. Max zip size applies to bulk
+          uploads. Limits above the web proxy's request-body cap also need that cap raised (see the deployment docs).
+        </p>
+        <StatusLine error={error} />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+          <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
+            {busy && <Loader2Icon className="size-3.5 animate-spin" />} Save
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

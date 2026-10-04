@@ -22,38 +22,27 @@ shows `processing_status`/each check's status until they settle. Still
 out of scope here: cross-document checks and risk scoring — those are
 separate, later pipeline stages.
 """
-import hashlib
 import uuid
-from pathlib import PurePosixPath
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.api.auth import require_company_role
 from app.api.case_access import load_visible_case
 from app.api.tenant_access import CaseScope, get_case_scope
-from app.core.config import settings
 from app.models.document import Document
 from app.models.user import User, UserRole
 from app.schemas.document import DocumentFileUrlResponse, DocumentResponse
-from app.services.audit_service import record_event
+from app.services.document_intake import enqueue_document_pipeline, record_document, store_original
 from app.services.storage_service import (
     StorageOperationError,
     StorageService,
-    document_blob_path,
     ensure_company_blob,
     get_storage_service,
 )
+from app.services.upload_limits import company_upload_limits
 from app.services.upload_validation import UploadRejected, check_size, validate_upload
-from app.services.usage_service import record_document_uploaded
-from app.tasks.document_processing import process_document
-from app.tasks.duplicate_check_task import run_duplicate_check_task
-from app.tasks.metadata_forensics_task import run_metadata_forensics
-from app.tasks.signature_detection_task import run_signature_detection
-from app.tasks.tampering_checks_task import run_tampering_checks
-from app.tasks.visual_inconsistency_task import run_visual_inconsistency_review_task
 
 router = APIRouter(prefix="/cases", tags=["documents"])
 
@@ -71,7 +60,8 @@ router = APIRouter(prefix="/cases", tags=["documents"])
         "metadata forensics, ELA/copy-move, duplicate detection, visual review, signature "
         "detection). The response returns immediately with `processing_status: pending`; poll "
         "GET /cases/{case_id} for progress. Before anything is stored or queued the file is "
-        "validated: at most `MAX_UPLOAD_SIZE_BYTES` (10 MB), not empty, a PDF by its "
+        "validated: at most the company's per-file limit (`max_file_size_mb`, set by a platform admin; "
+        "10 MB by default), not empty, a PDF by its "
         "header bytes (not its name), a matching extension, and locally parseable (not corrupted, "
         "not password-protected). A rejection returns `detail: {code, message, ...}` with one of "
         "the codes `file_empty`, `file_too_large`, `unsupported_file_type`, `file_type_mismatch`, "
@@ -103,13 +93,15 @@ async def upload_document(
     db = scope.db
     company_id = scope.company_id
     load_visible_case(db, case_id, current_user)
+    # This company's limit, read fresh on every request (a platform admin's
+    # change applies to the next upload, no new sign-in needed).
+    max_bytes = company_upload_limits(db, company_id).max_file_bytes
     # End the read transaction: reading the body and uploading the blob can
     # take seconds, and no DB connection should be held meanwhile.
     db.commit()
 
     # Validate before anything is stored or queued: a bad file must never
     # reach Blob Storage, a worker, Document Intelligence or Azure OpenAI.
-    max_bytes = settings.max_upload_size_bytes
     # Read at most one byte past the limit, so an oversized file is never
     # held in memory whole; its full size comes from the parsed upload.
     content = await file.read(max_bytes + 1)
@@ -126,72 +118,30 @@ async def upload_document(
     # (the pipeline's PDF-only gates read this column).
     content_type = validated.content_type
 
-    file_hash = hashlib.sha256(content).hexdigest()
-    document_id = uuid.uuid4()
-    extension = PurePosixPath(file.filename or "").suffix  # includes leading "."
-
     # Company- and case-prefixed (storage-layer isolation, per-company
     # storage accounting); the document id + content hash make it unique.
-    blob_path = document_blob_path(company_id, case_id, document_id, file_hash, extension)
-
+    # Shared with bulk zip ingestion (app/services/document_intake.py).
     try:
-        file_url = storage.upload(blob_path, content, content_type=content_type)
+        stored = store_original(storage, company_id, case_id, file.filename, content, content_type)
     except StorageOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
         ) from exc
 
-    document = Document(
-        id=document_id,
+    document = record_document(
+        db,
         company_id=company_id,
         case_id=case_id,
         uploaded_by_user_id=current_user.id,
-        original_filename=file.filename or "unnamed",
-        blob_storage_path=file_url,
-        file_hash=file_hash,
+        filename=file.filename,
         content_type=content_type,
-        file_size_bytes=len(content),
+        stored=stored,
     )
-    db.add(document)
-    # See app/api/cases.py: flush before the audit_log insert so its FK
-    # reference to this document is satisfied without relying on an ORM
-    # relationship for flush ordering.
-    db.flush()
-
-    record_event(
-        db,
-        "document_uploaded",
-        case_id=case_id,
-        document_id=document_id,
-        actor_user_id=current_user.id,
-        event_data={
-            "original_filename": document.original_filename,
-            "file_hash": file_hash,
-            "file_size_bytes": document.file_size_bytes,
-        },
-    )
-    record_document_uploaded(db, company_id, len(content))
-
     db.commit()
     db.refresh(document)
 
-    # One independent task per (document, step), each carrying the company
-    # so the worker opens a session confined to it. Every step lands on the
-    # queue for the service it depends on (extraction / vision / forensics —
-    # app/tasks/celery_app.py), interleaved FIFO with every other company's
-    # documents; nothing processes a whole case or batch inside one task.
-    args = (str(document.id), str(company_id))
-    process_document.delay(*args)
-    # All four independent of extraction (only read the PDF's own bytes/
-    # rendered pages, not OCR text or a classified document_type) — run
-    # in parallel rather than waiting on process_document.
-    run_metadata_forensics.delay(*args)
-    run_tampering_checks.delay(*args)
-    run_duplicate_check_task.delay(*args)
-    run_visual_inconsistency_review_task.delay(*args)
-    # Detection only (presence/location) — comparison waits for a reviewer
-    # to create a reference (app/tasks/signature_comparison_task.py).
-    run_signature_detection.delay(*args)
+    # Only after the commit, so a worker never sees an id it can't load.
+    enqueue_document_pipeline(document.id, company_id)
 
     try:
         signed_url = storage.get_download_url(document.blob_storage_path)

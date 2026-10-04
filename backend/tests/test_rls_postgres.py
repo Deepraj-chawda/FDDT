@@ -32,8 +32,21 @@ TENANT_TABLES = (
     "cases", "documents", "document_checks", "document_page_hashes", "cross_document_findings",
     "case_actions", "case_risk_assessments", "risk_scores", "risk_rules", "risk_settings",
     "issuer_registry", "signature_references", "signature_matches", "case_reports", "audit_log",
-    "users", "company_usage_stats",
+    "users", "company_usage_stats", "bulk_uploads", "bulk_upload_cases",
 )
+
+
+def test_the_list_covers_every_tenant_owned_model():
+    """A new TenantScopedMixin model must be added above, so that its RLS
+    policies are actually verified."""
+    from app.models import Base
+    from app.models.company import TenantScopedMixin
+
+    tenant_tables = {
+        mapper.class_.__tablename__ for mapper in Base.registry.mappers
+        if issubclass(mapper.class_, TenantScopedMixin)
+    }
+    assert tenant_tables <= set(TENANT_TABLES), tenant_tables - set(TENANT_TABLES)
 
 
 def _role_url(user: str, password: str):
@@ -62,7 +75,7 @@ def two_companies(engines):
     with owner.begin() as conn:
         for key in ("a", "b"):
             company_id, user_id, case_id, doc_id, issuer_id = (uuid.uuid4() for _ in range(5))
-            conn.execute(text("INSERT INTO companies (id, name, is_active) VALUES (:id, :name, true)"),
+            conn.execute(text("INSERT INTO companies (id, name, is_active, max_file_size_mb, max_zip_size_mb) VALUES (:id, :name, true, 10, 300)"),
                          {"id": company_id, "name": f"RLS test {key.upper()} {tag}"})
             conn.execute(text(
                 "INSERT INTO users (id, company_id, email, hashed_password, role, is_active, created_at, updated_at) "

@@ -10,6 +10,16 @@ export interface Company {
   is_active: boolean
   created_at: string
   user_count: number
+  /** Per-company upload limits (MB), a platform-admin capacity lever. */
+  max_file_size_mb: number
+  max_zip_size_mb: number
+}
+
+export interface CompanyUpdatePayload {
+  name?: string
+  is_active?: boolean
+  max_file_size_mb?: number
+  max_zip_size_mb?: number
 }
 
 export const listCompanies = (token: string) => apiFetch<Company[]>("/platform/companies", { token })
@@ -17,7 +27,7 @@ export const listCompanies = (token: string) => apiFetch<Company[]>("/platform/c
 export const createCompany = (name: string, token: string) =>
   apiFetch<Company>("/platform/companies", { method: "POST", token, body: JSON.stringify({ name }) })
 
-export const updateCompany = (id: string, payload: { name?: string; is_active?: boolean }, token: string) =>
+export const updateCompany = (id: string, payload: CompanyUpdatePayload, token: string) =>
   apiFetch<Company>(`/platform/companies/${id}`, { method: "PATCH", token, body: JSON.stringify(payload) })
 
 export type UsagePeriod = "this_month" | "last_month" | "last_30_days" | "this_year" | "all_time" | "custom"

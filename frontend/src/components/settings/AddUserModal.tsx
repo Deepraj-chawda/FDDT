@@ -6,6 +6,7 @@ import { ApiError } from "@/api/client"
 import { createUser } from "@/api/settings"
 import { Modal } from "@/components/settings/Modal"
 import { StatusLine } from "@/components/settings/SettingsShell"
+import { FieldError, invalidFieldClass, visibleError } from "@/components/ui/field-error"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
 import { ROLE_OPTIONS, type UserRole } from "@/types/auth"
@@ -40,6 +41,10 @@ export function AddUserModal({
   const [password, setPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  // Field messages show once a field has been left (blurred) or Add user was clicked.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const [submitted, setSubmitted] = React.useState(false)
+  const touch = (field: string) => () => setTouched((t) => ({ ...t, [field]: true }))
 
   const create = useMutation({
     mutationFn: () =>
@@ -61,7 +66,16 @@ export function AddUserModal({
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim())
   const passwordOk = password.length >= MIN_PASSWORD
   const companyOk = role === "platform_admin" || Boolean(companyId)
-  const canSubmit = emailOk && passwordOk && companyOk && !create.isPending
+  const fieldErrors = {
+    email: !email.trim() ? "Enter the user's email address." : emailOk ? null : "Enter a valid email address (e.g. name@company.com).",
+    password: !password
+      ? "Enter a password, or click Generate."
+      : passwordOk
+        ? null
+        : `The password must be at least ${MIN_PASSWORD} characters (currently ${password.length}).`,
+    company: companyOk ? null : "Choose the company this user belongs to.",
+  }
+  const shown = (field: keyof typeof fieldErrors) => visibleError(fieldErrors, field, touched, submitted)
 
   return (
     <Modal
@@ -72,11 +86,12 @@ export function AddUserModal({
     >
       <form
         className="flex flex-col gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
-          if (!emailOk) return setError("Enter a valid email address.")
-          if (!passwordOk) return setError(`The password must be at least ${MIN_PASSWORD} characters.`)
+          setSubmitted(true)
+          if (fieldErrors.email || fieldErrors.password || fieldErrors.company) return
           create.mutate()
         }}
       >
@@ -88,11 +103,15 @@ export function AddUserModal({
             id="new-user-email"
             type="email"
             autoComplete="off"
-            className={inputClass}
+            className={shown("email") ? `${inputClass} ${invalidFieldClass}` : inputClass}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={touch("email")}
+            aria-invalid={Boolean(shown("email"))}
+            aria-describedby="new-user-email-error"
             autoFocus
           />
+          <FieldError id="new-user-email-error" message={shown("email")} />
         </div>
         <div>
           <label htmlFor="new-user-name" className="mb-1 block text-xs font-semibold text-slate-700">
@@ -126,9 +145,12 @@ export function AddUserModal({
             </label>
             <select
               id="new-user-company"
-              className={inputClass}
+              className={shown("company") ? `${inputClass} ${invalidFieldClass}` : inputClass}
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
+              onBlur={touch("company")}
+              aria-invalid={Boolean(shown("company"))}
+              aria-describedby="new-user-company-error"
             >
               {companies.length === 0 && <option value="">Create a company first (Platform › Companies)</option>}
               {companies.map((c) => (
@@ -138,6 +160,7 @@ export function AddUserModal({
                 </option>
               ))}
             </select>
+            <FieldError id="new-user-company-error" message={shown("company")} />
             <p className="mt-1 text-[11px] text-slate-400">They will only ever see this company's data.</p>
           </div>
         )}
@@ -166,10 +189,14 @@ export function AddUserModal({
             id="new-user-password"
             type={showPassword ? "text" : "password"}
             autoComplete="new-password"
-            className={inputClass}
+            className={shown("password") ? `${inputClass} ${invalidFieldClass}` : inputClass}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onBlur={touch("password")}
+            aria-invalid={Boolean(shown("password"))}
+            aria-describedby="new-user-password-error"
           />
+          <FieldError id="new-user-password-error" message={shown("password")} />
           <p className="mt-1 text-[11px] text-slate-400">
             At least {MIN_PASSWORD} characters. Share it with them securely — it is stored hashed and can't be shown again.
           </p>
@@ -181,7 +208,7 @@ export function AddUserModal({
           </button>
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={create.isPending}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
           >
             {create.isPending && <Loader2Icon className="size-3.5 animate-spin" />}

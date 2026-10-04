@@ -80,7 +80,7 @@ administrator email and password come from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASS
   container's `docauth` user is a superuser, which is fine for a demo.
 - **Seeded account:** `admin@example.com` is now a **platform admin** — create a company and its users under
   *Platform* before submitting cases.
-- **Uploads:** PDF only, 10 MB; the new nginx template caps request bodies at 11 MB.
+- **Uploads:** PDF only, per-company limits (10 MB / 300 MB zip by default); the nginx template caps request bodies at `UPLOAD_BODY_LIMIT` (11m) and bulk zips at `BULK_UPLOAD_BODY_LIMIT` (301m), both set by env vars.
 
 ## Tear-down
 

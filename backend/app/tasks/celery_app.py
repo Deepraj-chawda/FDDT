@@ -59,6 +59,9 @@ TASK_QUEUES: dict[str, str] = {
     "run_duplicate_check": FORENSICS_QUEUE,
     "run_cross_document_checks": FORENSICS_QUEUE,
     "score_case": FORENSICS_QUEUE,
+    # Bulk zip ingestion: unzip + PDF parsing, local CPU only. Each document
+    # it creates is then queued like any single upload.
+    "ingest_bulk_upload": FORENSICS_QUEUE,
     "reconcile_usage_stats": FORENSICS_QUEUE,
     "log_queue_metrics": FORENSICS_QUEUE,
 }
@@ -80,6 +83,7 @@ celery_app = Celery(
         "app.tasks.signature_comparison_task",
         "app.tasks.risk_scoring_task",
         "app.tasks.usage_tasks",
+        "app.tasks.bulk_upload_task",
     ],
 )
 

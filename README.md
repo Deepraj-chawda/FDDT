@@ -33,6 +33,11 @@ processing status, overlays, risk reasons, audit timeline), new-case/upload,
 company settings and platform-admin screens. Multi-tenant: several client
 companies share one deployment, each seeing only its own data.
 
+## User Manuals
+
+- 🏢 **[Company User Manual](docs/COMPANY_USER_MANUAL.md)** — Step-by-step operational guide for client organizations covering all 3 company roles (**User/Submitter**, **Reviewer L1/Analyst**, **Reviewer L2/Supervisor**), case submission, bulk uploads, review workflows, automated checks, and company settings.
+- ⚙️ **[Platform Administrator Manual](docs/PLATFORM_ADMIN_MANUAL.md)** — Comprehensive guide for platform operators covering tenant provisioning, company storage/file limits, user account management across all 4 roles, password resets, global rule templates, queue monitoring, usage tracking, and audit governance.
+
 ## Prerequisites
 
 - Docker Desktop (for Postgres, Redis and PgBouncer)

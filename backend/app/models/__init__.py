@@ -4,6 +4,7 @@ Alembic autogenerate and for `Base.metadata.create_all()` in tests.
 """
 from app.models.audit_log import AuditLog
 from app.models.base import Base
+from app.models.bulk_upload import BulkUpload, BulkUploadCase, BulkUploadStatus
 from app.models.case import Case, CaseTier, CaseStatus, CaseType, RiskTier
 from app.models.case_action import CaseAction, CaseActionType
 from app.models.case_report import CaseReport
@@ -25,6 +26,9 @@ from app.models.user import User, UserRole
 
 __all__ = [
     "Base",
+    "BulkUpload",
+    "BulkUploadCase",
+    "BulkUploadStatus",
     "Company",
     "CompanyUsageStats",
     "TenantScopedMixin",

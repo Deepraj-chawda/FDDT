@@ -10,6 +10,7 @@ from fastapi import FastAPI
 
 from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
+from app.api.bulk_uploads import router as bulk_uploads_router
 from app.api.case_actions import router as case_actions_router
 from app.api.case_reports import router as case_reports_router
 from app.api.cases import router as cases_router
@@ -33,6 +34,7 @@ app.include_router(cases_router)
 app.include_router(case_actions_router)
 app.include_router(case_reports_router)
 app.include_router(documents_router)
+app.include_router(bulk_uploads_router)
 app.include_router(signatures_router)
 app.include_router(settings_router)
 app.include_router(audit_router)

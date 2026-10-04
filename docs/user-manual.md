@@ -46,10 +46,10 @@ server-side logout. If your company is suspended, sign-in stops working for ever
 2. Choose the case type: *School / educational document*, *Vendor invoice*, *Commercial invoice*,
    *Procurement documentation*, *Quotation*, *Travel / accommodation reimbursement*, or *Other*.
 3. Attach the supporting document(s) — the original invoice, receipt, quotation, evidence of payment,
-   etc. **Only PDF files are accepted, up to 10 MB each.** If you have a photo or scan as an image, save
+   etc. **Only PDF files are accepted, each within your company's size limit** (10 MB unless your company has a different limit; the upload screen shows the limit that applies to you). If you have a photo or scan as an image, save
    or scan it to PDF first. A file is refused immediately, with the reason shown next to it, if it is:
    - not a PDF (for example a JPEG, PNG or Word file, even if renamed to `.pdf`);
-   - empty, or larger than 10 MB (the message shows the file's size and the limit);
+   - empty, or larger than your company's limit (the message shows the file's size and the limit);
    - **password-protected** — remove the password and upload it again (the system never asks for
      document passwords);
    - corrupted or cut off (for example a partly downloaded file).
@@ -67,6 +67,24 @@ existing case.
 ![The New Case form](images/user-manual/11-new-case-empty.jpg)
 ![A case type chosen and a document attached, ready to submit](images/user-manual/12-new-case-file-attached.jpg)
 ![Confirmation after submission, with the optional reference-signature step](images/user-manual/13-case-submitted.jpg)
+
+## Submitting many cases at once (bulk upload)
+
+From **New case**, choose **Bulk upload (zip of cases)**.
+
+1. Make one zip file with **one folder per case**, each holding that case's PDFs directly (no
+   subfolders). The folder name becomes the case's reference label; it doesn't have to be unique.
+2. Pick the case type. It applies to every case in the zip.
+3. Drop the zip (within your company's zip and file limits, shown on the screen; 300 MB and 10 MB per PDF
+   by default) and select **Upload and create cases**.
+
+You land on the bulk upload summary. Every case folder is listed straight away, and problems found
+without opening the files (a subfolder inside a case folder, an empty folder, an empty or oversized
+file) are shown immediately. The cases are then created one by one, and each shows its own progress:
+**Queued → Processing → Done**. You don't have to wait for the whole zip; open any finished case
+while the rest are still running. A bad file (corrupted, password-protected, not a PDF) is rejected on its
+own with the reason and the rest of its case goes ahead. A case is only *Not created* if none of its files
+could be accepted.
 
 ## Tracking your cases (User)
 
@@ -260,7 +278,7 @@ retroactively, and never affect another company.
 
 The **Platform** area is visible only to platform admins:
 
-- **Companies** — create a company (it receives the default rule set and thresholds; its issuer registry
+- **Companies** — set each company's **upload limits** with **Edit** (max file size and max zip size in MB, 10 MB / 300 MB by default; takes effect on the company's next upload, and every change is recorded in the platform audit log with the old and new values); create a company (it receives the default rule set and thresholds; its issuer registry
   starts empty), rename it, or suspend / reactivate it. Suspending blocks sign-in for all its users.
 - **Users** — create and manage every account; there's no self-service sign-up and companies cannot manage
   their own users. Each account gets a company and a role (User, Reviewer L1, Reviewer L2), or is a
@@ -303,7 +321,7 @@ Being direct about this is part of using the tool responsibly:
   a proven detector, and its real-world accuracy on scanned business documents hasn't been validated.
 - **ELA is a signal, not a verdict** — weak against print-and-rescan tampering, and can flag a
   legitimately recompressed scan.
-- **Only PDFs (up to 10 MB, not password-protected) can be uploaded**, because every forensic check works
+- **Only PDFs (within the company's size limit, not password-protected) can be uploaded**, because every forensic check works
   on the PDF itself. There is no page-count limit and no virus scan.
 - **A failed check contributes nothing to the score, silently.** If a check errors out, the case still
   scores — the failure is visible in the audit log and the check's own card, but no rule fires because

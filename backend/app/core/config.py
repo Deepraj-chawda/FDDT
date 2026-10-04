@@ -82,11 +82,24 @@ class Settings(BaseSettings):
         default=0, alias="PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS"
     )
 
-    # Largest accepted document upload, in bytes (app/api/documents.py,
-    # app/services/upload_validation.py). The frontend enforces the same
-    # 10 MB figure client-side (frontend/src/lib/uploadLimits.ts) — keep the
-    # two in step if this changes.
-    max_upload_size_bytes: int = Field(default=10 * 1024 * 1024, alias="MAX_UPLOAD_SIZE_BYTES")
+    # Upload limits are PER COMPANY (companies.max_file_size_mb /
+    # max_zip_size_mb, set by a platform admin; app/services/upload_limits.py
+    # is the one place they are read). These two values are only the defaults
+    # a NEW company is created with. Changing them never changes an existing
+    # company.
+    default_max_file_size_mb: int = Field(default=10, ge=1, alias="DEFAULT_MAX_FILE_SIZE_MB")
+    default_max_zip_size_mb: int = Field(default=300, ge=1, alias="DEFAULT_MAX_ZIP_SIZE_MB")
+
+    # Bulk upload (app/api/bulk_uploads.py, app/services/bulk_upload_service.py):
+    # one zip, one top-level folder per case. Every document inside still gets
+    # the single-file checks and the company's per-file limit.
+    # Safety cap on zip ENTRIES (not cases): stops a zip of millions of tiny
+    # entries from tying up the ingestion worker. Far above any real upload.
+    bulk_upload_max_entries: int = Field(default=25_000, alias="BULK_UPLOAD_MAX_ENTRIES")
+    # Soft warning only — a zip with more cases is still accepted.
+    bulk_upload_case_warning_threshold: int = Field(
+        default=100, alias="BULK_UPLOAD_CASE_WARNING_THRESHOLD"
+    )
 
     # --- Processing queues (app/tasks/celery_app.py) ---
     # Global (cross-worker, Redis-backed) call-rate ceilings, applied at each

@@ -29,6 +29,7 @@ from app.models.company import Company
 from app.models.user import User, UserRole
 from app.services.forensics.pdf_render import RenderedPage, render_pdf_pages
 from app.services.storage_service import StorageService, get_storage_service
+from app.tasks.bulk_upload_task import ingest_bulk_upload
 from app.tasks.document_checks import run_cross_document_checks, run_document_checks
 from app.tasks.document_processing import process_document
 from app.tasks.duplicate_check_task import run_duplicate_check_task
@@ -51,6 +52,8 @@ class FakeStorageService(StorageService):
         self.uploads: dict[str, bytes] = {}
 
     def upload(self, blob_path, content, content_type=None):
+        if hasattr(content, "read"):  # a file object (bulk-upload zips)
+            content = content.read()
         self.uploads[blob_path] = content
         return f"https://fake.blob.core.windows.net/documents/{blob_path}"
 
@@ -144,6 +147,22 @@ def make_company(db_session, name: str) -> Company:
         tenancy.restore(db_session, state)
 
 
+def set_upload_limits(db_session, company_id, *, file_mb: int | None = None, zip_mb: int | None = None) -> None:
+    """Set a company's per-company upload limits directly (what a platform
+    admin does through PATCH /platform/companies/{id})."""
+    state = tenancy.snapshot(db_session)
+    tenancy.bind_platform(db_session)
+    try:
+        company = db_session.get(Company, company_id)
+        if file_mb is not None:
+            company.max_file_size_mb = file_mb
+        if zip_mb is not None:
+            company.max_zip_size_mb = zip_mb
+        db_session.commit()
+    finally:
+        tenancy.restore(db_session, state)
+
+
 @pytest.fixture()
 def fake_storage():
     return FakeStorageService()
@@ -175,6 +194,7 @@ def _no_celery(monkeypatch):
     monkeypatch.setattr(run_signature_detection, "delay", lambda *args, **kwargs: None)
     monkeypatch.setattr(run_visual_inconsistency_review_task, "delay", lambda *args, **kwargs: None)
     monkeypatch.setattr(score_case_task, "delay", lambda *args, **kwargs: None)
+    monkeypatch.setattr(ingest_bulk_upload, "delay", lambda *args, **kwargs: None)
 
 
 @pytest.fixture()

@@ -28,6 +28,7 @@ import {
 import { FileDropzone, type FileWithProgress } from "@/components/upload/FileDropzone"
 import { SignatureReferenceCreator } from "@/components/upload/SignatureReferenceCreator"
 import { useAuth } from "@/hooks/useAuth"
+import { useUploadLimits } from "@/hooks/useUploadLimits"
 import { clientUploadProblem } from "@/lib/uploadLimits"
 import { CASE_TYPE_LABELS, CASE_TYPES, type Case } from "@/types/case"
 import type { CaseDocument, SignatureReference } from "@/types/case"
@@ -47,6 +48,8 @@ type CaseTypeFormValues = z.infer<typeof caseTypeSchema>
 export function NewCasePage() {
   const { token } = useAuth()
   const navigate = useNavigate()
+  // This company's per-file limit (set by a platform admin).
+  const maxFileBytes = useUploadLimits()?.max_file_size_bytes ?? null
 
   const [fileEntries, setFileEntries] = React.useState<FileWithProgress[]>([])
   const [filesError, setFilesError] = React.useState<string | null>(null)
@@ -77,8 +80,10 @@ export function NewCasePage() {
   const addFiles = (newFiles: File[]) => {
     // Empty or over-the-limit files are refused here, before anything is
     // sent; the server applies the same checks (plus type/corruption ones).
-    const problems = newFiles.map(clientUploadProblem).filter((p): p is string => p !== null)
-    const accepted = newFiles.filter((file) => clientUploadProblem(file) === null)
+    const problems = newFiles
+      .map((file) => clientUploadProblem(file, maxFileBytes))
+      .filter((p): p is string => p !== null)
+    const accepted = newFiles.filter((file) => clientUploadProblem(file, maxFileBytes) === null)
     setFilesError(problems.length > 0 ? problems.join(" ") : null)
     setFileEntries((prev) => [...prev, ...accepted.map((file) => ({ file }))])
   }
@@ -196,6 +201,11 @@ export function NewCasePage() {
           eyebrow="Secure intake"
           title="Analyze new documents"
           description="Upload related evidence together for cross-document verification."
+          actions={
+            <Button variant="outline" onClick={() => navigate("/cases/bulk")}>
+              Bulk upload (zip of cases)
+            </Button>
+          }
         />
         <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[1fr_420px]">
           {/* Left column — upload card */}
@@ -355,6 +365,7 @@ export function NewCasePage() {
                       onFilesAdded={addFiles}
                       onFileRemoved={removeFile}
                       disabled={isSubmitting}
+                      maxFileBytes={maxFileBytes}
                     />
                     {filesError && <p className="text-sm text-destructive">{filesError}</p>}
                     {failedCount > 0 && !isSubmitting && (

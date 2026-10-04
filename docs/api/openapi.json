@@ -81,6 +81,39 @@
         ]
       }
     },
+    "/auth/me/upload-limits": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get my company's upload limits",
+        "description": "The per-file and per-zip limits the caller's company is held to (set per company by a platform admin). Read fresh on every request, so upload screens always show the limit that will actually be enforced. Platform admins belong to no company: 404.",
+        "operationId": "read_upload_limits_auth_me_upload_limits_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadLimitsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "404": {
+            "description": "Platform admins have no company and therefore no upload limits."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/cases": {
       "post": {
         "tags": [
@@ -324,7 +357,7 @@
           "cases"
         ],
         "summary": "Get a case's activity timeline",
-        "description": "Chronological feed for the case detail page's activity timeline —\nCLAUDE.md section 3.5. Reads the same append-only `audit_log` rows\nevery check task and case/document endpoint already writes; this\nadds no new events, just a way to read the ones that exist.",
+        "description": "Chronological feed for the case detail page's activity timeline —\nSystem Specification section 3.5. Reads the same append-only `audit_log` rows\nevery check task and case/document endpoint already writes; this\nadds no new events, just a way to read the ones that exist.",
         "operationId": "get_case_audit_log_cases__case_id__audit_log_get",
         "security": [
           {
@@ -713,7 +746,7 @@
           "documents"
         ],
         "summary": "Upload a document to a case",
-        "description": "One file per request (multipart field `file`). The original bytes are stored immutably in Blob Storage at `companies/{company_id}/cases/{case_id}/documents/{document_id}_{sha256}{ext}`, a `documents` row is written with the file's SHA-256, then the Celery pipeline is enqueued (extraction, metadata forensics, ELA/copy-move, duplicate detection, visual review, signature detection). The response returns immediately with `processing_status: pending`; poll GET /cases/{case_id} for progress. Before anything is stored or queued the file is validated: at most `MAX_UPLOAD_SIZE_BYTES` (10 MB), not empty, a PDF by its header bytes (not its name), a matching extension, and locally parseable (not corrupted, not password-protected). A rejection returns `detail: {code, message, ...}` with one of the codes `file_empty`, `file_too_large`, `unsupported_file_type`, `file_type_mismatch`, `file_corrupted`, `file_password_protected`. Each pipeline step is its own task on a shared, FIFO queue (see app/tasks/celery_app.py). A `user` may upload only to a case they submitted; reviewers to any case of their company; platform admins never (403).",
+        "description": "One file per request (multipart field `file`). The original bytes are stored immutably in Blob Storage at `companies/{company_id}/cases/{case_id}/documents/{document_id}_{sha256}{ext}`, a `documents` row is written with the file's SHA-256, then the Celery pipeline is enqueued (extraction, metadata forensics, ELA/copy-move, duplicate detection, visual review, signature detection). The response returns immediately with `processing_status: pending`; poll GET /cases/{case_id} for progress. Before anything is stored or queued the file is validated: at most the company's per-file limit (`max_file_size_mb`, set by a platform admin; 10 MB by default), not empty, a PDF by its header bytes (not its name), a matching extension, and locally parseable (not corrupted, not password-protected). A rejection returns `detail: {code, message, ...}` with one of the codes `file_empty`, `file_too_large`, `unsupported_file_type`, `file_type_mismatch`, `file_corrupted`, `file_password_protected`. Each pipeline step is its own task on a shared, FIFO queue (see app/tasks/celery_app.py). A `user` may upload only to a case they submitted; reviewers to any case of their company; platform admins never (403).",
         "operationId": "upload_document_cases__case_id__documents_post",
         "security": [
           {
@@ -848,13 +881,226 @@
         }
       }
     },
+    "/bulk-uploads": {
+      "post": {
+        "tags": [
+          "bulk uploads"
+        ],
+        "summary": "Bulk upload: a zip of cases",
+        "description": "Request body: the zip file itself (`Content-Type: application/zip`), not multipart. Query: `case_type` (applied to every case) and `filename` (the zip's name, for display). The zip holds one top-level folder per case, each containing that case's documents directly. The response (202) returns once the zip is stored: it lists every case folder found, with structural failures already marked (subfolder in a case folder, empty folder, empty or file over the company's per-file limit). Documents are then extracted, validated with the same checks as a single upload, and each valid case is created and queued, one case at a time. Poll GET /bulk-uploads/{id}. Partial success: a bad file is rejected on its own and a case with no valid file fails on its own. Zip rejections return `detail: {code, message, ...}` with `zip_empty`, `zip_too_large` (over the company's zip limit, `max_zip_size_mb`, 300 MB by default, decided from Content-Length before the body is read), `not_a_zip`, `zip_corrupted`, `zip_too_many_entries` or `zip_no_case_folders`.",
+        "operationId": "create_bulk_upload_bulk_uploads_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CaseType",
+              "description": "Case type for every case in the zip."
+            },
+            "description": "Case type for every case in the zip."
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The zip's file name.",
+              "title": "Filename"
+            },
+            "description": "The zip's file name."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkUploadDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`zip_empty`."
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Platform admins have read-only access."
+          },
+          "413": {
+            "description": "`zip_too_large` (`size_bytes`, `max_size_bytes`)."
+          },
+          "415": {
+            "description": "`not_a_zip`."
+          },
+          "422": {
+            "description": "`zip_corrupted`, `zip_too_many_entries`, `zip_no_case_folders`."
+          },
+          "502": {
+            "description": "Blob Storage rejected the upload."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bulk uploads"
+        ],
+        "summary": "List bulk uploads",
+        "description": "Newest first. A `user` sees only their own; reviewers see their company's. Platform admins pass `company_id` (audited).",
+        "operationId": "list_bulk_uploads_bulk_uploads_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "company_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company.",
+              "title": "Company Id"
+            },
+            "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BulkUploadSummary"
+                  },
+                  "title": "Response List Bulk Uploads Bulk Uploads Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bulk-uploads/{bulk_upload_id}": {
+      "get": {
+        "tags": [
+          "bulk uploads"
+        ],
+        "summary": "Bulk upload summary (live per-case status)",
+        "description": "Every case folder of the zip with its outcome (created / failed and why, per file) and, for created cases, live progress (queued → processing → done / flagged). Poll until `settled`. Another user's upload (for a `user`) or another company's is a 404.",
+        "operationId": "get_bulk_upload_bulk_uploads__bulk_upload_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bulk_upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Bulk Upload Id"
+            }
+          },
+          {
+            "name": "company_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company.",
+              "title": "Company Id"
+            },
+            "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkUploadDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cases/{case_id}/documents/{document_id}/signature-references": {
       "post": {
         "tags": [
           "signatures"
         ],
         "summary": "Create a signature reference",
-        "description": "Create a signature reference from a reviewer-drawn bounding box.\n\nCrops the signature region from the document's PDF, uploads it to\nBlob Storage, inserts the signature_references row, then immediately\nenqueues the in-case comparison Celery task for this reference.\n\n`person_name` is required and must be typed by the reviewer — the\nsystem does not attempt to auto-extract it (CLAUDE.md §2.3).",
+        "description": "Create a signature reference from a reviewer-drawn bounding box.\n\nCrops the signature region from the document's PDF, uploads it to\nBlob Storage, inserts the signature_references row, then immediately\nenqueues the in-case comparison Celery task for this reference.\n\n`person_name` is required and must be typed by the reviewer — the\nsystem does not attempt to auto-extract it (System Specification §2.3).",
         "operationId": "create_signature_reference_cases__case_id__documents__document_id__signature_references_post",
         "security": [
           {
@@ -991,7 +1237,7 @@
           "signatures"
         ],
         "summary": "List a case's signature comparison results",
-        "description": "All in-case signature match results for this case, enriched with the\nreference person_name. Filtered to comparison_scope='in_case' only —\nlibrary-scope matches are not generated yet (CLAUDE.md §2.3).",
+        "description": "All in-case signature match results for this case, enriched with the\nreference person_name. Filtered to comparison_scope='in_case' only —\nlibrary-scope matches are not generated yet (System Specification §2.3).",
         "operationId": "list_signature_matches_cases__case_id__signature_matches_get",
         "security": [
           {
@@ -1943,6 +2189,74 @@
         }
       }
     },
+    "/settings/users/{user_id}/reset-password": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Reset user password (platform admin only)",
+        "description": "Resets the password for any user account. The new password is stored hashed. Only platform admins have access to this action. Action is logged in the audit trail.",
+        "operationId": "reset_user_password_settings_users__user_id__reset_password_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPasswordReset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAdminResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Requires the platform admin role."
+          },
+          "404": {
+            "description": "No such user."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit-log": {
       "get": {
         "tags": [
@@ -2244,8 +2558,8 @@
         "tags": [
           "platform"
         ],
-        "summary": "Rename or suspend/reactivate a company",
-        "description": "`is_active=false` suspends the company: its users can no longer sign in, and existing tokens stop working on the next request. Data is kept.",
+        "summary": "Rename, suspend/reactivate, or change a company's upload limits",
+        "description": "`is_active=false` suspends the company: its users can no longer sign in, and existing tokens stop working on the next request. Data is kept. `max_file_size_mb` / `max_zip_size_mb` change the company's upload limits (any positive whole number of MB; no upper ceiling), effective on its next upload with no new sign-in. Every change is written to the platform audit log as `company_updated` with old → new values.",
         "operationId": "update_company_platform_companies__company_id__patch",
         "security": [
           {
@@ -2883,7 +3197,7 @@
           "created_at"
         ],
         "title": "AuditLogEntrySchema",
-        "description": "One `audit_log` row scoped to a case — CLAUDE.md section 3.5's\n\"review history/timeline ... built from the same audit log.\" Every\nevent_type here is a real one already written by app/services/\naudit_service.py's call sites (case creation, uploads, and each\nCelery check task) — nothing here is synthesized for display."
+        "description": "One `audit_log` row scoped to a case — System Specification section 3.5's\n\"review history/timeline ... built from the same audit log.\" Every\nevent_type here is a real one already written by app/services/\naudit_service.py's call sites (case creation, uploads, and each\nCelery check task) — nothing here is synthesized for display."
       },
       "AuditPage": {
         "properties": {
@@ -2962,6 +3276,556 @@
         ],
         "title": "BoundingBoxSchema",
         "description": "Normalized bounding box — page-fraction (0-1) coordinates, same\nconvention as every other bounding box in this codebase (ELA, copy-move,\nvisual inconsistency). `page` is 1-based."
+      },
+      "BulkUploadCaseSchema": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "created",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "case_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Number"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/BulkUploadFileSchema"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "live_status": {
+            "type": "string",
+            "enum": [
+              "validating",
+              "failed",
+              "queued",
+              "processing",
+              "done",
+              "flagged"
+            ],
+            "title": "Live Status"
+          },
+          "case_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "documents_total": {
+            "type": "integer",
+            "title": "Documents Total",
+            "default": 0
+          },
+          "documents_finished": {
+            "type": "integer",
+            "title": "Documents Finished",
+            "default": 0
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaseFlagSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "folder",
+          "status",
+          "files",
+          "live_status"
+        ],
+        "title": "BulkUploadCaseSchema"
+      },
+      "BulkUploadDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "original_filename": {
+            "type": "string",
+            "title": "Original Filename"
+          },
+          "case_type": {
+            "$ref": "#/components/schemas/CaseType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BulkUploadStatus"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "zip_size_bytes": {
+            "type": "integer",
+            "title": "Zip Size Bytes"
+          },
+          "case_folder_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Folder Count"
+          },
+          "cases_created": {
+            "type": "integer",
+            "title": "Cases Created"
+          },
+          "cases_failed": {
+            "type": "integer",
+            "title": "Cases Failed"
+          },
+          "documents_accepted": {
+            "type": "integer",
+            "title": "Documents Accepted"
+          },
+          "documents_rejected": {
+            "type": "integer",
+            "title": "Documents Rejected"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "wrapper_folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrapper Folder"
+          },
+          "ignored_entries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ignored Entries",
+            "default": []
+          },
+          "ignored_entry_count": {
+            "type": "integer",
+            "title": "Ignored Entry Count",
+            "default": 0
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "progress": {
+            "$ref": "#/components/schemas/BulkUploadProgress"
+          },
+          "settled": {
+            "type": "boolean",
+            "title": "Settled"
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/BulkUploadCaseSchema"
+            },
+            "type": "array",
+            "title": "Cases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "original_filename",
+          "case_type",
+          "status",
+          "error_code",
+          "error_message",
+          "zip_size_bytes",
+          "case_folder_count",
+          "cases_created",
+          "cases_failed",
+          "documents_accepted",
+          "documents_rejected",
+          "uploaded_by",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "progress",
+          "settled",
+          "cases"
+        ],
+        "title": "BulkUploadDetail"
+      },
+      "BulkUploadFileSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "BulkUploadFileSchema"
+      },
+      "BulkUploadProgress": {
+        "properties": {
+          "validating": {
+            "type": "integer",
+            "title": "Validating",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued",
+            "default": 0
+          },
+          "processing": {
+            "type": "integer",
+            "title": "Processing",
+            "default": 0
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done",
+            "default": 0
+          },
+          "flagged": {
+            "type": "integer",
+            "title": "Flagged",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "BulkUploadProgress"
+      },
+      "BulkUploadStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "ingesting",
+          "complete",
+          "failed"
+        ],
+        "title": "BulkUploadStatus"
+      },
+      "BulkUploadSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "original_filename": {
+            "type": "string",
+            "title": "Original Filename"
+          },
+          "case_type": {
+            "$ref": "#/components/schemas/CaseType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BulkUploadStatus"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "zip_size_bytes": {
+            "type": "integer",
+            "title": "Zip Size Bytes"
+          },
+          "case_folder_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Folder Count"
+          },
+          "cases_created": {
+            "type": "integer",
+            "title": "Cases Created"
+          },
+          "cases_failed": {
+            "type": "integer",
+            "title": "Cases Failed"
+          },
+          "documents_accepted": {
+            "type": "integer",
+            "title": "Documents Accepted"
+          },
+          "documents_rejected": {
+            "type": "integer",
+            "title": "Documents Rejected"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "original_filename",
+          "case_type",
+          "status",
+          "error_code",
+          "error_message",
+          "zip_size_bytes",
+          "case_folder_count",
+          "cases_created",
+          "cases_failed",
+          "documents_accepted",
+          "documents_rejected",
+          "uploaded_by",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "BulkUploadSummary"
       },
       "CaseActionSchema": {
         "properties": {
@@ -3581,7 +4445,7 @@
           "other"
         ],
         "title": "CaseType",
-        "description": "Case-level category, selected at submission time (CLAUDE.md section\n3.6's document-type coverage list). This is separate from a document's\nown `document_type`, which is filled in later by the classification\nstep — a case can hold documents of more than one type (e.g. an\ninvoice plus its approval voucher)."
+        "description": "Case-level category, selected at submission time (System Specification section\n3.6's document-type coverage list). This is separate from a document's\nown `document_type`, which is filled in later by the classification\nstep — a case can hold documents of more than one type (e.g. an\ninvoice plus its approval voucher)."
       },
       "CompanyCreate": {
         "properties": {
@@ -3590,6 +4454,32 @@
             "maxLength": 255,
             "minLength": 2,
             "title": "Name"
+          },
+          "max_file_size_mb": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Size Mb",
+            "description": "Max document size in MB (per company)."
+          },
+          "max_zip_size_mb": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Zip Size Mb",
+            "description": "Max bulk-upload zip size in MB (per company)."
           }
         },
         "type": "object",
@@ -3621,6 +4511,16 @@
           "user_count": {
             "type": "integer",
             "title": "User Count"
+          },
+          "max_file_size_mb": {
+            "type": "integer",
+            "title": "Max File Size Mb",
+            "description": "Largest document this company may upload, in MB."
+          },
+          "max_zip_size_mb": {
+            "type": "integer",
+            "title": "Max Zip Size Mb",
+            "description": "Largest bulk-upload zip this company may upload, in MB."
           }
         },
         "type": "object",
@@ -3629,7 +4529,9 @@
           "name",
           "is_active",
           "created_at",
-          "user_count"
+          "user_count",
+          "max_file_size_mb",
+          "max_zip_size_mb"
         ],
         "title": "CompanyResponse"
       },
@@ -3658,6 +4560,32 @@
               }
             ],
             "title": "Is Active"
+          },
+          "max_file_size_mb": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Size Mb",
+            "description": "Max document size in MB (per company)."
+          },
+          "max_zip_size_mb": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Zip Size Mb",
+            "description": "Max bulk-upload zip size in MB (per company)."
           }
         },
         "type": "object",
@@ -3780,7 +4708,7 @@
           "created_at"
         ],
         "title": "CrossDocumentFindingSummary",
-        "description": "One `cross_document_findings` row (CLAUDE.md section 3.1,\n\"Cross-document validation & reconciliation\") — a shared field\n(amount/date/issuer) that disagreed between two of this case's\ndocuments. Case-level, not per-document — see app/services/\ncross_document_service.py and app/tasks/document_checks.py."
+        "description": "One `cross_document_findings` row (System Specification section 3.1,\n\"Cross-document validation & reconciliation\") — a shared field\n(amount/date/issuer) that disagreed between two of this case's\ndocuments. Case-level, not per-document — see app/services/\ncross_document_service.py and app/tasks/document_checks.py."
       },
       "CurrentUserResponse": {
         "properties": {
@@ -3919,7 +4847,7 @@
           "created_at"
         ],
         "title": "DocumentCheckSummary",
-        "description": "One `document_checks` row (CLAUDE.md sections 2.2/3.1/3.2 —\nfield_validation, issuer_verification, and later the forensic checks).\n`result` holds whatever shape that check_type produces — see the\nindividual check services (e.g. app/services/field_validation_service.py)\nfor what's inside — the frontend's Checks panel renders it generically\nrather than assuming a fixed schema per check_type."
+        "description": "One `document_checks` row (System Specification sections 2.2/3.1/3.2 —\nfield_validation, issuer_verification, and later the forensic checks).\n`result` holds whatever shape that check_type produces — see the\nindividual check services (e.g. app/services/field_validation_service.py)\nfor what's inside — the frontend's Checks panel renders it generically\nrather than assuming a fixed schema per check_type."
       },
       "DocumentFileUrlResponse": {
         "properties": {
@@ -5060,7 +5988,7 @@
           "bounding_box"
         ],
         "title": "SignatureReferenceCreate",
-        "description": "Request body for POST /cases/{case_id}/documents/{document_id}/\nsignature-references.\n\n`person_name` is required and must be provided by the reviewer —\nthe system never attempts to auto-extract or pre-fill it (CLAUDE.md §2.3)."
+        "description": "Request body for POST /cases/{case_id}/documents/{document_id}/\nsignature-references.\n\n`person_name` is required and must be provided by the reviewer —\nthe system never attempts to auto-extract or pre-fill it (System Specification §2.3)."
       },
       "SignatureReferenceResponse": {
         "properties": {
@@ -5155,6 +6083,37 @@
           "access_token"
         ],
         "title": "TokenResponse"
+      },
+      "UploadLimitsResponse": {
+        "properties": {
+          "max_file_size_mb": {
+            "type": "integer",
+            "title": "Max File Size Mb",
+            "description": "Largest document, in MB (1 MB = 1,048,576 bytes)."
+          },
+          "max_zip_size_mb": {
+            "type": "integer",
+            "title": "Max Zip Size Mb",
+            "description": "Largest bulk-upload zip, in MB."
+          },
+          "max_file_size_bytes": {
+            "type": "integer",
+            "title": "Max File Size Bytes"
+          },
+          "max_zip_size_bytes": {
+            "type": "integer",
+            "title": "Max Zip Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "max_file_size_mb",
+          "max_zip_size_mb",
+          "max_file_size_bytes",
+          "max_zip_size_bytes"
+        ],
+        "title": "UploadLimitsResponse",
+        "description": "The calling company's upload limits, as enforced on its next upload."
       },
       "UsageResponse": {
         "properties": {
@@ -5424,6 +6383,22 @@
         ],
         "title": "UserCreate",
         "description": "An account created by an administrator (there is no self-service\nsign-up). The password is set here and only ever stored hashed."
+      },
+      "UserPasswordReset": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "description": "New password (8-128 chars); stored hashed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "UserPasswordReset"
       },
       "UserRole": {
         "type": "string",

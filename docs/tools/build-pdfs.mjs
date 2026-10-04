@@ -54,6 +54,7 @@ const DOC_LIST = [
   { file: "27-Multi-Tenancy", src: "docs/multi-tenancy.md", group: "Architecture" },
   { file: "28-Processing-Queues", src: "docs/processing-queues.md", group: "Architecture" },
   { file: "04-Pipeline-01-Upload-Intake", src: "docs/pipeline/01-upload-intake.md", group: "Pipeline" },
+  { file: "31-Pipeline-01a-Bulk-Upload", src: "docs/pipeline/01a-bulk-upload.md", group: "Pipeline" },
   { file: "05-Pipeline-02-Extraction-Normalization", src: "docs/pipeline/02-extraction-normalization.md", group: "Pipeline" },
   { file: "06-Pipeline-03-Field-Validation", src: "docs/pipeline/03-field-validation.md", group: "Pipeline" },
   { file: "07-Pipeline-04-Cross-Document-Consistency", src: "docs/pipeline/04-cross-document-consistency.md", group: "Pipeline" },

@@ -8,7 +8,7 @@ definitions, so it cannot drift from the code:
 | Interactive docs (Swagger UI) | `http://localhost:8000/docs` while the backend runs |
 | ReDoc | `http://localhost:8000/redoc` |
 | Machine-readable schema | `http://localhost:8000/openapi.json` |
-| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 33 paths / 41 operations / 60 schemas) |
+| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 37 paths / 46 operations / 68 schemas) |
 
 Every operation carries a `summary`, a `description` (rules, side effects, role requirements) and its
 error responses; every request field has a description. Import `openapi.json` into Postman,
@@ -88,6 +88,7 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 |---|---|---|
 | `POST /auth/login` | Log in and obtain a JWT | public |
 | `GET /auth/me` | Get the current user (with company) | any |
+| `GET /auth/me/upload-limits` | The caller's company upload limits (max file / zip size), read fresh each time | company users (404 for platform admins) |
 
 ### Cases — tag `cases`
 | Method & path | Summary | Access |
@@ -107,7 +108,10 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 ### Documents — tag `documents`
 | Method & path | Summary | Access |
 |---|---|---|
-| `POST /cases/{case_id}/documents` | Upload a document (multipart field `file`, one per request; **PDF only**, ≤ 10 MB, not password-protected; rejections return `detail: {code, message}`, see [01-upload-intake](../pipeline/01-upload-intake.md#upload-validation)) | own case, or reviewer |
+| `POST /cases/{case_id}/documents` | Upload a document (multipart field `file`, one per request; **PDF only**, within the company's own size limit (10 MB by default; set per company by a platform admin), not password-protected; rejections return `detail: {code, message}`, see [01-upload-intake](../pipeline/01-upload-intake.md#upload-validation)) | own case, or reviewer |
+| `POST /bulk-uploads` | Bulk upload: one zip (raw body, `Content-Type: application/zip`; query `case_type`, `filename`), one folder per case, within the company's zip limit. 202 with the per-case plan; ingestion runs in the background ([01a](../pipeline/01a-bulk-upload.md)) | any company role |
+| `GET /bulk-uploads` | Recent bulk uploads | own (user) / company (reviewers) / platform admin per company |
+| `GET /bulk-uploads/{id}` | Bulk upload summary with each case's live status | same as above |
 | `GET /cases/{case_id}/documents/{document_id}/file-url` | Get a fresh signed URL for the original file | own case, or reviewer; PA read |
 
 ### Signatures — tag `signatures`
@@ -156,7 +160,7 @@ admin passing `company_id` (audited). Users are platform-admin only.
 |---|---|
 | `GET /platform/companies` | List companies |
 | `POST /platform/companies` | Create a company (seeds its risk rules from the template and default thresholds) |
-| `PATCH /platform/companies/{company_id}` | Rename / suspend / reactivate a company |
+| `PATCH /platform/companies/{company_id}` | Rename / suspend / reactivate a company, or change its upload limits (`max_file_size_mb`, `max_zip_size_mb`; audited old → new) |
 | `GET /platform/usage` | Billing & usage per company (`period` or a custom date range) |
 | `POST /platform/usage/reconcile` | Recompute the usage counters now |
 | `GET /platform/queues` | Processing-queue monitor (depth, waits, workers, limiter counters, outstanding per company) |

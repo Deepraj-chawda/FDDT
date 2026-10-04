@@ -3,7 +3,7 @@ import { FileIcon, UploadCloudIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { ACCEPTED_UPLOAD_TYPES, formatFileSize, MAX_UPLOAD_BYTES } from "@/lib/uploadLimits"
+import { ACCEPTED_UPLOAD_TYPES, formatFileSize } from "@/lib/uploadLimits"
 import { cn } from "@/lib/utils"
 
 export interface FileWithProgress {
@@ -18,6 +18,8 @@ interface FileDropzoneProps {
   onFilesAdded: (files: File[]) => void
   onFileRemoved: (index: number) => void
   disabled?: boolean
+  /** The company's per-file limit; null while it loads. */
+  maxFileBytes?: number | null
 }
 
 export function FileDropzone({
@@ -25,6 +27,7 @@ export function FileDropzone({
   onFilesAdded,
   onFileRemoved,
   disabled,
+  maxFileBytes = null,
 }: FileDropzoneProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [isDragActive, setIsDragActive] = React.useState(false)
@@ -77,7 +80,7 @@ export function FileDropzone({
           approval voucher — in one go.
         </p>
         <p className="text-xs text-muted-foreground">
-          PDF only · up to {formatFileSize(MAX_UPLOAD_BYTES)} each ·
+          PDF only{maxFileBytes !== null && <> · max file size: {formatFileSize(maxFileBytes)} each</>} ·
           not password-protected
         </p>
         <input

@@ -25,6 +25,7 @@ from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.models.base import utcnow
+from app.models.bulk_upload import BulkUpload
 from app.models.case import Case
 from app.models.case_report import CaseReport
 from app.models.company import Company
@@ -75,6 +76,12 @@ def record_document_uploaded(db: Session, company_id: uuid.UUID, size_bytes: int
 
 
 def record_report_stored(db: Session, company_id: uuid.UUID, size_bytes: int) -> None:
+    _upsert_increment(db, company_id, _today(), files_stored=1, storage_bytes=size_bytes)
+
+
+def record_bulk_zip_stored(db: Session, company_id: uuid.UUID, size_bytes: int) -> None:
+    """The submitted zip itself (kept in Blob Storage as the upload's record).
+    Its documents are counted one by one as they are ingested."""
     _upsert_increment(db, company_id, _today(), files_stored=1, storage_bytes=size_bytes)
 
 
@@ -198,6 +205,18 @@ def compute_true_usage(db: Session) -> dict[tuple[uuid.UUID, date], dict[str, in
             func.count(),
             func.coalesce(func.sum(CaseReport.file_size_bytes), 0),
         ).group_by(CaseReport.company_id, _day(CaseReport.generated_at))
+    ).all():
+        counters = true[_key(company_id, day)]
+        counters["files_stored"] += int(n)
+        counters["storage_bytes"] += int(size)
+
+    for company_id, day, n, size in db.execute(
+        select(
+            BulkUpload.company_id,
+            _day(BulkUpload.created_at),
+            func.count(),
+            func.coalesce(func.sum(BulkUpload.zip_size_bytes), 0),
+        ).group_by(BulkUpload.company_id, _day(BulkUpload.created_at))
     ).all():
         counters = true[_key(company_id, day)]
         counters["files_stored"] += int(n)

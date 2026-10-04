@@ -24,6 +24,8 @@ cannot read or change anything they are not entitled to.
 | `/login` | LoginPage | public |
 | `/` , `/cases`, `/review-queue` | CaseQueuePage | any logged-in user (platform admin: per company, read-only) |
 | `/cases/new` | NewCasePage | company users (hidden for platform admins) |
+| `/cases/bulk` | BulkUploadPage | company users (platform admins see it read-only, without the upload form) |
+| `/bulk-uploads/:bulkUploadId` | BulkUploadDetailPage | the uploader; reviewers of the company; platform admins (per company, read-only) |
 | `/cases/:caseId` | CaseDetailPage | any (reduced view for `user`; read-only decision panel for a Reviewer L1 on an L2 case; "Support view" for a platform admin) |
 | `/dashboard` | DashboardPage | company users |
 | `/my-cases` | MyCasesPage | company users |
@@ -71,8 +73,8 @@ mixed list.
 **Endpoints:** `POST /cases`, `POST /cases/{id}/documents` (once per file, XHR with progress), and, for
 the optional signature step, `GET …/documents/{id}/file-url` and
 `POST …/documents/{id}/signature-references` (through `SignatureReferenceCreator`).
-**Flow:** React Hook Form + Zod validate the case type. The drop zone accepts **PDF only, up to 10 MB
-each, not password-protected**; a file that is not a PDF, is empty or is over 10 MB is refused in the
+**Flow:** React Hook Form + Zod validate the case type. The drop zone accepts **PDF only, within the company's per-file
+limit, not password-protected** (it shows the limit, from `GET /auth/me/upload-limits`); a file that is not a PDF, is empty or is over that limit is refused in the
 browser before anything is sent (`lib/uploadLimits.ts`). The case is created once (so a retry after a
 failed upload reuses it); files upload in parallel; each shows its own progress, or the server's
 specific rejection message (e.g. "This file is password-protected. Please remove the password and
@@ -82,6 +84,24 @@ page is opened.
 **Roles:** any company user may create a case, upload to their own case and set reference signatures on
 it; reviewers may do so on any case of their company. A stranger's request is a 404; platform admins
 can't upload.
+
+## BulkUploadPage — `/cases/bulk`
+**Purpose:** submit many cases at once as one zip with one folder per case ([pipeline 01a](../pipeline/01a-bulk-upload.md)).
+**Endpoints:** `POST /bulk-uploads` (the zip as the raw body, XHR with progress), `GET /bulk-uploads`
+(recent uploads).
+**Flow:** pick the case type for every case in the zip, then drop one `.zip`. The browser refuses a
+non-zip, empty or over-limit zip (the company's own zip limit, shown on the page) before sending (`lib/uploadLimits.ts`). It also counts the case
+folders from the zip's central directory and warns above 100, without blocking. After upload it opens the
+summary page. Linked from NewCasePage ("Bulk upload (zip of cases)").
+
+## BulkUploadDetailPage — `/bulk-uploads/:bulkUploadId`
+**Purpose:** the live per-case summary of one bulk upload.
+**Endpoint:** `GET /bulk-uploads/{id}`, polled every 3 s until `settled`.
+**Shows:** zip-level status and any failure, the >100-case warning, the wrapper-folder and ignored-files
+notes, an overall progress bar with counts per live status, and a table of every case folder: case number
+(a link once created), documents processed, live status (Checking files / Queued / Processing / Done /
+Flagged / Not created) and risk flag. Each rejected file is listed under its case with the reason. Filters:
+All / Needs attention / In progress / Done. Folder and file names render with `dir="auto"` (Arabic).
 
 ## CaseDetailPage — `/cases/:caseId`
 **Purpose:** everything about one case in three columns (`lg:grid-cols-12`): **documents** (3), the
@@ -160,10 +180,17 @@ deactivate themselves.
 **Roles:** platform admins only.
 
 ## PlatformCompaniesPage — `/platform/companies`
-**Purpose:** list, create, rename, suspend and reactivate companies.
+**Purpose:** list, create, rename, suspend and reactivate companies, and set each company's upload limits.
 **Endpoints:** `GET/POST /platform/companies`, `PATCH /platform/companies/{id}`.
 **Notes:** creating a company seeds its risk rules from the platform template and default thresholds;
-its issuer registry starts empty. Suspending blocks sign-in and existing tokens for all its users.
+its issuer registry starts empty. Suspending blocks sign-in and existing tokens for all its users. The table
+shows each company's limits ("10 MB / file · 300 MB / zip"). **Edit** opens a form with the name, **Max file
+size (MB)** and **Max zip size (MB)**, pre-filled; only changed values are sent, each change is platform-audited
+(`company_updated`, old → new), and it applies to the company's next upload without a new sign-in.
+
+**Form validation (every form):** a problem is shown in red directly under the field (`FieldError` + red
+border), never only as a hover tooltip. Submit buttons stay enabled, so clicking with a problem marks the
+field instead of silently doing nothing.
 
 ## PlatformRuleTemplatesPage — `/platform/rule-templates`
 **Purpose:** edit the default rule set that every **new** company starts from.

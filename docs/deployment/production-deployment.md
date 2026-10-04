@@ -50,7 +50,7 @@ flowchart TB
 
 | Component | Azure service | Why |
 |---|---|---|
-| SPA + reverse proxy | Container App `fddt-web` (frontend image), **public** ingress | One origin for the SPA and `/api`, so no CORS is needed; nginx caps request bodies at 11 MB |
+| SPA + reverse proxy | Container App `fddt-web` (frontend image), **public** ingress | One origin for the SPA and `/api`, so no CORS is needed; nginx caps request bodies (`UPLOAD_BODY_LIMIT` / `BULK_UPLOAD_BODY_LIMIT`, at least the largest per-company limit) |
 | API | Container App `fddt-api` (backend image), **internal** ingress only | Never exposed directly; reached only through `fddt-web` |
 | Workers | Container Apps `fddt-worker-extraction`, `-vision`, `-forensics` (backend image), no ingress | One per queue so each scales on its own ([processing-queues.md](../processing-queues.md)) |
 | Scheduler | Container App `fddt-beat`, no ingress, **min = max = 1** | Nightly usage reconciliation, per-minute queue metrics. Two beats would run every job twice |
@@ -386,7 +386,7 @@ and mapped into environment variables with `secretref:`.
 | `AZURE_OPENAI_ENDPOINT` / `_KEY` / `_DEPLOYMENT_NAME` | `https://$PREFIX-openai.openai.azure.com/` / `secretref:openai-key` / `gpt-4.1-mini` |
 | `AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE` / `_MAX_TOKENS_PER_MINUTE` | 80 % of the deployment's RPM / TPM |
 | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` | `10` |
-| `MAX_UPLOAD_SIZE_BYTES` | `10485760` |
+| `DEFAULT_MAX_FILE_SIZE_MB` / `DEFAULT_MAX_ZIP_SIZE_MB` | `10` / `300` (limits for new companies; each company's own are set under Platform › Companies) |
 | `QUEUE_ALERT_OLDEST_WAITING_SECONDS` | `300` |
 | `EXTRACTION_WORKER_CONCURRENCY` / `VISION_WORKER_CONCURRENCY` | `4` / `4` (per replica) |
 | `FORENSICS_WORKER_CONCURRENCY` | `0` (one process per vCPU of the container) |
@@ -445,7 +445,11 @@ command; the replica counts above are tier M — take them from section 2.)
 
 - `API_UPSTREAM` is the API's **internal FQDN** (`az containerapp show -n fddt-api --query
   properties.configuration.ingress.fqdn`). nginx strips `/api`, forwards to it, and refuses bodies over
-  **11 MB** (`client_max_body_size`) before they reach Uvicorn.
+  `UPLOAD_BODY_LIMIT` (default **11m**) — or, for `/api/bulk-uploads` (streamed, unbuffered),
+  `BULK_UPLOAD_BODY_LIMIT` (default **301m**) — before they reach Uvicorn. Upload limits are per company,
+  so these two must be at least the **largest** per-company limit granted (plus ~1 MB of multipart overhead
+  for single files): when a platform admin gives a company 20 MB / 500 MB, redeploy `fddt-web` with
+  `--env-vars UPLOAD_BODY_LIMIT=21m BULK_UPLOAD_BODY_LIMIT=501m`.
 - Workers need no probes beyond the default; give the API a liveness probe on `GET /health`.
 - Rolling update order for a release: build images → run `fddt-migrate` → update `fddt-api` → update the
   workers and beat → update `fddt-web`. Migrations are additive within a release, so old workers keep

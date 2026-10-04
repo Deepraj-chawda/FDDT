@@ -88,7 +88,7 @@ Three of the four "should fix soon" items from R2.3 are done. The fourth (splitt
 |---|---|---|---|
 | Rate-limiter caps 85 % → 80 % | ✅ Done | `backend/.env`: `AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE=80`, `AZURE_OPENAI_MAX_TOKENS_PER_MINUTE=80000` (quota 100 / 100,000). `.env.example` and `config.py` comments now say ~80 %. Code defaults are unchanged (60 RPM / TPM off) because they don't assume a quota. | `tests/test_rate_limiter.py` passes. ⚠️ **Restart the vision and extraction workers** to pick it up. Expected cost: ~6 % less peak Azure OpenAI throughput (≈ 3.4 instead of ≈ 3.6 one-page docs/min). |
 | Frontend code-splitting | ✅ Done | `src/App.tsx`: every page except Login is `React.lazy` with one `Suspense` ("Loading…") around the routes. | `npm run build` (tsc + vite) and `oxlint` are clean. Main bundle **1.39 MB → 359 kB** (gzip 111 kB). Pages are now 4–106 kB chunks; shared Nav chunk 110 kB. The one chunk still > 500 kB is pdf.js's prebuilt `pdf.worker.min` (631 kB). It is a separate file that is only fetched when a PDF is shown, and it can't be split further. ⚠️ Not click-tested in a browser yet. |
-| Queue metrics → monitoring + alerting | ✅ App side done | `log_queue_metrics` (every minute) now logs `queue_metrics {json}` per queue, plus a **WARNING** `queue_alert {json}` line when the oldest waiting task > `QUEUE_ALERT_OLDEST_WAITING_SECONDS` (new setting, default 300, 0 = off). Format in `processing-queues.md` › Monitoring. | New `tests/test_queue_metrics_log.py` (2 tests): JSON per queue, alert only past the threshold, 0 disables. ⚠️ **Still a deployment step:** ship worker logs to Azure Monitor / Log Analytics and create an alert rule on `queue_alert`. That is not built, because CLAUDE.md says no cloud config yet. |
+| Queue metrics → monitoring + alerting | ✅ App side done | `log_queue_metrics` (every minute) now logs `queue_metrics {json}` per queue, plus a **WARNING** `queue_alert {json}` line when the oldest waiting task > `QUEUE_ALERT_OLDEST_WAITING_SECONDS` (new setting, default 300, 0 = off). Format in `processing-queues.md` › Monitoring. | New `tests/test_queue_metrics_log.py` (2 tests): JSON per queue, alert only past the threshold, 0 disables. ⚠️ **Still a deployment step:** ship worker logs to Azure Monitor / Log Analytics and create an alert rule on `queue_alert`. That is not built, because system specifications specify no cloud config yet. |
 
 Files: `backend/.env`, `backend/.env.example`, `backend/app/core/config.py`, `backend/app/tasks/usage_tasks.py`,
 `backend/tests/test_queue_metrics_log.py`, `frontend/src/App.tsx`, `docs/processing-queues.md`, this report.
@@ -213,7 +213,7 @@ attributes), `tenant_access.py`, `audit.py`, `cases.py`, `platform.py`, `db/sess
 ## 1. Safety steps taken before changing anything
 
 - The project is **not a git repository**, so a full code backup was made first:
-  `scratchpad/pre-multitenant-backup.tgz` (backend, frontend, docs, compose, CLAUDE.md, README).
+  `scratchpad/pre-multitenant-backup.tgz` (backend, frontend, docs, compose, specifications, README).
 - The real dev database was dumped before migration: `scratchpad/docauth-pre-multitenant.dump`
   (`pg_restore` to roll back).
 - The migration was first run on a **restored copy** (`docauth_mtest`), including a
@@ -615,5 +615,5 @@ workflow / audit / storage / signature / OCR / LLM services, every Celery task, 
 `components/platform/PlatformShell.tsx`, `pages/PlatformCompaniesPage.tsx`, `PlatformUsagePage.tsx`,
 `PlatformQueuesPage.tsx`; changed types, routes, nav, settings pages, case queue/detail, dashboard, audit page.
 
-**Repo root/docs:** `docker-compose.yml` (worker services), `CLAUDE.md`, `README.md`,
+**Repo root/docs:** `docker-compose.yml` (worker services), `SPECIFICATION.md`, `README.md`,
 `docs/multi-tenancy.md`, `docs/processing-queues.md`, `docs/README.md`, this report.

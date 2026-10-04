@@ -94,6 +94,15 @@ class Case(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Placeholder for a possible future external case-management integration
     # (see CLAUDE.md section 4) — unused for now.
     external_ref_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Set on cases created from a bulk zip upload (app/models/bulk_upload.py):
+    # which upload, and the uploader's own label for the case, which is its
+    # folder name inside the zip. The label is only a reference for the
+    # uploader. It need not be unique, and the case's identity is still its
+    # id / case_number.
+    bulk_upload_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("bulk_uploads.id"), nullable=True, index=True
+    )
+    reference_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     submitted_by = relationship(
         "User", back_populates="submitted_cases", foreign_keys=[submitted_by_user_id]

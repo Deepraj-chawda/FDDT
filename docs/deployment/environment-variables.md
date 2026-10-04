@@ -44,7 +44,9 @@ not call Azure.
 | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` | `10.0` | Global cap on Document Intelligence calls (Azure's default S0 limit is 15 TPS) |
 | `DATABASE_POOLER_HOST` / `DATABASE_POOLER_PORT` | *(unset)* / `6432` | When set, the two app roles connect through **PgBouncer** (transaction pooling) and each process keeps no pool of its own. Recommended in production ([processing-queues.md](../processing-queues.md#database-connections)) |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `5` / `10` | SQLAlchemy pool per role per process when connecting **directly** (no PgBouncer) |
-| `MAX_UPLOAD_SIZE_BYTES` | `10485760` (10 MB) | Largest accepted PDF. The frontend enforces the same 10 MB in `frontend/src/lib/uploadLimits.ts` — keep them in step |
+| `DEFAULT_MAX_FILE_SIZE_MB` / `DEFAULT_MAX_ZIP_SIZE_MB` | `10` / `300` | Upload limits a **new** company is created with. Limits are per company (`companies.max_file_size_mb` / `max_zip_size_mb`, changed by a platform admin under Platform › Companies); changing these defaults never changes an existing company. The frontend reads the company's real limits from `GET /auth/me/upload-limits` |
+| `BULK_UPLOAD_MAX_ENTRIES` | `25000` | Safety cap on entries (files + folders) in one zip. A 300 MB zip of small born-digital PDFs holds about 11,000 entries |
+| `BULK_UPLOAD_CASE_WARNING_THRESHOLD` | `100` | Above this many cases the UI warns; the zip is still accepted |
 | `DEFAULT_COMPANY_NAME` | `Default Company` | Name of the company the multi-tenancy migration assigns pre-existing data to (used once, by the migration) |
 | `PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS` | `0` | 0 = every platform-admin read of company data writes its own (platform-only) audit row; > 0 collapses identical reads within that window |
 | `EXTRACTION_WORKER_CONCURRENCY` / `VISION_WORKER_CONCURRENCY` | `4` / `4` | Threads per extraction / vision worker (`start-worker.sh`). Size to just saturate the Azure caps |
@@ -73,7 +75,6 @@ Rule templates; see [11](../pipeline/11-risk-scoring-engine.md)).
 | `EMAIL_SERVICE_CONNECTION_STRING`, `EMAIL_FROM_ADDRESS` | Transactional email | Never read — notifications are not built |
 | `API_V1_PREFIX` (`/api/v1`) | URL prefix | Never read — routes have no prefix |
 | `REDIS_URL` | Redis | Never read — Celery, the rate limiter, the fair-share counters and the queue monitor all use `CELERY_BROKER_URL` |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude API | Never read — the `LLMService` implementation in use is Azure OpenAI |
 
 ## docker-compose (optional overrides)
 

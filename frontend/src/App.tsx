@@ -12,6 +12,8 @@ import { LoginPage } from "@/pages/LoginPage"
 // its own chunk, fetched the first time the route is opened. The login page
 // stays in the main bundle since it is the first screen.
 const AuditHistoryPage = lazy(() => import("@/pages/AuditHistoryPage").then((m) => ({ default: m.AuditHistoryPage })))
+const BulkUploadDetailPage = lazy(() => import("@/pages/BulkUploadDetailPage").then((m) => ({ default: m.BulkUploadDetailPage })))
+const BulkUploadPage = lazy(() => import("@/pages/BulkUploadPage").then((m) => ({ default: m.BulkUploadPage })))
 const CaseDetailPage = lazy(() => import("@/pages/CaseDetailPage").then((m) => ({ default: m.CaseDetailPage })))
 const CaseQueuePage = lazy(() => import("@/pages/CaseQueuePage").then((m) => ({ default: m.CaseQueuePage })))
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })))
@@ -56,6 +58,8 @@ function App() {
               <Route path="/cases" element={<CaseQueuePage />} />
               <Route path="/review-queue" element={<CaseQueuePage />} />
               <Route path="/cases/new" element={<NewCasePage />} />
+              <Route path="/cases/bulk" element={<BulkUploadPage />} />
+              <Route path="/bulk-uploads/:bulkUploadId" element={<BulkUploadDetailPage />} />
               <Route path="/cases/:caseId" element={<CaseDetailPage />} />
 
               {/* Operational Dashboard & My Cases */}

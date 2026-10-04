@@ -1,4 +1,4 @@
-# CLAUDE.md — Document Authenticator Tool
+# System Specification — Fraud Document Detection Tool (FDDT)
 
 ## 1. Project Overview & Core Objectives
 
@@ -405,7 +405,7 @@ document-authenticator/
 │   └── vite.config.ts
 ├── sample-documents/              # test PDFs (already generated)
 ├── docker-compose.yml             # local: postgres + redis + backend + frontend
-├── CLAUDE.md
+├── SPECIFICATION.md
 └── README.md
 ```
 
@@ -421,8 +421,11 @@ registry/risk rules, company-prefixed blob paths, per-company billing/usage
 counters with nightly reconciliation, PgBouncer transaction pooling), three
 fair-share, calibrated-rate-limited processing queues with a queue monitor, JWT auth with ranked `user` / `reviewer_l1` /
 `reviewer_l2` company roles plus `platform_admin`, case and document upload with immutable
-hash-verified storage (uploads are PDF only, at most 10 MB, and validated synchronously before storage —
-corrupted and password-protected PDFs are rejected; `app/services/upload_validation.py`), the Celery pipeline (OCR, classification and
+hash-verified storage (uploads are PDF only, within the company's own size limit — per-company `max_file_size_mb` / `max_zip_size_mb` set by a platform admin, 10 MB / 300 MB by default, read through `app/services/upload_limits.py` by every upload path — and validated synchronously before storage —
+corrupted and password-protected PDFs are rejected; `app/services/upload_validation.py`), bulk upload
+(one zip of at most 300 MB, one folder per case, ingested in the background case by case with partial
+success and a live per-case summary; each document validated and queued exactly like a single upload;
+`app/services/bulk_upload_service.py`, `docs/pipeline/01a-bulk-upload.md`), the Celery pipeline (OCR, classification and
 extraction, field validation, issuer verification, cross-document checks,
 PDF forensics, visual review, signature/stamp detection), the transparent
 versioned rules-engine risk score, the two-tier reviewer workflow (L1, with

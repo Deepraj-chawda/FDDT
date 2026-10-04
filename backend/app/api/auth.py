@@ -34,7 +34,7 @@ from app.db import tenancy
 from app.db.session import get_db, get_system_db
 from app.models.company import Company
 from app.models.user import User, UserRole, has_rank, role_label
-from app.schemas.auth import CurrentUserResponse, LoginRequest, TokenResponse
+from app.schemas.auth import CurrentUserResponse, LoginRequest, TokenResponse, UploadLimitsResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -241,4 +241,40 @@ def read_current_user(
         is_platform_admin=current_user.is_platform_admin,
         company_id=current_user.company_id,
         company_name=company_name,
+    )
+
+
+@router.get(
+    "/me/upload-limits",
+    response_model=UploadLimitsResponse,
+    summary="Get my company's upload limits",
+    description=(
+        "The per-file and per-zip limits the caller's company is held to (set per company by a "
+        "platform admin). Read fresh on every request, so upload screens always show the limit that "
+        "will actually be enforced. Platform admins belong to no company: 404."
+    ),
+    responses={
+        401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
+        404: {"description": "Platform admins have no company and therefore no upload limits."},
+    },
+)
+def read_upload_limits(
+    current_user: User = Depends(get_current_user),
+    system_db: Session = Depends(get_system_db),
+) -> UploadLimitsResponse:
+    from app.services.upload_limits import company_upload_limits
+
+    if current_user.company_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Platform admins have no upload limits.")
+    state = tenancy.snapshot(system_db)
+    tenancy.bind_platform(system_db)
+    try:
+        limits = company_upload_limits(system_db, current_user.company_id)
+    finally:
+        tenancy.restore(system_db, state)
+    return UploadLimitsResponse(
+        max_file_size_mb=limits.max_file_size_mb,
+        max_zip_size_mb=limits.max_zip_size_mb,
+        max_file_size_bytes=limits.max_file_bytes,
+        max_zip_size_bytes=limits.max_zip_bytes,
     )

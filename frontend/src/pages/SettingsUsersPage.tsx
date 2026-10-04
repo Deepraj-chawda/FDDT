@@ -9,6 +9,7 @@ import { Modal } from "@/components/settings/Modal"
 import { SettingsShell, StatusLine } from "@/components/settings/SettingsShell"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import { ROLE_LABELS, ROLE_OPTIONS, type UserRole } from "@/types/auth"
 import type { AdminUser } from "@/types/settings"
 import { APP_NAME } from "@/lib/appInfo"
@@ -84,6 +85,13 @@ function ResetPasswordModal({
   }
 
   const isValid = password.length >= 8
+  const [attempted, setAttempted] = React.useState(false)
+  const passwordError = !password
+    ? "Enter a new password, or generate one."
+    : isValid
+      ? null
+      : `The password must be at least 8 characters (currently ${password.length}).`
+  const shownPasswordError = attempted ? passwordError : null
 
   return (
     <Modal
@@ -94,13 +102,12 @@ function ResetPasswordModal({
     >
       <form
         className="flex flex-col gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
-          if (!isValid) {
-            setError("Password must be at least 8 characters.")
-            return
-          }
+          setAttempted(true)
+          if (passwordError) return
           reset.mutate()
         }}
       >
@@ -129,8 +136,11 @@ function ResetPasswordModal({
                 setPassword(e.target.value)
                 setCopied(false)
               }}
+              onBlur={() => password && setAttempted(true)}
+              aria-invalid={Boolean(shownPasswordError)}
+              aria-describedby="reset-password-error"
               placeholder="Enter at least 8 characters..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-20 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+              className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-20 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono ${shownPasswordError ? invalidFieldClass : ""}`}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400">
               {password && (
@@ -153,6 +163,7 @@ function ResetPasswordModal({
               </button>
             </div>
           </div>
+          <FieldError id="reset-password-error" message={shownPasswordError} />
           <p className="mt-1.5 text-[11px] text-slate-400">
             Must be at least 8 characters long. The password is hashed using bcrypt before saving.
           </p>
@@ -171,7 +182,7 @@ function ResetPasswordModal({
           </button>
           <button
             type="submit"
-            disabled={!isValid || reset.isPending}
+            disabled={reset.isPending}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
           >
             {reset.isPending && <Loader2Icon className="size-3.5 animate-spin" />}

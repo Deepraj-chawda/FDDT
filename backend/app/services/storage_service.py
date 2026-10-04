@@ -19,6 +19,7 @@ a short-lived signed (SAS) URL instead, via `get_download_url()`.
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from typing import BinaryIO
 
 from azure.core.exceptions import AzureError
 from azure.storage.blob import (
@@ -41,6 +42,7 @@ from app.core.config import settings
 #   companies/{company_id}/cases/{case_id}/documents/{document_id}_{sha256}{ext}
 #   companies/{company_id}/cases/{case_id}/reports/{report_id}.pdf
 #   companies/{company_id}/cases/{case_id}/signatures/{crop_id}.png
+#   companies/{company_id}/bulk-uploads/{bulk_upload_id}_{sha256}.zip
 #
 # so isolation also holds at the storage layer (a path never mixes companies,
 # and `ensure_company_blob` refuses to sign another company's file), and a
@@ -72,6 +74,13 @@ def report_blob_path(company_id, case_id, report_id) -> str:
 
 def signature_blob_path(company_id, case_id, crop_id) -> str:
     return f"{case_blob_prefix(company_id, case_id)}signatures/{crop_id}.png"
+
+
+def bulk_upload_blob_path(company_id, bulk_upload_id, file_hash: str) -> str:
+    """The zip as submitted, kept as the record of a bulk upload. The
+    documents extracted from it are stored separately, per case, like any
+    single upload."""
+    return f"{company_blob_prefix(company_id)}bulk-uploads/{bulk_upload_id}_{file_hash}.zip"
 
 
 def _blob_name(file_url: str) -> str:
@@ -112,9 +121,11 @@ class StorageOperationError(RuntimeError):
 class StorageService(ABC):
     @abstractmethod
     def upload(
-        self, blob_path: str, content: bytes, content_type: str | None = None
+        self, blob_path: str, content: bytes | BinaryIO, content_type: str | None = None
     ) -> str:
-        """Upload `content` to `blob_path` and return the file's durable URL."""
+        """Upload `content` (bytes, or a readable binary file positioned at
+        its start, which a bulk zip uses so it is never held in memory whole)
+        to `blob_path` and return the file's durable URL."""
         raise NotImplementedError
 
     @abstractmethod
@@ -135,6 +146,12 @@ class StorageService(ABC):
         service fetch the bytes itself."""
         raise NotImplementedError
 
+    def download_to(self, file_url: str, fileobj: BinaryIO) -> None:
+        """Write a stored file's bytes into `fileobj`, for files too big to
+        hold in memory whole (a bulk-upload zip of up to 300 MB). Backends
+        override this to stream; the default buffers once."""
+        fileobj.write(self.download_bytes(file_url))
+
 
 class AzureBlobStorageService(StorageService):
     def __init__(self, connection_string: str | None, container_name: str):
@@ -154,7 +171,7 @@ class AzureBlobStorageService(StorageService):
         self._container = client.get_container_client(container_name)
 
     def upload(
-        self, blob_path: str, content: bytes, content_type: str | None = None
+        self, blob_path: str, content: bytes | BinaryIO, content_type: str | None = None
     ) -> str:
         try:
             blob_client = self._container.get_blob_client(blob_path)
@@ -200,6 +217,17 @@ class AzureBlobStorageService(StorageService):
         except AzureError as exc:
             raise StorageOperationError(
                 f"Failed to download the file's bytes: {exc}"
+            ) from exc
+
+    def download_to(self, file_url: str, fileobj: BinaryIO) -> None:
+        try:
+            blob_client = BlobClient.from_blob_url(
+                file_url, credential=self._container.credential
+            )
+            blob_client.download_blob(max_concurrency=4).readinto(fileobj)
+        except AzureError as exc:
+            raise StorageOperationError(
+                f"Failed to download the file: {exc}"
             ) from exc
 
 

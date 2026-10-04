@@ -16,7 +16,8 @@ current build, and those outside its scope, are collected in the table in
 
 | If you want to… | Read |
 |---|---|
-| Learn to use the app as a submitter, Reviewer L1 / L2 or platform admin | [user-manual.md](user-manual.md) |
+| Learn to use the app as a Company User (Submitter, Reviewer L1, Reviewer L2) | [COMPANY_USER_MANUAL.md](COMPANY_USER_MANUAL.md) |
+| Manage the multi-tenant system as a Platform Administrator | [PLATFORM_ADMIN_MANUAL.md](PLATFORM_ADMIN_MANUAL.md) |
 | Understand the whole system in ten minutes | [architecture/overview.md](architecture/overview.md) |
 | Understand companies, roles and tenant isolation (RLS) | [multi-tenancy.md](multi-tenancy.md) |
 | Tune processing queues, worker pools and Azure rate limits | [processing-queues.md](processing-queues.md) |
@@ -34,12 +35,10 @@ current build, and those outside its scope, are collected in the table in
 
 ## Contents
 
-### User manual
-- [user-manual.md](user-manual.md) — role-by-role guide (submitter / Reviewer L1 / Reviewer L2 / platform admin) to using the
-  application, in plain language: submitting a case, the review queue and case detail page, what each
-  automated check means and how far to trust it, the risk score, approve/reject/escalate, the forensic
-  report, company settings, platform administration, and the tool's known limitations. Also published as
-  [`docs-pdf/26-User-Manual.pdf`](../docs-pdf/26-User-Manual.pdf).
+### User Manuals
+- [COMPANY_USER_MANUAL.md](COMPANY_USER_MANUAL.md) — Comprehensive guide for client organizations covering all 3 company roles (User/Submitter, Reviewer L1, Reviewer L2), case submission, bulk intake, review workflows, automated forensic checks, overlays, and company settings. Includes high-resolution interface screenshots.
+- [PLATFORM_ADMIN_MANUAL.md](PLATFORM_ADMIN_MANUAL.md) — Complete operational manual for Platform Administrators covering tenant provisioning, company limits, user administration across all 4 roles, password resets, rule templates, queue monitoring, usage analytics, and immutable audit history. Includes high-resolution interface screenshots.
+- [user-manual.md](user-manual.md) — Consolidated role-by-role overview guide.
 
 ### Architecture
 - [overview.md](architecture/overview.md) — system diagram, tech stack, the key design decisions and their
@@ -54,7 +53,7 @@ current build, and those outside its scope, are collected in the table in
 Each page covers what it detects, the algorithm and libraries, the real input/output shape, known
 limitations and the risk rules it feeds.
 
-1. [Upload & intake](pipeline/01-upload-intake.md)
+1. [Upload & intake](pipeline/01-upload-intake.md) · [1a. Bulk upload (a zip of cases)](pipeline/01a-bulk-upload.md)
 2. [Extraction & normalization](pipeline/02-extraction-normalization.md)
 3. [Field validation](pipeline/03-field-validation.md)
 4. [Cross-document consistency](pipeline/04-cross-document-consistency.md)

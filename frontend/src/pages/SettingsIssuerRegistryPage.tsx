@@ -8,6 +8,7 @@ import { Modal } from "@/components/settings/Modal"
 import { SettingsShell, StatusLine } from "@/components/settings/SettingsShell"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
+import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
 import { ISSUER_TYPE_LABELS, type Issuer, type IssuerType } from "@/types/settings"
 
 const TYPE_STYLES: Record<IssuerType, string> = {
@@ -63,6 +64,8 @@ function IssuerForm({
   })
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }))
+  const [nameTouched, setNameTouched] = React.useState(false)
+  const nameError = nameTouched && !form.name.trim() ? "Enter the issuer's name in English." : null
   const inputClass =
     "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
 
@@ -75,13 +78,12 @@ function IssuerForm({
     >
       <form
         className="flex flex-col gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
-          if (!form.name.trim()) {
-            setError("Name is required.")
-            return
-          }
+          setNameTouched(true)
+          if (!form.name.trim()) return
           save.mutate()
         }}
       >
@@ -89,7 +91,17 @@ function IssuerForm({
           <label htmlFor="issuer-name" className="mb-1 block text-xs font-semibold text-slate-700">
             Name (English) <span className="text-rose-600">*</span>
           </label>
-          <input id="issuer-name" className={inputClass} value={form.name} onChange={(e) => set("name", e.target.value)} autoFocus />
+          <input
+            id="issuer-name"
+            className={nameError ? `${inputClass} ${invalidFieldClass}` : inputClass}
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            onBlur={() => setNameTouched(true)}
+            aria-invalid={Boolean(nameError)}
+            aria-describedby="issuer-name-error"
+            autoFocus
+          />
+          <FieldError id="issuer-name-error" message={nameError} />
         </div>
         <div>
           <label htmlFor="issuer-name-ar" className="mb-1 block text-xs font-semibold text-slate-700">

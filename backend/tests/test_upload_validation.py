@@ -5,7 +5,6 @@ Celery task."""
 import pytest
 from sqlalchemy import func, select
 
-from app.api import documents as documents_api
 from app.core.config import settings
 from app.models.audit_log import AuditLog
 from app.models.document import Document
@@ -13,22 +12,29 @@ from app.services.upload_validation import UploadRejected, is_pdf, validate_uplo
 from tests.sample_files import PDF, make_encrypted_pdf, make_image, make_pdf
 
 LIMIT = 10 * 1024 * 1024
-TASKS = (
-    "process_document",
-    "run_metadata_forensics",
-    "run_tampering_checks",
-    "run_duplicate_check_task",
-    "run_visual_inconsistency_review_task",
-    "run_signature_detection",
-)
+from app.tasks.document_processing import process_document
+from app.tasks.duplicate_check_task import run_duplicate_check_task
+from app.tasks.metadata_forensics_task import run_metadata_forensics
+from app.tasks.signature_detection_task import run_signature_detection
+from app.tasks.tampering_checks_task import run_tampering_checks
+from app.tasks.visual_inconsistency_task import run_visual_inconsistency_review_task
+
+# Every pipeline task an upload enqueues (app/services/document_intake.py).
+TASKS = {
+    "process_document": process_document,
+    "run_metadata_forensics": run_metadata_forensics,
+    "run_tampering_checks": run_tampering_checks,
+    "run_duplicate_check_task": run_duplicate_check_task,
+    "run_visual_inconsistency_review_task": run_visual_inconsistency_review_task,
+    "run_signature_detection": run_signature_detection,
+}
 
 
 @pytest.fixture
 def enqueued(monkeypatch):
     """Record every pipeline task the upload endpoint enqueues."""
     calls: list[str] = []
-    for name in TASKS:
-        task = getattr(documents_api, name)
+    for name, task in TASKS.items():
         monkeypatch.setattr(task, "delay", lambda *a, _n=name, **k: calls.append(_n))
     return calls
 
@@ -57,8 +63,9 @@ def _assert_rejected(response, status, code, fake_storage, enqueued, db_session)
     return detail
 
 
-def test_default_limit_is_10_mb():
-    assert settings.max_upload_size_bytes == LIMIT
+def test_a_new_companys_default_limit_is_10_mb(company):
+    assert settings.default_max_file_size_mb == 10
+    assert company.max_file_size_mb * 1024 * 1024 == LIMIT
 
 
 def test_empty_file_is_rejected_with_its_own_message(client, auth_headers, case_id, fake_storage, enqueued, db_session):
