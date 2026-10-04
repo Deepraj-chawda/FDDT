@@ -44,6 +44,7 @@ from app.schemas.settings import (
     UserAdminResponse,
     UserAdminUpdate,
     UserCreate,
+    UserPasswordReset,
 )
 from app.services.audit_service import record_event
 from app.services import risk_rule_catalog as catalog
@@ -740,4 +741,41 @@ def update_user(
         )
         db.commit()
         db.refresh(user)
+    return _user_response(user, _company_names(db))
+
+
+@router.post(
+    "/users/{user_id}/reset-password",
+    response_model=UserAdminResponse,
+    summary="Reset user password (platform admin only)",
+    description=(
+        "Resets the password for any user account. The new password is stored hashed. "
+        "Only platform admins have access to this action. Action is logged in the audit trail."
+    ),
+    responses={
+        401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
+        **_PLATFORM_ONLY,
+        404: {"description": "No such user."},
+    },
+)
+def reset_user_password(
+    user_id: uuid.UUID,
+    payload: UserPasswordReset,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_system_db),
+) -> UserAdminResponse:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    user.hashed_password = hash_password(payload.password)
+    record_event(
+        db,
+        "user_password_reset",
+        actor_user_id=admin.id,
+        company_id=user.company_id,
+        event_data={"user_id": str(user.id), "email": user.email},
+    )
+    db.commit()
+    db.refresh(user)
     return _user_response(user, _company_names(db))

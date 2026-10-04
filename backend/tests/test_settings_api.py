@@ -33,6 +33,7 @@ ADMIN_ENDPOINTS = [
     ("put", "/settings/risk-thresholds", {"medium_threshold": 20, "high_threshold": 50}),
     ("get", "/settings/users", None),
     ("patch", "/settings/users/00000000-0000-0000-0000-000000000000", {"is_active": False}),
+    ("post", "/settings/users/00000000-0000-0000-0000-000000000000/reset-password", {"password": "NewSecret123!"}),
 ]
 
 
@@ -243,3 +244,41 @@ def test_user_update_validation(client, platform_admin_headers):
     assert client.patch("/settings/users/00000000-0000-0000-0000-000000000000", headers=h, json={}).status_code == 422
     assert client.patch("/settings/users/00000000-0000-0000-0000-000000000000", headers=h, json={"role": "root"}).status_code == 422
     assert client.patch("/settings/users/00000000-0000-0000-0000-000000000000", headers=h, json={"role": "user"}).status_code == 404
+
+
+def test_platform_admin_can_reset_password_and_is_audited(client, db_session, platform_admin_headers, plain_user, reviewer_headers):
+    # Non-admin cannot reset password
+    assert client.post(
+        f"/settings/users/{plain_user.id}/reset-password",
+        headers=reviewer_headers,
+        json={"password": "NewValidPassword123!"},
+    ).status_code == 403
+
+    # Password too short returns 422
+    assert client.post(
+        f"/settings/users/{plain_user.id}/reset-password",
+        headers=platform_admin_headers,
+        json={"password": "short"},
+    ).status_code == 422
+
+    # Platform admin resets password successfully
+    res = client.post(
+        f"/settings/users/{plain_user.id}/reset-password",
+        headers=platform_admin_headers,
+        json={"password": "BrandNewPassword123!"},
+    )
+    assert res.status_code == 200
+    assert res.json()["id"] == str(plain_user.id)
+
+    # User can now log in with the new password
+    login_res = client.post("/auth/login", json={"email": plain_user.email, "password": "BrandNewPassword123!"})
+    assert login_res.status_code == 200
+
+    # Old password no longer works
+    login_old = client.post("/auth/login", json={"email": plain_user.email, "password": "TestPassword123!"})
+    assert login_old.status_code == 401
+
+    # Audit log entry exists
+    events = _events(db_session, "user_password_reset")
+    assert any(e.event_data.get("user_id") == str(plain_user.id) for e in events)
+

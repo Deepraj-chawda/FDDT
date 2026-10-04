@@ -227,6 +227,10 @@ class UserAdminUpdate(BaseModel):
         return self
 
 
+class UserPasswordReset(BaseModel):
+    password: str = Field(..., min_length=8, max_length=128, description="New password (8-128 chars); stored hashed.")
+
+
 # ----------------------------------------------------------------- audit log
 
 

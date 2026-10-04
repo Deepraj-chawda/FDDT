@@ -1,9 +1,9 @@
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Loader2Icon, PlusIcon, SearchIcon } from "lucide-react"
+import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon, KeyRoundIcon, Loader2Icon, PlusIcon, SearchIcon, SparklesIcon } from "lucide-react"
 
 import { ApiError } from "@/api/client"
-import { listUsers, updateUser } from "@/api/settings"
+import { listUsers, resetUserPassword, updateUser } from "@/api/settings"
 import { AddUserModal } from "@/components/settings/AddUserModal"
 import { Modal } from "@/components/settings/Modal"
 import { SettingsShell, StatusLine } from "@/components/settings/SettingsShell"
@@ -38,10 +38,156 @@ function initialsFor(u: AdminUser): string {
   )
 }
 
+function ResetPasswordModal({
+  user,
+  onClose,
+  onSuccess,
+}: {
+  user: AdminUser
+  onClose: () => void
+  onSuccess: (message: string) => void
+}) {
+  const { token } = useAuth()
+  const [password, setPassword] = React.useState("")
+  const [showPassword, setShowPassword] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+
+  const reset = useMutation({
+    mutationFn: () => resetUserPassword(user.id, password, token as string),
+    onSuccess: () => {
+      onSuccess(`Password for ${user.email} has been successfully reset.`)
+    },
+    onError: (err) => {
+      setError(errorText(err))
+    },
+  })
+
+  const generateRandomPassword = () => {
+    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*"
+    const bytes = crypto.getRandomValues(new Uint32Array(14))
+    const generated = Array.from(bytes, (b) => chars[b % chars.length]).join("")
+    setPassword(generated)
+    setShowPassword(true)
+    setCopied(false)
+  }
+
+  const copyToClipboard = async () => {
+    if (!password) return
+    try {
+      await navigator.clipboard.writeText(password)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // ignore clipboard write failure
+    }
+  }
+
+  const isValid = password.length >= 8
+
+  return (
+    <Modal
+      title={`Reset password for ${user.full_name || user.email}`}
+      description="Set a new password for this user account. The user will be required to sign in with this new password."
+      onClose={onClose}
+      busy={reset.isPending}
+    >
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          setError(null)
+          if (!isValid) {
+            setError("Password must be at least 8 characters.")
+            return
+          }
+          reset.mutate()
+        }}
+      >
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="reset-password-input" className="block text-xs font-semibold text-slate-700">
+              New password <span className="text-rose-600">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={generateRandomPassword}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition cursor-pointer"
+            >
+              <SparklesIcon className="size-3" />
+              Generate secure password
+            </button>
+          </div>
+          <div className="relative">
+            <input
+              id="reset-password-input"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              autoFocus
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setCopied(false)
+              }}
+              placeholder="Enter at least 8 characters..."
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-20 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400">
+              {password && (
+                <button
+                  type="button"
+                  onClick={copyToClipboard}
+                  title="Copy password"
+                  className="p-1 hover:text-slate-700 transition rounded cursor-pointer"
+                >
+                  {copied ? <CheckIcon className="size-4 text-emerald-600" /> : <CopyIcon className="size-4" />}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                title={showPassword ? "Hide password" : "Show password"}
+                className="p-1 hover:text-slate-700 transition rounded cursor-pointer"
+              >
+                {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <p className="mt-1.5 text-[11px] text-slate-400">
+            Must be at least 8 characters long. The password is hashed using bcrypt before saving.
+          </p>
+        </div>
+
+        <StatusLine error={error} />
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={reset.isPending}
+            className="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!isValid || reset.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+          >
+            {reset.isPending && <Loader2Icon className="size-3.5 animate-spin" />}
+            Reset password
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 export function SettingsUsersPage() {
   const { token, user: me } = useAuth()
   const { companies } = useActingCompany()
   const queryClient = useQueryClient()
+  const isPlatformAdmin = me?.role === "platform_admin"
   const [search, setSearch] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<UserRole | "">("")
   // "" = everyone, "platform" = platform admins, otherwise a company id.
@@ -49,6 +195,7 @@ export function SettingsUsersPage() {
   const [notice, setNotice] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [confirmDeactivate, setConfirmDeactivate] = React.useState<AdminUser | null>(null)
+  const [resetPasswordUser, setResetPasswordUser] = React.useState<AdminUser | null>(null)
   const [adding, setAdding] = React.useState(false)
 
   const { data: users = [], isLoading, isError } = useQuery({
@@ -171,7 +318,7 @@ export function SettingsUsersPage() {
 
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-xs min-w-[700px]">
+          <table className="w-full border-collapse text-left text-xs min-w-[780px]">
             <thead>
               <tr className="border-b border-slate-200/70 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <th className="px-5 py-3.5">User</th>
@@ -179,16 +326,17 @@ export function SettingsUsersPage() {
                 <th className="px-4 py-3.5">Role</th>
                 <th className="px-4 py-3.5">Status</th>
                 <th className="px-4 py-3.5">Created</th>
+                <th className="px-4 py-3.5 text-center">Password</th>
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">Loading users…</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-sm text-slate-400">Loading users…</td></tr>
               ) : isError ? (
-                <tr><td colSpan={6} className="py-12 text-center text-sm text-rose-600">Couldn't load users.</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-sm text-rose-600">Couldn't load users.</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-sm text-slate-400">No users match the current filters.</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-sm text-slate-400">No users match the current filters.</td></tr>
               ) : (
                 filtered.map((u) => {
                   const isMe = me?.id === u.id
@@ -260,6 +408,25 @@ export function SettingsUsersPage() {
                       <td className="whitespace-nowrap px-4 py-4 text-slate-500">
                         {new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>
+                      <td className="whitespace-nowrap px-4 py-4 text-center">
+                        {isPlatformAdmin ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(null)
+                              setNotice(null)
+                              setResetPasswordUser(u)
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs cursor-pointer"
+                            title={`Reset password for ${u.email}`}
+                          >
+                            <KeyRoundIcon className="size-3.5 text-blue-600" />
+                            <span>Reset password</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-300">—</span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap px-5 py-4 text-right">
                         {isMe ? (
                           <span className="text-[11px] text-slate-300">—</span>
@@ -316,6 +483,18 @@ export function SettingsUsersPage() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {resetPasswordUser && (
+        <ResetPasswordModal
+          user={resetPasswordUser}
+          onClose={() => setResetPasswordUser(null)}
+          onSuccess={(msg) => {
+            setResetPasswordUser(null)
+            setError(null)
+            setNotice(msg)
+          }}
+        />
       )}
     </SettingsShell>
   )

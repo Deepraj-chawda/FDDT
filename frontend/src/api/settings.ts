@@ -91,6 +91,16 @@ export const updateUser = (
   token: string
 ) => apiFetch<AdminUser>(`/settings/users/${id}`, { method: "PATCH", token, body: JSON.stringify(payload) })
 
+export const resetUserPassword = (
+  id: string,
+  password: string,
+  token: string
+) => apiFetch<AdminUser>(`/settings/users/${id}/reset-password`, {
+  method: "POST",
+  token,
+  body: JSON.stringify({ password }),
+})
+
 // ---- System audit history (reviewer/admin) ---------------------------------
 export interface AuditQuery {
   event_type?: string
