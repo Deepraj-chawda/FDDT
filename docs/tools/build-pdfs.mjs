@@ -49,6 +49,34 @@ const DOC_LIST = [
         "human reviewer — nothing here auto-approves anything.",
     },
   },
+  {
+    file: "32-Company-User-Manual",
+    src: "docs/COMPANY_USER_MANUAL.md",
+    group: "User manual",
+    cover: {
+      title: "Fraud Document Detection Tool",
+      tag: "(FDDT)",
+      subtitle: "Company User Manual",
+      meta: [
+        "A guide for client organizations: User (Submitter), Reviewer L1 and Reviewer L2",
+        "Describes the application as implemented — companion to the technical documentation in docs/",
+      ],
+    },
+  },
+  {
+    file: "33-Platform-Admin-Manual",
+    src: "docs/PLATFORM_ADMIN_MANUAL.md",
+    group: "User manual",
+    cover: {
+      title: "Fraud Document Detection Tool",
+      tag: "(FDDT)",
+      subtitle: "Platform Administrator Manual",
+      meta: [
+        "Tenant provisioning, user administration, rule templates, queues, usage and audit history",
+        "Describes the application as implemented — companion to the technical documentation in docs/",
+      ],
+    },
+  },
   { file: "02-Architecture-Overview", src: "docs/architecture/overview.md", group: "Architecture" },
   { file: "03-Data-Flow", src: "docs/architecture/data-flow.md", group: "Architecture" },
   { file: "27-Multi-Tenancy", src: "docs/multi-tenancy.md", group: "Architecture" },
@@ -77,7 +105,6 @@ const DOC_LIST = [
   { file: "23-Azure-Migration-Notes", src: "docs/deployment/azure-migration-notes.md", group: "Deployment" },
   { file: "29-Production-Deployment", src: "docs/deployment/production-deployment.md", group: "Deployment" },
   { file: "25-Azure-Demo-Deployment", src: "docs/deployment/azure-demo-deployment.md", group: "Deployment" },
-  { file: "30-Change-Report-Multi-Tenancy", src: "docs/MULTI_TENANCY_CHANGE_REPORT.md", group: "Change records" },
 ]
 const BOOK_FILE = "FDDT-Complete-Documentation"
 
