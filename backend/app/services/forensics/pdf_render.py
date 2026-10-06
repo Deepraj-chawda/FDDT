@@ -17,7 +17,7 @@ import pymupdf
 # and BRISK keypoint detection against memory/CPU cost across a
 # multi-page document — in the same range as a real scanned page, so
 # ELA's JPEG-block-artifact scale is representative of what a genuine
-# scan/rescan would show (CLAUDE.md section 3.2 flags print-and-rescan
+# scan/rescan would show (SPECIFICATION.md section 3.2 flags print-and-rescan
 # as ELA's known weak spot; rendering far above real scan resolution
 # would only make that worse).
 RENDER_DPI = 200
@@ -29,7 +29,7 @@ class RenderedPage:
     reviewer/PDF viewer counts pages, and how ela.py/copy_move.py's
     Finding descriptions and bounding_box.page refer to it — not the
     same as a 0-based list index. `has_image_content` gates ela.py's
-    analysis (CLAUDE.md's "born-digital, text-native pages" exemption):
+    analysis (SPECIFICATION.md's "born-digital, text-native pages" exemption):
     true iff this PDF page has at least one embedded raster image
     XObject; copy_move.py ignores this flag and runs on every page (a
     duplicated paragraph/logo/signature shows up as a keypoint cluster

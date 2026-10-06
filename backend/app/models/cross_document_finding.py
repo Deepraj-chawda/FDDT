@@ -1,6 +1,6 @@
 """
 `cross_document_findings` table — case-level reconciliation results
-(CLAUDE.md section 3.1, "Cross-document validation & reconciliation"):
+(SPECIFICATION.md section 3.1, "Cross-document validation & reconciliation"):
 shared fields (amount, date, vendor, ...) compared pairwise across every
 document in a case, once all of that case's documents have been processed.
 """

@@ -1,5 +1,5 @@
 """
-Celery task: in-case signature comparison (CLAUDE.md §2.3).
+Celery task: in-case signature comparison (SPECIFICATION.md §2.3).
 
 `run_signature_comparison` is enqueued immediately after a reviewer
 creates a signature_references row via the API (app/api/signatures.py).
@@ -10,7 +10,7 @@ each result as a signature_matches row with comparison_scope='in_case'.
 Scope intentionally limited to the same case only for this phase.
 Library references (is_library=True) are data-collected here but NOT
 used to trigger any cross-case comparison logic — that is explicitly
-not built yet (CLAUDE.md §2.3: "Do NOT build any cross-case matching
+not built yet (SPECIFICATION.md §2.3: "Do NOT build any cross-case matching
 logic against it yet. This is purely data collection for a future phase.")
 
 Documents with no detected signature, or whose detection check hasn't

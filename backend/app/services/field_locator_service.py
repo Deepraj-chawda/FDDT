@@ -1,5 +1,5 @@
 """
-Locates each extracted field on the page (CLAUDE.md section 3.6's template-
+Locates each extracted field on the page (SPECIFICATION.md section 3.6's template-
 free extraction stays as-is; this only adds WHERE each value was read from).
 
 Why this exists: field-level exceptions (amount mismatch, total that doesn't
@@ -338,4 +338,50 @@ def attach_field_locations(pages: list[OCRPage], extracted_fields: dict[str, Any
         if candidate is not None:
             field["bounding_box"] = _as_box(candidate)
             located += 1
+
+    located += _locate_line_items(pages_words, extracted_fields.get("line_items") or [], used)
+
+    words = extracted_fields.get("amount_in_words")
+    if isinstance(words, dict) and words.get("text") and not words.get("bounding_box"):
+        candidate = _fuzzy_line(pages, str(words["text"]))
+        if candidate is not None:
+            words["bounding_box"] = _as_box(candidate)
+            located += 1
+    return located
+
+
+def _locate_line_items(pages_words: list[list[_W]], line_items: list[Any], used: set) -> int:
+    """Boxes each line item's printed line total. The same figure can appear
+    on several lines (two terms at the same fee), so the occurrence whose line
+    best matches the item's description and unit price wins, in reading order
+    after the previous item."""
+    located = 0
+    after: tuple[int, float] = (0, -1.0)
+    for item in line_items:
+        if not isinstance(item, dict) or item.get("bounding_box"):
+            continue
+        total = item.get("line_total")
+        if not isinstance(total, (int, float)) or isinstance(total, bool):
+            continue
+        candidates = [c for words in pages_words for c in _numeric_matches(words, float(total), None)]
+        candidates = [c for c in candidates if c.key not in used]
+        if not candidates:
+            continue
+        description = _norm(str(item.get("description") or ""))
+        unit_price = item.get("unit_price")
+
+        def rank(c: _Candidate) -> tuple:
+            score = fuzz.partial_ratio(description, c.context) if description else 0
+            if isinstance(unit_price, (int, float)) and any(
+                (n := parse_number(t)) is not None and abs(n - unit_price) < 0.005 for t in c.context.split()
+            ):
+                score += 50
+            in_order = (c.page, c.y) > after
+            return (in_order, score, -c.page, -c.y)
+
+        best = max(candidates, key=rank)
+        item["bounding_box"] = _as_box(best)
+        used.add(best.key)
+        after = (best.page, best.y)
+        located += 1
     return located

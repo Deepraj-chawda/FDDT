@@ -1,17 +1,11 @@
 import * as React from "react"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import { Document, Page, pdfjs } from "react-pdf"
-// Vite's `?url` import gives the worker script's built URL rather than
-// its source — pdf.js does its actual parsing off the main thread in
-// this worker, and react-pdf needs GlobalWorkerOptions.workerSrc set to
-// it before rendering anything.
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
+import { Document, Page } from "react-pdf"
 
 import { Button } from "@/components/ui/button"
+import { PDF_DOCUMENT_OPTIONS } from "@/lib/pdfjs"
 import { cn } from "@/lib/utils"
 import type { BoundingBox } from "@/types/case"
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 // Fixed per check_type (backend/app/services/forensics/ela.py = red,
 // copy_move.py = orange) rather than derived from anything per-finding,
@@ -30,7 +24,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 // cross-document mismatch — backend/app/services/field_exception_service.py).
 // Those are deterministic comparisons of extracted values, so they are
 // neither pixel forensics (red/orange) nor model judgment (dashed).
-export type OverlayColor = "destructive" | "warning" | "ai" | "field"
+//
+// "font" is a solid FUCHSIA box around text whose font family differs from
+// the text around it, read from the PDF's text layer
+// (backend/app/services/forensics/font_consistency.py) — exact, not judged.
+export type OverlayColor = "destructive" | "warning" | "ai" | "field" | "font"
 
 export interface OverlayBox {
   box: BoundingBox
@@ -43,6 +41,7 @@ const OVERLAY_COLOR_CLASSES: Record<OverlayColor, string> = {
   warning: "border-warning bg-warning/25",
   ai: "border-dashed border-info bg-info/10",
   field: "border-violet-600 bg-violet-600/15",
+  font: "border-fuchsia-600 bg-fuchsia-600/15",
 }
 
 const OVERLAY_COLOR_LEGEND: Record<OverlayColor, string> = {
@@ -50,6 +49,7 @@ const OVERLAY_COLOR_LEGEND: Record<OverlayColor, string> = {
   warning: "Copy-move",
   ai: "AI-described area (approximate)",
   field: "Field exception",
+  font: "Font mismatch",
 }
 
 // react-pdf/pdf.js can throw synchronously during render on a load
@@ -82,7 +82,7 @@ class PdfViewerErrorBoundary extends React.Component<
 }
 
 // Renders one page of the case document with the currently-expanded
-// tampering checks' bounding boxes drawn on top — CLAUDE.md's ask: no
+// tampering checks' bounding boxes drawn on top — SPECIFICATION.md's ask: no
 // annotated/burned-in image is ever generated or stored, this is drawn
 // live over the real PDF render, and disappears the moment `overlays`
 // goes back to empty (the check gets collapsed).
@@ -198,6 +198,7 @@ function PdfOverlayViewerInner({
         >
           <Document
             file={fileUrl}
+            options={PDF_DOCUMENT_OPTIONS}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
             onLoadError={() => setLoadError(true)}
             loading={<div className="p-8 text-sm text-muted-foreground">Loading document…</div>}

@@ -18,7 +18,7 @@ class DocumentResponse(BaseModel):
     # endpoint does — the storage container is private, so the durable URL
     # alone isn't browser-fetchable, see app/services/storage_service.py);
     # otherwise the durable Azure Blob Storage URL stored in the
-    # `blob_storage_path` column per the schema in CLAUDE.md section 5.
+    # `blob_storage_path` column per the schema in System Specification section 5.
     file_url: str
     uploaded_at: datetime
     processing_status: str
@@ -47,7 +47,7 @@ class DocumentFileUrlResponse(BaseModel):
 
 
 class DocumentCheckSummary(BaseModel):
-    """One `document_checks` row (CLAUDE.md sections 2.2/3.1/3.2 —
+    """One `document_checks` row (System Specification sections 2.2/3.1/3.2 —
     field_validation, issuer_verification, and later the forensic checks).
     `result` holds whatever shape that check_type produces — see the
     individual check services (e.g. app/services/field_validation_service.py)

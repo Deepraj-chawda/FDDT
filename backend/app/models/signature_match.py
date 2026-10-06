@@ -7,9 +7,9 @@ every other document in the same upload batch/case.
 
 `comparison_scope` is an enum kept extensible for future library-wide
 comparison ("library") even though only "in_case" is generated today
-(CLAUDE.md §2.3: "keep 'library' as a valid value for later").
+(SPECIFICATION.md §2.3: "keep 'library' as a valid value for later").
 
-`result` uses advisory language deliberately — CLAUDE.md §2.3 and §4
+`result` uses advisory language deliberately — SPECIFICATION.md §2.3 and §4
 forbid UI copy or code that reads as "signature verified". The first four
 values map to the four verdicts the vision model is asked for. The last two
 come from a classical pixel comparison instead (no model — see
@@ -79,7 +79,7 @@ class SignatureMatch(TenantScopedMixin, Base):
         Enum(SignatureMatchResult, name="signature_match_result"), nullable=False
     )
     # Vision model's qualitative explanation in plain English — advisory,
-    # not a confidence score (CLAUDE.md §2.3: "qualitative judgment only —
+    # not a confidence score (SPECIFICATION.md §2.3: "qualitative judgment only —
     # never a numeric score implying precision this technique doesn't have").
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
 

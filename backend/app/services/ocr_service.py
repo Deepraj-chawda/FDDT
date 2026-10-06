@@ -1,9 +1,9 @@
 """
 OCR / layout extraction service — wraps Azure Document Intelligence's
 Layout model (generic text/table/key-value extraction, no per-document-
-type template) per CLAUDE.md sections 2 and 3.6. Handles printed Arabic
+type template) per SPECIFICATION.md sections 2 and 3.6. Handles printed Arabic
 natively (Azure Document Intelligence's own limitation, not this code's:
-handwritten Arabic is not reliably supported — CLAUDE.md section 3.7).
+handwritten Arabic is not reliably supported — SPECIFICATION.md section 3.7).
 
 Analyzes by URL (a short-lived SAS URL from StorageService.get_download_
 url), not by uploading raw bytes through this service — the Celery task
@@ -40,13 +40,20 @@ class OCRTable:
 @dataclass
 class OCRWord:
     """One recognized word with its box as a normalized (0-1) page fraction
-    — the same convention as every other bounding box in this codebase."""
+    — the same convention as every other bounding box in this codebase.
+    `font_family` is Layout's `similarFontFamily` estimate for the word (e.g.
+    "Arial, Helvetica, sans-serif") with its confidence, when the styleFont
+    add-on was requested and returned one (words only, not lines)."""
 
     text: str
     x: float
     y: float
     width: float
     height: float
+    font_family: str | None = None
+    font_confidence: float | None = None
+    # Also from styleFont: italic, or handwritten (signatures are usually one or the other).
+    italic_or_handwritten: bool = False
 
 
 @dataclass
@@ -73,6 +80,28 @@ class OCRResult:
     pages: list[OCRPage] = field(default_factory=list)
 
 
+def _fonts_by_offset(result) -> tuple[dict[int, tuple[str, float]], set[int]]:
+    """From the styleFont add-on's `styles`: content offset -> (similar font
+    family, confidence), where overlapping styles keep the most confident one;
+    and the offsets styled italic or handwritten."""
+    best: dict[int, tuple[str, float]] = {}
+    slanted: set[int] = set()
+    for style in getattr(result, "styles", None) or []:
+        family = getattr(style, "similar_font_family", None)
+        # font_style is a str enum: compare by value (str() of it is "DocumentFontStyle.ITALIC").
+        is_slanted = getattr(style, "font_style", None) == "italic" or bool(getattr(style, "is_handwritten", None))
+        if not family and not is_slanted:
+            continue
+        confidence = float(getattr(style, "confidence", None) or 0.0)
+        for span in style.spans or []:
+            for offset in range(span.offset, span.offset + span.length):
+                if is_slanted:
+                    slanted.add(offset)
+                if family and (offset not in best or best[offset][1] < confidence):
+                    best[offset] = (family, confidence)
+    return best, slanted
+
+
 def _normalized_box(polygon: list[float] | None, page_width: float, page_height: float):
     """Azure returns a flat [x1, y1, x2, y2, ...] polygon in the page's own
     units (inches for PDFs, pixels for images); the axis-aligned bounding
@@ -90,6 +119,7 @@ def _normalized_box(polygon: list[float] | None, page_width: float, page_height:
 
 
 def pages_from_result(result) -> list[OCRPage]:
+    fonts, slanted = _fonts_by_offset(result)
     pages: list[OCRPage] = []
     for index, page in enumerate(result.pages or []):
         ocr_page = OCRPage(page_number=getattr(page, "page_number", None) or index + 1)
@@ -98,7 +128,13 @@ def pages_from_result(result) -> list[OCRPage]:
                 text = getattr(item, "content", None)
                 box = _normalized_box(getattr(item, "polygon", None), page.width, page.height)
                 if text and box:
-                    target.append(OCRWord(text, *box))
+                    word = OCRWord(text, *box)
+                    span = getattr(item, "span", None)
+                    if target is ocr_page.words and span is not None:
+                        if span.offset in fonts:
+                            word.font_family, word.font_confidence = fonts[span.offset]
+                        word.italic_or_handwritten = span.offset in slanted
+                    target.append(word)
         pages.append(ocr_page)
     return pages
 
@@ -120,7 +156,7 @@ class OCRService:
         )
 
     def analyze_url(self, document_url: str) -> OCRResult:
-        from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+        from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, DocumentAnalysisFeature
         from azure.core.exceptions import AzureError, HttpResponseError
 
         # Global ceiling across every extraction worker (Azure's default is
@@ -131,9 +167,13 @@ class OCRService:
             1.0,
         )
         try:
+            features = (
+                [DocumentAnalysisFeature.STYLE_FONT] if settings.azure_document_intelligence_style_font else None
+            )
             poller = self._client.begin_analyze_document(
                 "prebuilt-layout",
                 body=AnalyzeDocumentRequest(url_source=document_url),
+                features=features,
             )
             result = poller.result()
         except HttpResponseError as exc:

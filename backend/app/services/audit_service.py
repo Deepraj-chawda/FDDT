@@ -1,5 +1,5 @@
 """
-Append-only audit log writer (CLAUDE.md section 3.5/4).
+Append-only audit log writer (SPECIFICATION.md section 3.5/4).
 
 Every automated check result and every human action is INSERTed via this
 one function — nothing else in the codebase should UPDATE or DELETE an

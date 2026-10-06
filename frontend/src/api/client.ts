@@ -1,4 +1,4 @@
-// Minimal fetch wrapper. Base URL is env-var driven (CLAUDE.md section 4:
+// Minimal fetch wrapper. Base URL is env-var driven (SPECIFICATION.md section 4:
 // "Use environment variables for ... environment-specific config").
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api"
 

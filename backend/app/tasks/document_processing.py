@@ -1,6 +1,6 @@
 """
 Celery task: OCR + classification + extraction for one uploaded document
-(CLAUDE.md sections 3.1 and 3.6). Triggered automatically right after
+(SPECIFICATION.md sections 3.1 and 3.6). Triggered automatically right after
 upload (see app/api/documents.py) — enqueued via `.delay()`, so the
 upload request itself doesn't block on OCR/LLM latency.
 
@@ -24,11 +24,14 @@ from sqlalchemy import select
 from app.db import tenancy
 from app.db.session import SessionLocal
 from app.models.document import Document, DocumentProcessingStatus
+from app.models.document_check import DocumentCheckStatus, DocumentCheckType
 from app.services.audit_service import record_event
+from app.services.check_store import save_check
 from app.services.extraction_service import classify_and_extract
 from app.services.field_locator_service import attach_field_locations
+from app.services.forensics.font_consistency import analyze_font_consistency
 from app.services.llm_service import get_llm_service
-from app.services.ocr_service import get_ocr_service
+from app.services.ocr_service import OCRPage, get_ocr_service
 from app.services.risk_scoring_service import request_case_scoring
 from app.services.storage_service import get_storage_service_for_task
 from app.tasks.celery_app import celery_app
@@ -40,6 +43,51 @@ from app.tasks.document_checks import _maybe_enqueue_cross_document_check, run_d
 # traceback; the full exception is still whatever Celery's own logging
 # captures.
 _ERROR_MESSAGE_MAX_LENGTH = 4000
+
+
+def _is_pdf(document: Document) -> bool:
+    return document.content_type == "application/pdf" or document.original_filename.lower().endswith(".pdf")
+
+
+def _run_font_consistency(db, document: Document, storage, ocr_pages: list[OCRPage]) -> None:
+    """The font consistency check (app/services/forensics/font_consistency.py).
+    Runs here rather than as its own task because scanned pages need this
+    task's OCR font estimates. Best effort: a failure is stored as a failed
+    check, never fails the extraction."""
+    if not _is_pdf(document):
+        return
+    try:
+        result = analyze_font_consistency(storage.download_bytes(document.blob_storage_path), ocr_pages)
+        save_check(
+            db,
+            document=document,
+            check_type=DocumentCheckType.font_consistency,
+            status=DocumentCheckStatus.completed,
+            result=result,
+        )
+        findings = [d for d in result["details"] if d["finding"] == "font_inconsistency"]
+        record_event(
+            db,
+            "font_consistency_completed",
+            case_id=document.case_id,
+            document_id=document.id,
+            event_data={"result": result["result"], "finding_count": len(findings)},
+        )
+    except Exception as exc:  # noqa: BLE001
+        save_check(
+            db,
+            document=document,
+            check_type=DocumentCheckType.font_consistency,
+            status=DocumentCheckStatus.failed,
+            error_message=str(exc)[:_ERROR_MESSAGE_MAX_LENGTH],
+        )
+        record_event(
+            db,
+            "font_consistency_failed",
+            case_id=document.case_id,
+            document_id=document.id,
+            event_data={"error": str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]},
+        )
 
 
 @celery_app.task(name="process_document")
@@ -77,6 +125,10 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
                 "document_type_confidence": analysis.document_type_confidence,
                 "core_fields": analysis.core_fields_as_dict(),
                 "additional_fields": [f.model_dump() for f in analysis.additional_fields],
+                # Numbers as printed, for the arithmetic checks in
+                # app/services/field_validation_service.py.
+                "line_items": [item.model_dump() for item in analysis.line_items],
+                "amount_in_words": analysis.amount_in_words.model_dump(),
             }
             # Where on the page each value was read from — stored on the field
             # as a normalized `bounding_box` so field-level exceptions can be
@@ -86,6 +138,9 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
                 fields_located = attach_field_locations(ocr_result.pages, extracted_fields)
             except Exception:  # noqa: BLE001
                 fields_located = 0
+            # Before the document is marked complete, so the case is never
+            # scored without it.
+            _run_font_consistency(db, document, storage, ocr_result.pages)
             document.extracted_fields = extracted_fields
             document.processing_status = DocumentProcessingStatus.complete
             document.processing_error = None

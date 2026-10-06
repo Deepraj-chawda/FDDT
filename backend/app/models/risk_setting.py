@@ -1,6 +1,6 @@
 """
 `risk_settings` table — one row per company holding the two editable risk
-tier cutoffs (CLAUDE.md section 3.3: "map to tier via configurable
+tier cutoffs (SPECIFICATION.md section 3.3: "map to tier via configurable
 thresholds"):
 
     score <  medium_threshold                      -> low

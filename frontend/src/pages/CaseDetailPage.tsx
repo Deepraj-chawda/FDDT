@@ -130,7 +130,7 @@ export function CaseDetailPage() {
 
   // In-case signature comparison results — fetched case-wide and filtered
   // per active document in the Checks panel. Only in_case scope is shown
-  // at this phase (library-scope comparison not built yet per CLAUDE.md §2.3).
+  // at this phase (library-scope comparison not built yet per SPECIFICATION.md §2.3).
   const { data: signatureMatches = [] } = useQuery<SignatureMatch[]>({
     queryKey: ["signatureMatches", caseId, token],
     queryFn: () => getSignatureMatches(caseId!, token!),

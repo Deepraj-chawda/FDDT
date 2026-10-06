@@ -5,11 +5,11 @@ Revises: 4b7d0e1f3a52
 Create Date: 2026-09-17 00:00:00.000000
 
 Adds `visual_inconsistency_review` to `document_check_type` — the
-combined vision-model check (CLAUDE.md sections 3.2/3.4/3.5, see
+combined vision-model check (SPECIFICATION.md sections 3.2/3.4/3.5, see
 app/services/visual_inconsistency_service.py's module docstring for why
 this covers BOTH the visual-inconsistency review and the AI-generated-
 content question in one check_type rather than two: Azure AI Content
-Safety, the API CLAUDE.md section 2 names for AI-generated-content
+Safety, the API SPECIFICATION.md section 2 names for AI-generated-content
 detection, turns out to have no synthetic-content detection capability
 at all).
 

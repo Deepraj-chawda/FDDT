@@ -76,7 +76,7 @@ class CaseListItem(BaseModel):
 
 
 class CrossDocumentFindingSummary(BaseModel):
-    """One `cross_document_findings` row (CLAUDE.md section 3.1,
+    """One `cross_document_findings` row (System Specification section 3.1,
     "Cross-document validation & reconciliation") — a shared field
     (amount/date/issuer) that disagreed between two of this case's
     documents. Case-level, not per-document — see app/services/
@@ -255,7 +255,7 @@ class CaseDecisionResponse(BaseModel):
 
 
 class AuditLogEntrySchema(BaseModel):
-    """One `audit_log` row scoped to a case — CLAUDE.md section 3.5's
+    """One `audit_log` row scoped to a case — System Specification section 3.5's
     "review history/timeline ... built from the same audit log." Every
     event_type here is a real one already written by app/services/
     audit_service.py's call sites (case creation, uploads, and each

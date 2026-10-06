@@ -1,5 +1,5 @@
 """
-Celery task: duplicate/near-duplicate detection (CLAUDE.md section 3.2 —
+Celery task: duplicate/near-duplicate detection (SPECIFICATION.md section 3.2 —
 see app/services/forensics/duplicate_check.py for the actual analysis).
 
 Like app/tasks/metadata_forensics_task.py and app/tasks/tampering_checks_
@@ -14,7 +14,7 @@ prior documents' stored page hashes AND to persist this document's own
 both) — so this task's own SessionLocal() is passed straight into it,
 rather than the check being a pure function over just the rendered pages.
 
-PDF-only for now (CLAUDE.md's "starting with PDF documents only" scope
+PDF-only for now (SPECIFICATION.md's "starting with PDF documents only" scope
 note, same gate as the other forensics tasks) — a non-PDF document is a
 quiet no-op here, not a flag or error.
 """

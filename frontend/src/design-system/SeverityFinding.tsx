@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
  * trust factor that *lowers* risk, hence "positive" tone reading green
  * with a minus sign, not red).
  *
- * Worth calling out: this is a near-exact visual match for CLAUDE.md
+ * Worth calling out: this is a near-exact visual match for SPECIFICATION.md
  * section 3.3's risk_scoring_service — one triggered risk_rule's
  * `reason_template` + `weight`, rendered explainably. Once that engine
  * exists, `risk_scores.triggered_reasons` (jsonb) is the real data

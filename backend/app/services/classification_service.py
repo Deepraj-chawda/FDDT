@@ -1,5 +1,5 @@
 """
-Document-type classification — configurable label list (CLAUDE.md section
+Document-type classification — configurable label list (SPECIFICATION.md section
 3.1: "classified against a configurable label list").
 
 Defined once, here, and passed as a parameter into

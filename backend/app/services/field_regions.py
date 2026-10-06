@@ -73,6 +73,18 @@ def valid_box(raw: Any) -> dict[str, float | int] | None:
     return {"page": page, "x": round(x, 4), "y": round(y, 4), "width": round(w, 4), "height": round(h, 4)}
 
 
+def make_located_region(
+    located: dict[str, Any] | None, field: str, label: str, value: str, caption: str
+) -> dict[str, Any] | None:
+    """A region for any located value that is not a core field (a line item,
+    the amount in words), from its own stored `bounding_box`; None if it has
+    no location."""
+    box = valid_box((located or {}).get("bounding_box"))
+    if box is None:
+        return None
+    return {"field": field, "label": label, "value": value, "caption": caption, "bounding_box": box}
+
+
 def make_region(core_fields: dict[str, Any], name: str, caption: str) -> dict[str, Any] | None:
     """The region for core field `name`, or None if that field has no
     stored location (the exception is still reported, just not drawn)."""

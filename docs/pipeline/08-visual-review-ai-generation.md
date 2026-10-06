@@ -76,6 +76,9 @@ the red/orange pixel-forensic boxes.
 - **Every page costs two vision calls.** A 10-page PDF is 20 calls; there is no page cap on this task
   (unlike signature detection, capped at 10 pages).
 - Legitimate documents made of mixed sources (a template with a pasted logo, mixed fonts) can flag.
+- **Font judgement is unreliable**: the page is downscaled to 1536 px, and a few amounts retyped in a
+  different font are often missed. The [font consistency](06a-font-consistency.md) check covers fonts
+  deterministically on digital PDFs, and with OCR font recognition on scans.
 - PDF only.
 
 ## Risk rules fed

@@ -72,7 +72,7 @@ def create_signature_reference(
     enqueues the in-case comparison Celery task for this reference.
 
     `person_name` is required and must be typed by the reviewer — the
-    system does not attempt to auto-extract it (CLAUDE.md §2.3).
+    system does not attempt to auto-extract it (System Specification §2.3).
     """
     # The uploader sets reference signatures during upload, so the case owner is allowed as well as
     # reviewers; anyone else gets a 404 (same rule as GET /cases/{id}).
@@ -198,7 +198,7 @@ def list_signature_matches(
 ) -> list[SignatureMatchResponse]:
     """All in-case signature match results for this case, enriched with the
     reference person_name. Filtered to comparison_scope='in_case' only —
-    library-scope matches are not generated yet (CLAUDE.md §2.3)."""
+    library-scope matches are not generated yet (System Specification §2.3)."""
     # The uploader sets reference signatures during upload, so the case owner is allowed as well as
     # reviewers/admins; anyone else gets a 404 (same rule as GET /cases/{id}).
     db = scope.db

@@ -59,10 +59,11 @@ CONTENT = A4 + (MARGIN_X, 48, -MARGIN_X, -56)  # room for the header and footer
 RENDER_DPI = 144  # crisp enough to read, small enough to keep the report light
 
 # Live-UI colours (frontend/src/index.css: --destructive #DC2626, --warning
-# #D97706, --info #2563EB) plus violet for field exceptions.
+# #D97706, --info #2563EB) plus violet for field exceptions and fuchsia for
+# text-layer font mismatches.
 _HEX = {
     "ela": "#DC2626", "copy_move": "#D97706", "model": "#2563EB",
-    "field": "#7C3AED", "page_level": "#64748B",
+    "field": "#7C3AED", "font": "#C026D3", "page_level": "#64748B",
 }
 
 
@@ -77,6 +78,7 @@ _STYLE = {
     "copy_move": (_rgb(_HEX["copy_move"]), False),
     "model": (_rgb(_HEX["model"]), True),
     "field": (_rgb(_HEX["field"]), False),
+    "font": (_rgb(_HEX["font"]), False),
     "page_level": (_rgb(_HEX["page_level"]), False),
 }
 _KIND_LEGEND = {
@@ -84,6 +86,7 @@ _KIND_LEGEND = {
     "copy_move": "Copy-move (solid orange)",
     "model": "Model judgment (dashed blue, approximate)",
     "field": "Field exception (solid purple)",
+    "font": "Font mismatch in the text layer (solid fuchsia)",
     "page_level": "Page-level finding (not localized)",
 }
 
@@ -136,7 +139,7 @@ def _e(value: object) -> str:
     wrapped in an RTL span so extracted Arabic values render right-to-left
     (numbers inside stay left-to-right by the Unicode bidi rules) — the same
     value-level treatment the live UI gives them; the report layout itself
-    stays LTR (CLAUDE.md section 3.7)."""
+    stays LTR (SPECIFICATION.md section 3.7)."""
     text = html.escape(str(value))
     first_letter = next((c for c in text if c.isalpha()), "")
     if first_letter and _ARABIC.match(first_letter):
@@ -533,7 +536,7 @@ def _regions_intro_html(d: ReportData, regions: list[tuple[DocumentSection, Page
         return "".join(parts)
     parts.append("<h3>Colour key</h3><table cellspacing=\"0\">" + "".join(
         f'<tr><td width="7%"><span style="color:{_HEX[k]}"><b>■</b></span></td><td>{html.escape(_KIND_LEGEND[k])}</td></tr>'
-        for k in ("ela", "copy_move", "field", "model", "page_level")
+        for k in ("ela", "copy_move", "font", "field", "model", "page_level")
     ) + "</table>")
     parts.append("<h3>Region index</h3>")
     parts.append('<table cellspacing="0"><tr><th width="8%" align="left">Region</th><th width="30%" align="left">Document</th><th width="8%" align="left">Page</th><th align="left">What it shows</th></tr>')
@@ -588,7 +591,7 @@ def _draw_dashes(dashed: bool) -> str | None:
 
 def _legend(page: pymupdf.Page, kinds: set[str], y: float) -> None:
     x = MARGIN_X
-    for kind in ("ela", "copy_move", "field", "model", "page_level"):
+    for kind in ("ela", "copy_move", "font", "field", "model", "page_level"):
         if kind not in kinds:
             continue
         colour, dashed = _STYLE[kind]

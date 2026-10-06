@@ -1,9 +1,9 @@
 """
 `risk_rules` table — configuration for the transparent weighted rules
-engine (CLAUDE.md section 3.3). Rules live in the DB, not hardcoded, so
+engine (SPECIFICATION.md section 3.3). Rules live in the DB, not hardcoded, so
 an admin can tune weights/severity/wording/on-off without a redeploy.
 
-VERSIONING (CLAUDE.md section 3.3 — firm requirement):
+VERSIONING (SPECIFICATION.md section 3.3 — firm requirement):
 A row is IMMUTABLE once written. Editing a rule never UPDATEs it; the
 admin API (app/api/settings.py) INSERTs a new row with the same
 `rule_id` and `version + 1` instead. The "current" version of a rule is

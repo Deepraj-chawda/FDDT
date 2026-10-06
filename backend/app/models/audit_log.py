@@ -1,5 +1,5 @@
 """
-`audit_log` table — the append-only system-of-record (CLAUDE.md
+`audit_log` table — the append-only system-of-record (SPECIFICATION.md
 section 3.5). Every automated check result and every human action is
 INSERTed here; the application layer must never UPDATE or DELETE rows in
 this table (there is deliberately no update/delete path exposed anywhere
@@ -8,7 +8,7 @@ in the API for this model).
 Rows are also how the workflow engine's emitted internal events
 (`case_created`, `case_status_changed`, `case_escalated`, ...) are
 persisted once app/services/workflow_service.py exists — this table is
-one of the event subscribers described in CLAUDE.md section 4.
+one of the event subscribers described in SPECIFICATION.md section 4.
 """
 import uuid
 from datetime import datetime

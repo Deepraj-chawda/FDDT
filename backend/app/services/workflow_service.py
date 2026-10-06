@@ -1,5 +1,5 @@
 """
-Case workflow (CLAUDE.md section 3.4): a small `transitions` state machine
+Case workflow (SPECIFICATION.md section 3.4): a small `transitions` state machine
 plus an internal event emitter.
 
 Status model used in v1:
@@ -20,7 +20,7 @@ The other CaseStatus values (auto_approved, escalated, under_investigation,
 closed) stay in the enum for the eventual fuller workflow but nothing in v1
 transitions into them.
 
-EVENTS (CLAUDE.md section 4): transitions do not call side effects
+EVENTS (SPECIFICATION.md section 4): transitions do not call side effects
 directly; they `emit()` a WorkflowEvent, and subscribers react. The audit
 log is the current subscriber, so every event lands in `audit_log` — the
 same table the Audit History screen reads. A future external case-

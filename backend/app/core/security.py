@@ -1,6 +1,6 @@
 """
 Password hashing and JWT issuing/verification for the simple email/password
-auth flow described in CLAUDE.md section 2 (Auth). Role-based route guarding
+auth flow described in SPECIFICATION.md section 2 (Auth). Role-based route guarding
 is intentionally not implemented yet — only `role` is carried in the token.
 """
 from datetime import datetime, timedelta, timezone

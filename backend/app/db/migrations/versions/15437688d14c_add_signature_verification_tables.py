@@ -1,7 +1,7 @@
 """add_signature_verification_tables
 
 Creates signature_references and signature_matches tables for the
-reviewer-driven signature verification flow (CLAUDE.md §2.3).
+reviewer-driven signature verification flow (SPECIFICATION.md §2.3).
 
 signature_references: one row per reviewer-created reference region
   (person_name typed manually, bounding_box normalized 0-1 page

@@ -1,5 +1,5 @@
 """
-Cross-document consistency validation (CLAUDE.md section 3.1,
+Cross-document consistency validation (SPECIFICATION.md section 3.1,
 "Cross-document validation & reconciliation") — pairwise comparison of
 shared fields (amount, date, issuer/vendor) across every completed
 document in a case. Case-level, not per-document: see app/tasks/
@@ -154,7 +154,7 @@ def find_cross_document_mismatches(documents: list[Document]) -> list[dict[str, 
             findings.append(
                 {
                     "field_name": field_name,
-                    # Matches the check name in CLAUDE.md's task description
+                    # Matches the check name in SPECIFICATION.md's task description
                     # for this validation step.
                     "finding_type": "cross_document_consistency",
                     "severity": _finding_severity(field_name, claim_evidence_pair=claim_evidence_pair),

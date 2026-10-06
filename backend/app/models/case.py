@@ -2,13 +2,13 @@
 `cases` table — the unit of work the state machine (`transitions` library,
 see app/services/workflow_service.py, to be implemented later) operates on.
 
-`status` mirrors the state machine in CLAUDE.md section 3.4:
+`status` mirrors the state machine in SPECIFICATION.md section 3.4:
 submitted -> under_automated_review -> pending_manual_review / auto_approved
   -> escalated -> under_investigation -> approved/rejected -> closed
 
 `assigned_tier` records which reviewer tier owns the case (see CaseTier).
 
-`external_ref_id` is a nullable placeholder column (see CLAUDE.md section 4
+`external_ref_id` is a nullable placeholder column (see SPECIFICATION.md section 4
 note) for a possible future external case-management integration — it is
 not used by anything yet.
 """
@@ -53,7 +53,7 @@ class CaseTier(str, enum.Enum):
 
 
 class CaseType(str, enum.Enum):
-    """Case-level category, selected at submission time (CLAUDE.md section
+    """Case-level category, selected at submission time (System Specification section
     3.6's document-type coverage list). This is separate from a document's
     own `document_type`, which is filled in later by the classification
     step — a case can hold documents of more than one type (e.g. an
@@ -92,7 +92,7 @@ class Case(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
     )
     # Placeholder for a possible future external case-management integration
-    # (see CLAUDE.md section 4) — unused for now.
+    # (see SPECIFICATION.md section 4) — unused for now.
     external_ref_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Set on cases created from a bulk zip upload (app/models/bulk_upload.py):
     # which upload, and the uploader's own label for the case, which is its

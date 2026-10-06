@@ -1,5 +1,5 @@
 """
-Per-case PDF report: orchestration + storage (CLAUDE.md section 3.5,
+Per-case PDF report: orchestration + storage (SPECIFICATION.md section 3.5,
 "Evidence repository" / reporting). See app/services/case_report_data.py
 for what goes in and app/services/case_report_pdf.py for how it is drawn
 — including why the annotated page renders in the report do NOT conflict

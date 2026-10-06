@@ -1,14 +1,14 @@
 """
 File storage abstraction.
 
-CLAUDE.md section 2 names Azure Blob Storage as the file store, but
+SPECIFICATION.md section 2 names Azure Blob Storage as the file store, but
 `StorageService` keeps the upload endpoint (app/api/documents.py)
 decoupled from that choice: swapping in a different backend later means
 adding a new subclass here, not touching the endpoint.
 
 Original uploaded files are stored immutably — callers only ever
 `upload()`; there is no update/overwrite path exposed for a document's
-original bytes once it exists (CLAUDE.md section 4).
+original bytes once it exists (SPECIFICATION.md section 4).
 
 The `documents` container is private (confirmed: an unsigned request to
 a blob URL gets Azure's `PublicAccessNotPermitted`) — the right posture

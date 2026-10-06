@@ -36,7 +36,7 @@ class SignatureReferenceCreate(BaseModel):
     signature-references.
 
     `person_name` is required and must be provided by the reviewer —
-    the system never attempts to auto-extract or pre-fill it (CLAUDE.md §2.3).
+    the system never attempts to auto-extract or pre-fill it (System Specification §2.3).
     """
 
     person_name: str = Field(..., min_length=1, description=(
@@ -91,7 +91,7 @@ class SignatureReferenceResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 # Human-readable labels for the four result values — advisory language only
-# per CLAUDE.md §2.3/§4. No "verified", "confirmed", or "authenticated".
+# per System Specification §2.3/§4. No "verified", "confirmed", or "authenticated".
 SIGNATURE_MATCH_RESULT_LABELS: dict[str, str] = {
     "consistent": "Visually consistent with reference on file",
     "possibly_consistent": "Possibly consistent with reference on file",

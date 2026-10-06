@@ -33,6 +33,7 @@ FINDING_NAMES: dict[str, list[str]] = {
         "optional_content_groups", "orphaned_objects", "pdf_unreadable", "digital_signature",
         "document_id_chain", "info_dictionary", "xmp_metadata", "xmp_history", "revision_count",
     ],
+    "font_consistency": ["font_inconsistency", "font_family_inventory"],
     "error_level_analysis": ["recompression_error_region", "anti_forensic_signal"],
     "copy_move_detection": ["copy_move_cluster"],
     "duplicate_detection": ["near_duplicate_page"],
@@ -50,13 +51,15 @@ CHECK_RESULT_TYPES = [
     DocumentCheckType.copy_move_detection.value,
     DocumentCheckType.duplicate_detection.value,
     DocumentCheckType.visual_inconsistency_review.value,
+    DocumentCheckType.font_consistency.value,
     DocumentCheckType.signature_stamp_detection.value,
     DocumentCheckType.field_validation.value,
     DocumentCheckType.issuer_verification.value,
 ]
 
 SUB_CHECKS = [
-    "date_in_future", "subtotal_line_item_consistency", "total_tax_consistency", "reference_number_format",
+    "date_in_future", "line_item_arithmetic", "subtotal_line_item_consistency", "total_tax_consistency",
+    "tax_rate_consistency", "amount_in_words_consistency", "reference_number_format",
 ]
 CROSS_FIELDS = ["amount", "date", "issuer"]
 # "consistent" is the good outcome; a rule that fires on it would be a mistake.

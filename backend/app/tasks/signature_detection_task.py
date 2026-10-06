@@ -1,6 +1,6 @@
 """
 Celery task: automatic signature/stamp detection on every uploaded PDF
-(CLAUDE.md §2.3). Detection only — no comparison happens here except to
+(SPECIFICATION.md §2.3). Detection only — no comparison happens here except to
 re-trigger comparison for references a reviewer already created in this
 case (see the end of `run_signature_detection`).
 

@@ -1,6 +1,6 @@
 """
 `issuer_registry` table — known vendors, schools, and other document
-issuers an extracted issuer name is fuzzy-matched against (CLAUDE.md
+issuers an extracted issuer name is fuzzy-matched against (SPECIFICATION.md
 section 3.1, "Issuer validation"; see app/services/issuer_service.py).
 
 NOTE: seeded (see the Alembic migration that creates this table) with a

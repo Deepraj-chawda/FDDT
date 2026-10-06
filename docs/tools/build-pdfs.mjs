@@ -88,6 +88,7 @@ const DOC_LIST = [
   { file: "07-Pipeline-04-Cross-Document-Consistency", src: "docs/pipeline/04-cross-document-consistency.md", group: "Pipeline" },
   { file: "08-Pipeline-05-Issuer-Verification", src: "docs/pipeline/05-issuer-verification.md", group: "Pipeline" },
   { file: "09-Pipeline-06-Metadata-Forensics", src: "docs/pipeline/06-metadata-forensics.md", group: "Pipeline" },
+  { file: "34-Pipeline-06a-Font-Consistency", src: "docs/pipeline/06a-font-consistency.md", group: "Pipeline" },
   { file: "10-Pipeline-07-ELA-Copy-Move", src: "docs/pipeline/07-ela-copy-move.md", group: "Pipeline" },
   { file: "11-Pipeline-08-Visual-Review-AI-Generation", src: "docs/pipeline/08-visual-review-ai-generation.md", group: "Pipeline" },
   { file: "12-Pipeline-09-Signature-Verification", src: "docs/pipeline/09-signature-verification.md", group: "Pipeline" },

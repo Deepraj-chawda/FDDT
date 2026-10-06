@@ -1,5 +1,5 @@
 """
-Automatic signature/stamp detection (CLAUDE.md §2.3, Azure OpenAI vision).
+Automatic signature/stamp detection (SPECIFICATION.md §2.3, Azure OpenAI vision).
 
 Runs on every uploaded PDF. It answers only two questions per page —
 "is there a signature/stamp mark here, and where?" and "would a document

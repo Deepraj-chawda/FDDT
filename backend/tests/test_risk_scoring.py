@@ -119,6 +119,29 @@ def test_fired_rule_produces_reason_weight_and_document(db_session, user, rules)
     assert reason["weight"] == 30 and reason["severity"] == "high"
 
 
+def test_font_mismatch_scores_text_layer_and_scan_findings_separately(db_session, user, rules):
+    case = make_case(db_session, user)
+    add_document(db_session, case, user, "digital.pdf", checks={
+        T.font_consistency: _flag([
+            finding("font_family_inventory", "info", "1 of 1 page(s) analysed; 2 font families."),
+            finding("font_inconsistency", "high", "Page 1: '1,450.00' is set in Times-Roman."),
+            finding("font_inconsistency", "high", "Page 1: '14,500.00' is set in Times-Roman."),
+        ]),
+    })
+    add_document(db_session, case, user, "scan.pdf", checks={
+        T.font_consistency: _flag([finding("font_inconsistency", "medium", "Page 1 (scanned): '22,000' looks different.")]),
+    })
+    add_cross_doc_event(db_session, case)  # a two-document case waits for its cross-document check
+    a = score_case(db_session, db_session.info["test_company_id"], case.id)
+    by_rule = {r["rule_id"]: r for r in a.triggered_reasons}
+    assert by_rule.keys() == {"font.inconsistency", "font.inconsistency_scanned"}
+    digital, scan = by_rule["font.inconsistency"], by_rule["font.inconsistency_scanned"]
+    assert (digital["weight"], digital["severity"], digital["document_filename"]) == (40, "high", "digital.pdf")
+    assert "2 piece(s) of text" in digital["reason"] and "1,450.00" in digital["reason"]
+    assert (scan["weight"], scan["severity"], scan["document_filename"]) == (25, "medium", "scan.pdf")
+    assert "an estimate" in scan["reason"] and "22,000" in scan["reason"]
+
+
 def test_clean_case_scores_zero_low(db_session, user, rules):
     case = make_case(db_session, user)
     add_document(db_session, case, user, "a.pdf")

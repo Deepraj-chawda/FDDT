@@ -1,6 +1,6 @@
 // Mirrors backend/app/models/case.py (CaseType, CaseStatus, RiskTier) and
 // backend/app/schemas/case.py / document.py. Keep in sync by hand — see
-// CLAUDE.md section 2 (Forms: React Hook Form + Zod, "schema validation
+// SPECIFICATION.md section 2 (Forms: React Hook Form + Zod, "schema validation
 // mirrored from backend Pydantic models").
 
   export const CASE_TYPES = [
@@ -149,7 +149,7 @@ export interface CaseListItem {
 
 export type DocumentProcessingStatus = "pending" | "processing" | "complete" | "failed"
 
-// One plain-string extracted field, per CLAUDE.md section 3.6's
+// One plain-string extracted field, per SPECIFICATION.md section 3.6's
 // confidence/uncertain flag requirement (backend/app/services/
 // llm_service.py's FieldValue). Used for issuer/reference_number, and
 // for every additional_fields entry (those are never normalized — see
@@ -227,6 +227,7 @@ export type DocumentCheckType =
   | "duplicate_detection"
   | "ai_content_detection"
   | "visual_inconsistency_review"
+  | "font_consistency"
   // Not a real backend/app/models/document_check.py row — synthesized in
   // frontend/src/components/case/DocumentChecksPanel.tsx from the case's
   // cross_document_findings (case-level, not per-document) so it reads
@@ -250,17 +251,18 @@ export const DOCUMENT_CHECK_TYPE_LABELS: Record<DocumentCheckType, string> = {
   copy_move_detection: "Copy-move forgery detection",
   duplicate_detection: "Duplicate detection",
   ai_content_detection: "AI-generated content detection",
-  // Covers CLAUDE.md's "visual inconsistency review" AND "AI-generated
+  // Covers SPECIFICATION.md's "visual inconsistency review" AND "AI-generated
   // content detection" questions in one check — see backend/app/
   // services/visual_inconsistency_service.py's module docstring for
   // why (Azure AI Content Safety has no AI-generated-content detection
   // capability, so that question is folded into this same vision-model
   // call instead of being its own check/vendor). "(experimental)" in
   // the label itself, not just buried in the findings text, per
-  // CLAUDE.md section 4's "do not overstate ... AI-generated-document-
+  // SPECIFICATION.md section 4's "do not overstate ... AI-generated-document-
   // detection accuracy" rule — a reviewer should see the caveat before
   // they even expand the check.
   visual_inconsistency_review: "Visual inconsistency review (experimental)",
+  font_consistency: "Font consistency",
   cross_document_consistency: "Cross-document consistency",
 }
 
@@ -327,7 +329,7 @@ export interface CaseDetailDocument {
 }
 
 // One cross_document_findings row (backend/app/models/cross_document_
-// finding.py) — case-level, not per-document (CLAUDE.md section 3.1).
+// finding.py) — case-level, not per-document (SPECIFICATION.md section 3.1).
 export interface CrossDocumentFinding {
   id: string
   field_name: string
@@ -459,6 +461,8 @@ export type AuditEventType =
   | "tampering_checks_failed"
   | "visual_inconsistency_review_completed"
   | "visual_inconsistency_review_failed"
+  | "font_consistency_completed"
+  | "font_consistency_failed"
   | "cross_document_check_completed"
 
 // Event labels live in lib/audit.ts (shared with the system Audit History page).
@@ -500,7 +504,7 @@ export type SignatureMatchResult =
   | "identical_reuse"
   | "reused_different_signer"
 
-// Human-readable labels — advisory framing per CLAUDE.md §2.3/§4.
+// Human-readable labels — advisory framing per SPECIFICATION.md §2.3/§4.
 export const SIGNATURE_MATCH_RESULT_LABELS: Record<SignatureMatchResult, string> = {
   consistent: "Visually consistent with reference on file",
   possibly_consistent: "Possibly consistent with reference on file",

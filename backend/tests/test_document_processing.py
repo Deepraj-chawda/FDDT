@@ -15,6 +15,7 @@ task's writes are visible to plain assertions afterward.
 import uuid
 from unittest.mock import MagicMock
 
+import pymupdf
 import pytest
 
 from tests.conftest import tenant_task_factory
@@ -27,6 +28,7 @@ from app.models import Base
 from app.models.audit_log import AuditLog
 from app.models.case import Case, CaseStatus, CaseType
 from app.models.document import Document, DocumentProcessingStatus
+from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
 from app.models.user import User, UserRole
 from app.services.llm_service import (
     AdditionalField,
@@ -102,12 +104,20 @@ def seeded_document_id(task_session_factory) -> uuid.UUID:
         session.close()
 
 
-def _patch_storage(monkeypatch):
+def _one_page_pdf() -> bytes:
+    doc = pymupdf.open()
+    doc.new_page().insert_text((72, 72), "INVOICE #1 Vendor: Acme Total: $10", fontname="helv", fontsize=10)
+    return doc.tobytes()
+
+
+def _patch_storage(monkeypatch, pdf_bytes: bytes | None = None):
     fake_storage = MagicMock()
     fake_storage.get_download_url.return_value = "https://fake.blob.core.windows.net/signed-url"
+    fake_storage.download_bytes.return_value = pdf_bytes if pdf_bytes is not None else _one_page_pdf()
     monkeypatch.setattr(
         document_processing_module, "get_storage_service_for_task", lambda: fake_storage
     )
+    return fake_storage
 
 
 def test_process_document_success_stores_type_fields_and_ocr_text(
@@ -154,7 +164,49 @@ def test_process_document_success_stores_type_fields_and_ocr_text(
     assert document.extracted_fields["additional_fields"][0]["field_name"] == "vendor"
 
     events = session.query(AuditLog).filter_by(document_id=seeded_document_id).all()
-    assert {e.event_type for e in events} == {"document_processing_completed"}
+    assert {e.event_type for e in events} == {"document_processing_completed", "font_consistency_completed"}
+
+    # The font consistency check runs here, on the document's own bytes.
+    font = session.query(DocumentCheck).filter_by(
+        document_id=seeded_document_id, check_type=DocumentCheckType.font_consistency
+    ).one()
+    assert font.status == DocumentCheckStatus.completed
+    assert font.result["result"] == "pass"
+    assert font.result["details"][0]["data"]["pages"] == [{"page": 1, "source": "text_layer"}]
+
+
+def test_font_check_failure_never_fails_the_extraction(
+    task_session_factory, seeded_document_id, monkeypatch
+):
+    _patch_storage(monkeypatch, pdf_bytes=b"not a pdf")
+    fake_ocr = MagicMock()
+    fake_ocr.analyze_url.return_value = OCRResult(text="text")
+    monkeypatch.setattr(document_processing_module, "get_ocr_service", lambda: fake_ocr)
+    fake_llm = MagicMock()
+    fake_llm.classify_and_extract.return_value = DocumentAnalysis(
+        document_type="vendor_invoice",
+        document_type_confidence=0.9,
+        issuer=FieldValue(value=None, confidence=0.0, uncertain=True),
+        reference_number=FieldValue(value=None, confidence=0.0, uncertain=True),
+        date=DateFieldValue(value=None, raw_text=None, confidence=0.0, uncertain=True),
+        amount=_empty_amount(),
+        subtotal=_empty_amount(),
+        tax_amount=_empty_amount(),
+        tax_rate=_empty_numeric(),
+        additional_fields=[],
+    )
+    monkeypatch.setattr(document_processing_module, "get_llm_service", lambda: fake_llm)
+
+    document_processing_module.process_document(str(seeded_document_id))
+
+    session = task_session_factory()
+    assert session.get(Document, seeded_document_id).processing_status == DocumentProcessingStatus.complete
+    font = session.query(DocumentCheck).filter_by(
+        document_id=seeded_document_id, check_type=DocumentCheckType.font_consistency
+    ).one()
+    assert font.status == DocumentCheckStatus.failed and font.error_message
+    events = {e.event_type for e in session.query(AuditLog).filter_by(document_id=seeded_document_id)}
+    assert events == {"document_processing_completed", "font_consistency_failed"}
 
 
 def test_process_document_failure_marks_failed_with_reason(

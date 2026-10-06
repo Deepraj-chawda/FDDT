@@ -4,7 +4,7 @@ Revision ID: e7ce49024f9e
 Revises:
 Create Date: 2026-09-12 03:18:29.116136
 
-Creates the core v1 tables from CLAUDE.md section 6:
+Creates the core v1 tables from SPECIFICATION.md section 6:
 users, cases, documents, document_checks, cross_document_findings,
 risk_scores, risk_rules, case_actions, audit_log.
 """
@@ -222,7 +222,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_case_actions_case_id", "case_actions", ["case_id"])
 
-    # audit_log is append-only at the application layer (CLAUDE.md section
+    # audit_log is append-only at the application layer (SPECIFICATION.md section
     # 3.5/4): no UPDATE/DELETE path is exposed anywhere in the API for it.
     op.create_table(
         "audit_log",

@@ -3,7 +3,7 @@
 document (OCR/layout, classification, field extraction, each forensic
 check, AI-generated-content detection, etc.). `result` holds the raw
 check output as JSON; `confidence` backs the "fields_uncertain" routing
-rule described in CLAUDE.md section 3.6.
+rule described in SPECIFICATION.md section 3.6.
 """
 import enum
 import uuid
@@ -29,6 +29,7 @@ class DocumentCheckType(str, enum.Enum):
     duplicate_detection = "duplicate_detection"
     ai_content_detection = "ai_content_detection"
     visual_inconsistency_review = "visual_inconsistency_review"
+    font_consistency = "font_consistency"
 
 
 class DocumentCheckStatus(str, enum.Enum):

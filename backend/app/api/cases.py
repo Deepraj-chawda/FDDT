@@ -346,7 +346,7 @@ def get_case_audit_log(
     scope: CaseScope = Depends(get_case_scope),
 ) -> list[AuditLogEntrySchema]:
     """Chronological feed for the case detail page's activity timeline —
-    CLAUDE.md section 3.5. Reads the same append-only `audit_log` rows
+    System Specification section 3.5. Reads the same append-only `audit_log` rows
     every check task and case/document endpoint already writes; this
     adds no new events, just a way to read the ones that exist."""
     db, current_user = scope.db, scope.ctx.user

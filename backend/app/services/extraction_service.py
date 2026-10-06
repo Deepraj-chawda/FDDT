@@ -1,5 +1,5 @@
 """
-Template-free semantic field extraction (CLAUDE.md section 3.6): one
+Template-free semantic field extraction (SPECIFICATION.md section 3.6): one
 generic pipeline for every document type, not a per-type extractor.
 
 Classification and extraction happen as a single LLM call

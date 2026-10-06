@@ -42,6 +42,7 @@ not call Azure.
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | Azure OpenAI REST API version |
 | `AZURE_OPENAI_REQUEST_TIMEOUT_SECONDS` | `60.0` | Per-call LLM timeout. Kept short on purpose: a hung call holds a worker thread (and its rate-limiter reservation) |
 | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` | `10.0` | Global cap on Document Intelligence calls (Azure's default S0 limit is 15 TPS) |
+| `AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT` | `true` | Request Layout's font-style add-on (`styleFont`), which the [font consistency](../pipeline/06a-font-consistency.md) check uses on scanned pages. Billed by Azure as an add-on per page; `false` leaves fonts on scans to the visual review only |
 | `DATABASE_POOLER_HOST` / `DATABASE_POOLER_PORT` | *(unset)* / `6432` | When set, the two app roles connect through **PgBouncer** (transaction pooling) and each process keeps no pool of its own. Recommended in production ([processing-queues.md](../processing-queues.md#database-connections)) |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `5` / `10` | SQLAlchemy pool per role per process when connecting **directly** (no PgBouncer) |
 | `DEFAULT_MAX_FILE_SIZE_MB` / `DEFAULT_MAX_ZIP_SIZE_MB` | `10` / `300` | Upload limits a **new** company is created with. Limits are per company (`companies.max_file_size_mb` / `max_zip_size_mb`, changed by a platform admin under Platform › Companies); changing these defaults never changes an existing company. The frontend reads the company's real limits from `GET /auth/me/upload-limits` |

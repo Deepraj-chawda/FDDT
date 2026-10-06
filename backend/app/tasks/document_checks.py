@@ -1,6 +1,6 @@
 """
 Celery tasks: per-document field validation + issuer verification, and
-case-level cross-document consistency checks (CLAUDE.md section 3.1/3.2)
+case-level cross-document consistency checks (SPECIFICATION.md section 3.1/3.2)
 — the pipeline stage that follows OCR + classification + extraction
 (app/tasks/document_processing.py).
 
@@ -9,7 +9,7 @@ once a document's extraction has succeeded. Once it finishes, it checks
 whether every document in the case has now reached a terminal
 processing_status (complete or failed) and, if so, enqueues
 `run_cross_document_checks` — that's the "once all documents in a case
-have finished extraction" trigger from CLAUDE.md section 3.1, done here
+have finished extraction" trigger from SPECIFICATION.md section 3.1, done here
 rather than per-document. The same completion check is also called from
 document_processing.py's failure path, so a document that fails
 extraction doesn't silently block the case-level check forever.
@@ -41,7 +41,7 @@ from app.tasks.tenant import open_task_session, resolve_company_for_case, resolv
 _ERROR_MESSAGE_MAX_LENGTH = 4000
 
 # Cross-document consistency only makes sense with 2+ documents to
-# compare (CLAUDE.md section 3.1: "For every case with 2+ documents").
+# compare (SPECIFICATION.md section 3.1: "For every case with 2+ documents").
 _MIN_DOCUMENTS_FOR_CROSS_DOCUMENT_CHECK = 2
 
 _TERMINAL_STATUSES = (DocumentProcessingStatus.complete, DocumentProcessingStatus.failed)

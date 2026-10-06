@@ -1,19 +1,17 @@
 """
 LLM abstraction for document classification + template-free field
-extraction (CLAUDE.md sections 3.1/3.6), plus a semantic entity-matching
+extraction (SPECIFICATION.md sections 3.1/3.6), plus a semantic entity-matching
 fallback used by issuer verification (app/services/issuer_service.py)
 when fuzzy string matching can't help (e.g. an Arabic-script extracted
 name against an English-only registry entry — different scripts, not
 just spelling variance).
 
-CLAUDE.md section 2 names the Claude API (Anthropic) as the LLM for this
-job. This deployment currently uses Azure OpenAI instead — a deliberate,
-explicit choice made outside that doc. `LLMService` exists for the same
-reason `StorageService` (app/services/storage_service.py) sits in front of
-Azure Blob Storage: callers (app/services/extraction_service.py,
+The model is Azure OpenAI. `LLMService` exists for the same reason
+`StorageService` (app/services/storage_service.py) sits in front of Azure
+Blob Storage: callers (app/services/extraction_service.py,
 app/services/issuer_service.py) depend on this interface, not on Azure
-OpenAI directly, so swapping in a `ClaudeLLMService` later is a new
-class, not a rewrite of every call site.
+OpenAI directly, so another provider would be a new class, not a rewrite
+of every call site.
 
 The single `classify_and_extract` call does both classification (against a
 configurable label list) and field extraction in one round trip — see
@@ -46,7 +44,7 @@ from app.services import rate_limiter
 
 
 class FieldValue(BaseModel):
-    """A plain string field, per CLAUDE.md section 3.6: "Include a
+    """A plain string field, per SPECIFICATION.md section 3.6: "Include a
     confidence/fields_uncertain flag per extracted field; low-confidence
     key fields auto-route the document to manual review instead of
     silently proceeding." Used for fields that stay as free text
@@ -87,7 +85,7 @@ class DateFieldValue(BaseModel):
 
 class AdditionalField(BaseModel):
     """A dynamically-named field beyond the core ones — how this
-    stays template-free (CLAUDE.md section 3.6) despite the strict JSON
+    stays template-free (SPECIFICATION.md section 3.6) despite the strict JSON
     schema mode Azure OpenAI requires, which can't express an arbitrary/
     open-ended set of object keys. An array of {field_name, value, ...}
     can hold any field name a document happens to have, within a schema
@@ -101,6 +99,34 @@ class AdditionalField(BaseModel):
     uncertain: bool
 
 
+class LineItem(BaseModel):
+    """One charge line, numbers copied AS PRINTED (normalized only in
+    representation) — never recomputed, because the arithmetic between them
+    is exactly what app/services/field_validation_service.py checks.
+    `counts_toward_total` is false for lines the document itself marks as
+    already paid, informational or excluded."""
+
+    description: str | None
+    quantity: float | None
+    unit_price: float | None
+    discount: float | None
+    line_total: float | None
+    line_total_raw_text: str | None
+    counts_toward_total: bool
+    confidence: float
+    uncertain: bool
+
+
+class AmountInWords(BaseModel):
+    """The total written out in words ("Twenty thousand five hundred AED
+    only"), if the document has one. `value` is what the WORDS say — never
+    the numeric total they accompany."""
+
+    text: str | None
+    value: float | None
+    confidence: float
+
+
 class DocumentAnalysis(BaseModel):
     document_type: str
     document_type_confidence: float
@@ -108,7 +134,7 @@ class DocumentAnalysis(BaseModel):
     reference_number: FieldValue
     date: DateFieldValue
     # The grand total actually due/paid (tax-inclusive, when tax applies)
-    # — CLAUDE.md section 3.6 originally called this just "amount"; kept
+    # — SPECIFICATION.md section 3.6 originally called this just "amount"; kept
     # the same key so existing storage/consumers don't need a rename,
     # its meaning is now made explicit here and in the prompt.
     amount: AmountFieldValue
@@ -116,6 +142,8 @@ class DocumentAnalysis(BaseModel):
     tax_amount: AmountFieldValue
     tax_rate: NumericFieldValue
     additional_fields: list[AdditionalField]
+    line_items: list[LineItem] = []
+    amount_in_words: AmountInWords = AmountInWords(text=None, value=None, confidence=0.0)
 
     def core_fields_as_dict(self) -> dict[str, dict[str, Any]]:
         """The dict-of-core-fields shape stored in `documents.
@@ -164,7 +192,7 @@ class VisualCategoryFinding(BaseModel):
 
 class AIGenerationAssessment(BaseModel):
     """The sixth question asked of every page alongside the five visual-
-    consistency categories above — CLAUDE.md section 3.4's AI-generated-
+    consistency categories above — SPECIFICATION.md section 3.4's AI-generated-
     document detection, folded into this same vision call rather than a
     separate check/vendor (see app/services/visual_inconsistency_
     service.py's module docstring for why)."""
@@ -203,7 +231,7 @@ class SignatureComparisonResult(BaseModel):
     """Result of compare_signatures — purely qualitative, no numeric score.
 
     `result` maps to app/models/signature_match.py's SignatureMatchResult
-    enum (same four string values). Advisory language only per CLAUDE.md
+    enum (same four string values). Advisory language only per SPECIFICATION.md
     §2.3/§4: "visually consistent with reference on file", never "verified"
     or "confirmed". `reasoning` is the vision model's brief plain-English
     explanation, preserved verbatim in the signature_matches row for the
@@ -273,7 +301,7 @@ class LLMService(ABC):
         """One vision-model read of one rendered document page image
         (`image_data_uri` — a base64 data: URI, see app/services/
         visual_inconsistency_service.py._encode_page_image). Used for
-        CLAUDE.md section 3.2's secondary visual-inconsistency review AND
+        SPECIFICATION.md section 3.2's secondary visual-inconsistency review AND
         section 3.4's AI-generated-content question in one call — see
         that module's docstring."""
         raise NotImplementedError
@@ -286,7 +314,7 @@ class LLMService(ABC):
         image crops (both base64 data: URIs).
 
         Returns a SignatureComparisonResult with a four-value verdict and
-        plain-English reasoning. No numeric score — CLAUDE.md §2.3 is
+        plain-English reasoning. No numeric score — SPECIFICATION.md §2.3 is
         explicit: "never a numeric score implying precision this technique
         doesn't have". Language framing must be advisory throughout:
         'visually consistent with reference on file', never 'verified'."""
@@ -400,6 +428,57 @@ def _analysis_json_schema() -> dict[str, Any]:
                     "additionalProperties": False,
                 },
             },
+            "line_items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "description": {"type": ["string", "null"]},
+                        "quantity": {"type": ["number", "null"], "description": "As printed. Null if not shown."},
+                        "unit_price": {"type": ["number", "null"], "description": "As printed. Null if not shown."},
+                        "discount": {
+                            "type": ["number", "null"],
+                            "description": "Discount amount on this line, as printed. Null if none.",
+                        },
+                        "line_total": {
+                            "type": ["number", "null"],
+                            "description": "The line's amount AS PRINTED — never recomputed, even if it is wrong.",
+                        },
+                        "line_total_raw_text": {
+                            "type": ["string", "null"],
+                            "description": "The line total exactly as it appears in the document.",
+                        },
+                        "counts_toward_total": {
+                            "type": "boolean",
+                            "description": "False only if the document marks this line as already paid, "
+                            "informational or excluded from the amount due.",
+                        },
+                        "confidence": {"type": "number"},
+                        "uncertain": {"type": "boolean"},
+                    },
+                    "required": [
+                        "description", "quantity", "unit_price", "discount", "line_total",
+                        "line_total_raw_text", "counts_toward_total", "confidence", "uncertain",
+                    ],
+                    "additionalProperties": False,
+                },
+            },
+            "amount_in_words": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": ["string", "null"],
+                        "description": "The amount written out in words, exactly as printed. Null if absent.",
+                    },
+                    "value": {
+                        "type": ["number", "null"],
+                        "description": "The number those WORDS spell — even if it disagrees with the numeric total.",
+                    },
+                    "confidence": {"type": "number"},
+                },
+                "required": ["text", "value", "confidence"],
+                "additionalProperties": False,
+            },
         },
         "required": [
             "document_type",
@@ -412,6 +491,8 @@ def _analysis_json_schema() -> dict[str, Any]:
             "tax_amount",
             "tax_rate",
             "additional_fields",
+            "line_items",
+            "amount_in_words",
         ],
         "additionalProperties": False,
     }
@@ -626,7 +707,7 @@ uploaded document (which may be in English, Arabic, or a mix of both — \
 handle Arabic text natively, do not transliterate or translate free-text \
 values, keep them in their own script exactly as written).
 
-Do three things in one response:
+Do these things in one response:
 
 1. Classify the document into exactly one of these types: {labels}. \
 If nothing fits well, use "other". Give a confidence from 0.0 to 1.0.
@@ -669,6 +750,28 @@ language the document is in — only the value should be in the \
 document's own language/script, and these values are NOT normalized \
 (unlike the core fields above).
 
+4. List every charge line in `line_items` (invoice/quotation lines, \
+fee terms, rows of a charges table — one entry per line that carries an \
+amount), with quantity, unit_price, discount and line_total as plain \
+numbers (normalized like amounts) and the line total's original text in \
+line_total_raw_text. A rate stated in the line text ("5,500 PER MONTH X 4 \
+MONTHS = 22,000") gives unit_price 5500, quantity 4, line_total 22000. \
+Set counts_toward_total false only when the document itself marks a line \
+as already paid, informational or excluded from the amount due. Do not \
+list the subtotal, tax or total themselves as line items. Empty list if \
+the document has no charge lines.
+
+5. If the document writes an amount out in words ("Twenty thousand five \
+hundred dirhams only", "فقط خمسة آلاف درهم"), copy those words into \
+amount_in_words.text and put the number THE WORDS spell into \
+amount_in_words.value. All null (confidence 0) if there are none.
+
+CRITICAL for 4 and 5: copy every number exactly as printed, even when the \
+arithmetic is wrong (a line total that is not quantity x unit price, lines \
+that do not add up to the total, words that disagree with the figures). \
+Never correct, recompute or reconcile them — finding those discrepancies \
+is what this system is for.
+
 For every field (core and additional), set `confidence` (0.0-1.0, how \
 sure you are the value is correct and genuinely present in the text) and \
 `uncertain` (true if confidence is low, the text was ambiguous/garbled, \
@@ -704,7 +807,7 @@ the same document. Briefly explain your reasoning."""
 
 
 # app/services/visual_inconsistency_service.py's system prompt for the
-# vision-model page read — CLAUDE.md sections 3.2 (secondary visual-
+# vision-model page read — SPECIFICATION.md sections 3.2 (secondary visual-
 # inconsistency review) and 3.4 (AI-generated-content question), asked
 # together in one structured call. Kept here, not in that module, so
 # every LLM prompt in this codebase lives in one place next to the
@@ -745,7 +848,7 @@ either way."""
 
 
 # System prompt for compare_signatures (app/services/signature_comparison_service.py).
-# Advisory framing throughout — CLAUDE.md §2.3/§4: never "verified", "confirmed",
+# Advisory framing throughout — SPECIFICATION.md §2.3/§4: never "verified", "confirmed",
 # or "authenticated". The four verdicts map directly to SignatureMatchResult enum
 # values in app/models/signature_match.py. Kept here with the other prompts so all
 # LLM prompt text lives in one place next to the schemas that constrain their output.
@@ -780,7 +883,7 @@ structure", "the horizontal stroke weight differs significantly").\
 """
 
 # System prompt for detect_signatures_stamps. Presence/placement only —
-# CLAUDE.md §2.3: signature/stamp detection is assistive, never an
+# SPECIFICATION.md §2.3: signature/stamp detection is assistive, never an
 # identity or authenticity verdict.
 _SIGNATURE_DETECTION_SYSTEM_PROMPT = """\
 You are assisting a human document reviewer. Look at this business-document page image \
@@ -1175,7 +1278,7 @@ class AzureOpenAILLMService(LLMService):
     ) -> SignatureComparisonResult:
         """Qualitative comparison of two signature/stamp image crops via the
         vision model. Advisory language only — no numeric score, no "verified"
-        framing (CLAUDE.md §2.3/§4). See _signature_comparison_json_schema()
+        framing (SPECIFICATION.md §2.3/§4). See _signature_comparison_json_schema()
         for the four-verdict enum and _SIGNATURE_COMPARISON_SYSTEM_PROMPT for
         the prompt framing."""
         if not self._is_vision_capable:

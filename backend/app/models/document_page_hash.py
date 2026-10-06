@@ -1,6 +1,6 @@
 """
 `document_page_hashes` table — one row per rendered PDF page's perceptual
-hash, used by duplicate/near-duplicate detection (CLAUDE.md section 3.2;
+hash, used by duplicate/near-duplicate detection (SPECIFICATION.md section 3.2;
 see app/services/forensics/duplicate_check.py).
 
 A small dedicated table rather than a `perceptual_hash` column on

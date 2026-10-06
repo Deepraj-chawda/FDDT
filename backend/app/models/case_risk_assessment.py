@@ -1,6 +1,6 @@
 """
 `case_risk_assessments` table — one row per scoring run of a case
-(CLAUDE.md section 3.3). Rows are only ever INSERTed, never updated or
+(SPECIFICATION.md section 3.3). Rows are only ever INSERTed, never updated or
 overwritten, so a case's scoring history is preserved in full.
 
 `triggered_reasons` stores the already-rendered reason text of every rule

@@ -1,6 +1,6 @@
 """
 Celery task: image-tampering detection — Error Level Analysis +
-copy-move detection (CLAUDE.md section 3.2; see app/services/forensics/
+copy-move detection (SPECIFICATION.md section 3.2; see app/services/forensics/
 ela.py and copy_move.py for the actual analysis).
 
 One task runs both checks — not because they're the same check_type
@@ -15,7 +15,7 @@ bytes — no OCR text or classified document_type needed — so it's
 enqueued directly from the upload endpoint (app/api/documents.py) and
 runs independently/in parallel, not chained after extraction.
 
-PDF-only for now (CLAUDE.md's "starting with PDF documents only" scope
+PDF-only for now (SPECIFICATION.md's "starting with PDF documents only" scope
 note, same gate as metadata_forensics_task.py) — a non-PDF document is a
 quiet no-op here, not a flag or error.
 """

@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -13,9 +14,41 @@ const appTitle = (): Plugin => ({
   transformIndexHtml: (html) => html.replaceAll('%APP_TITLE%', APP_TITLE),
 })
 
+// pdf.js's decoders and data (src/lib/pdfjs.ts PDF_DOCUMENT_OPTIONS) served at
+// /pdfjs/<dir>/ straight from node_modules/pdfjs-dist in dev, and copied into
+// the build — so they always match the installed pdf.js version.
+const PDFJS_DIRS = ['wasm', 'cmaps', 'standard_fonts', 'iccs']
+const pdfjsRoot = path.resolve(import.meta.dirname, 'node_modules/pdfjs-dist')
+const pdfjsAssets = (): Plugin => ({
+  name: 'pdfjs-assets',
+  configureServer(server) {
+    server.middlewares.use('/pdfjs', (req, res, next) => {
+      const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '')
+      const file = path.resolve(pdfjsRoot, rel)
+      const [dir] = rel.split('/')
+      if (!PDFJS_DIRS.includes(dir) || !file.startsWith(pdfjsRoot + path.sep) || !fs.existsSync(file)) {
+        return next()
+      }
+      if (file.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm')
+      fs.createReadStream(file).pipe(res)
+    })
+  },
+  generateBundle() {
+    for (const dir of PDFJS_DIRS) {
+      for (const name of fs.readdirSync(path.join(pdfjsRoot, dir))) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `pdfjs/${dir}/${name}`,
+          source: fs.readFileSync(path.join(pdfjsRoot, dir, name)),
+        })
+      }
+    }
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), appTitle()],
+  plugins: [react(), tailwindcss(), appTitle(), pdfjsAssets()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
@@ -23,7 +56,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Backend runs on :8000 (see backend/README / CLAUDE.md). Proxying
+      // Backend runs on :8000 (see backend/README / SPECIFICATION.md). Proxying
       // avoids CORS config for local dev.
       '/api': {
         target: 'http://127.0.0.1:8000',

@@ -19,13 +19,13 @@ import { APP_FULL_NAME, APP_NAME } from "@/lib/appInfo"
 //   - "Trust this device" / hardware-binding checkbox — this app's auth
 //     is a plain JWT in localStorage (see hooks/useAuth.tsx), no device-
 //     trust or expiry concept exists to back a real control.
-//   - SAML/Okta SSO button — CLAUDE.md section 2 names SSO as a
+//   - SAML/Okta SSO button — SPECIFICATION.md section 2 names SSO as a
 //     "possible later upgrade, not part of the initial build"; a live-
 //     looking button that does nothing on click would be worse than not
 //     having it.
 //   - FIPS 140-2 / SOC 2 Type II / "zero-knowledge logs" trust badges —
 //     fabricated compliance claims about infrastructure this app
-//     doesn't have. CLAUDE.md section 4 is explicit about not
+//     doesn't have. SPECIFICATION.md section 4 is explicit about not
 //     overstating what the system does; inventing certifications is the
 //     same failure mode.
 //   - Terms/Privacy/status-page footer links — none of those pages exist.

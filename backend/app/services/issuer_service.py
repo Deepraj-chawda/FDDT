@@ -1,5 +1,5 @@
 """
-Issuer validation (CLAUDE.md section 3.1, "Issuer validation") —
+Issuer validation (SPECIFICATION.md section 3.1, "Issuer validation") —
 matches an extracted issuer name against the `issuer_registry` table
 (app/models/issuer_registry.py), first via rapidfuzz fuzzy string
 matching, then (if that doesn't clear the threshold) via an LLM semantic

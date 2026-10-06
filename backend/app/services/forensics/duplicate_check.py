@@ -1,5 +1,5 @@
 """
-Duplicate/near-duplicate detection (CLAUDE.md section 3.2). Computes a
+Duplicate/near-duplicate detection (SPECIFICATION.md section 3.2). Computes a
 perceptual hash (imagehash pHash, 64-bit/hash_size=8 default) for every
 rendered page of a newly uploaded PDF and compares each against every
 other document's previously stored page hashes (app/models/
@@ -57,7 +57,7 @@ class PageMatch:
     # Captured at check time (not resolved later via a join at read time)
     # so the finding stays self-contained and readable on its own even if
     # the matched document later moves case, gets renamed, or (per
-    # CLAUDE.md's audit/evidence conventions) the reviewer looking at
+    # SPECIFICATION.md's audit/evidence conventions) the reviewer looking at
     # THIS finding has no other reason to have that other case loaded —
     # duplicate matches are deliberately cross-case, so the matched
     # document is often in a case the current view knows nothing about.

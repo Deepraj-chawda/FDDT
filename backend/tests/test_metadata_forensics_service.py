@@ -209,7 +209,7 @@ def test_clean_pdf_with_consistent_info_and_xmp_passes():
 
 
 def test_every_finding_always_present_even_when_clean():
-    # Every numbered check (CLAUDE.md's ask) produces a finding entry
+    # Every numbered check (SPECIFICATION.md's ask) produces a finding entry
     # even when nothing is wrong — "info" severity, not absence.
     data = _build_pdf()
     result = analyze_pdf_metadata(data)
@@ -613,3 +613,17 @@ def test_multiple_flags_still_aggregate_to_single_flag_result():
     assert result["result"] == "flag"
     flagged = [f for f in result["details"] if f["severity"] in ("high", "medium")]
     assert len(flagged) >= 2
+
+
+def test_indirect_scalar_objects_do_not_crash_orphan_detection():
+    # Scanner output often writes a stream's /Length as its own indirect
+    # object; pikepdf returns those as plain ints, which have no objgen.
+    pdf = pikepdf.new()
+    pdf.add_blank_page()
+    length = pdf.make_indirect(pikepdf.Object.parse(b"12"))
+    pdf.Root.Extra = pikepdf.Dictionary(Length=length)
+    buf = io.BytesIO()
+    pdf.save(buf)
+    result = analyze_pdf_metadata(buf.getvalue())
+    assert "pdf_unreadable" not in [d["finding"] for d in result["details"]]
+    assert "orphaned_objects" in [d["finding"] for d in result["details"]]

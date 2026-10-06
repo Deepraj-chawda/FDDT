@@ -5,7 +5,7 @@ what reviewers actually read, not just the numeric score).
 
 `rules_snapshot` freezes the {rule_id: weight} pairs that were active at
 scoring time, so a later change to `risk_rules.weight` never retroactively
-changes a historical case's score (CLAUDE.md section 3.3, rule versioning).
+changes a historical case's score (SPECIFICATION.md section 3.3, rule versioning).
 """
 import uuid
 

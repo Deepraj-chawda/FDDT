@@ -1,5 +1,5 @@
 """
-Risk scoring engine (CLAUDE.md section 3.3) — a transparent, weighted
+Risk scoring engine (SPECIFICATION.md section 3.3) — a transparent, weighted
 RULES engine over the checks that have already run. Not a model.
 
 Config-driven: every flaggable condition is a `risk_rules` row (see
@@ -75,6 +75,7 @@ _FINDING_CHECK_TYPES = {
     "copy_move_detection",
     "duplicate_detection",
     "visual_inconsistency_review",
+    "font_consistency",
 }
 
 # Findings that are deliberately never scored: they are notes DERIVED from

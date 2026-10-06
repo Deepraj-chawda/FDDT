@@ -1,5 +1,5 @@
 """
-Audit history — the read side of the append-only `audit_log` table (CLAUDE.md
+Audit history — the read side of the append-only `audit_log` table (System Specification
 section 3.5). This is the same table every check task, case action and
 settings change already writes to via `record_event`; this endpoint adds no
 events and no parallel log, it only exposes them.

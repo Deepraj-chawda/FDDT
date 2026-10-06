@@ -1,5 +1,5 @@
 """
-Celery task: PDF metadata forensics (CLAUDE.md section 3.1/3.2 — see
+Celery task: PDF metadata forensics (SPECIFICATION.md section 3.1/3.2 — see
 app/services/forensics/metadata_forensics.py for the actual analysis).
 
 Unlike app/tasks/document_processing.py's OCR/classification/extraction
@@ -9,7 +9,7 @@ directly from the upload endpoint (app/api/documents.py) right alongside
 process_document, running independently/in parallel rather than waiting
 for extraction to finish.
 
-PDF-only for now (CLAUDE.md's "starting with PDF documents only" scope
+PDF-only for now (SPECIFICATION.md's "starting with PDF documents only" scope
 note): a non-PDF document is a quiet no-op here, not a flag or error —
 this check simply doesn't have anything to say about it yet.
 """

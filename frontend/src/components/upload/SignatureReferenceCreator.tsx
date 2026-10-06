@@ -10,20 +10,18 @@
  *      for now, compared against the other documents in the current case only
  *
  * Advisory language throughout — never "verify", "confirm", or "authenticate".
- * See CLAUDE.md §2.3/§4.
+ * See SPECIFICATION.md §2.3/§4.
  */
 import * as React from "react"
 import { CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import { Document, Page, pdfjs } from "react-pdf"
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
+import { Document, Page } from "react-pdf"
 
 import { createSignatureReference, getDocumentFileUrl } from "@/api/cases"
 import { ApiError } from "@/api/client"
 import { Button } from "@/components/ui/button"
+import { PDF_DOCUMENT_OPTIONS } from "@/lib/pdfjs"
 import { cn } from "@/lib/utils"
 import type { BoundingBox, SignatureReference } from "@/types/case"
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const MAX_PAGE_WIDTH = 640
 // Smaller than this is treated as a stray click, not a deliberate box.
@@ -383,6 +381,7 @@ export function SignatureReferenceCreator({
                   >
                     <Document
                       file={fileUrl}
+                      options={PDF_DOCUMENT_OPTIONS}
                       onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                       onLoadError={() => setLoadError(true)}
                       loading={<div className="p-8 text-sm text-muted-foreground">Loading document…</div>}

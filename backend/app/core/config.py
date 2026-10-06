@@ -171,6 +171,14 @@ class Settings(BaseSettings):
     azure_document_intelligence_key: str | None = Field(
         default=None, alias="AZURE_DOCUMENT_INTELLIGENCE_KEY"
     )
+    # Ask Layout for its font-style add-on (`styleFont`: an estimated font
+    # family per piece of recognized text). The font consistency check
+    # (app/services/forensics/font_consistency.py) needs it for scanned pages,
+    # which have no text layer. Billed by Azure as an add-on per page; off =
+    # fonts on scans are left to the visual review only.
+    azure_document_intelligence_style_font: bool = Field(
+        default=True, alias="AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT"
+    )
 
     # --- Azure AI Vision (signature/stamp detection, logo matching) ---
     azure_ai_vision_endpoint: str | None = Field(
@@ -178,19 +186,11 @@ class Settings(BaseSettings):
     )
     azure_ai_vision_key: str | None = Field(default=None, alias="AZURE_AI_VISION_KEY")
 
-    # --- Claude API (Anthropic) ---
-    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field(
-        default="claude-sonnet-5", alias="ANTHROPIC_MODEL"
-    )
-
     # --- Azure OpenAI ---
-    # NOTE: CLAUDE.md section 2 names the Claude API as the classification/
-    # extraction LLM. This deployment currently uses Azure OpenAI instead
-    # (a deliberate, explicit choice — see app/services/llm_service.py's
-    # `LLMService` abstraction, which exists specifically so swapping back
-    # to Claude later is a new implementation class, not a rewrite of the
-    # classification/extraction call sites).
+    # The classification/extraction and vision model. Called only through
+    # app/services/llm_service.py's `LLMService` abstraction, so another
+    # provider would be a new implementation class, not a rewrite of the
+    # classification/extraction call sites.
     azure_openai_key: str | None = Field(default=None, alias="AZURE_OPENAI_KEY")
     # Accepts either the classic resource endpoint
     # (https://<resource>.openai.azure.com/) or an Azure AI Foundry project
@@ -221,7 +221,7 @@ class Settings(BaseSettings):
     # --- Issuer registry fuzzy matching (rapidfuzz) ---
     # Below this score (0-100, rapidfuzz's WRatio scale), an extracted
     # issuer name is treated as not matching anything in `issuer_registry`
-    # (CLAUDE.md section 3.1) — configurable so it can be tuned without a
+    # (SPECIFICATION.md section 3.1) — configurable so it can be tuned without a
     # redeploy once real registry data shows how strict this needs to be.
     issuer_fuzzy_match_threshold: float = Field(
         default=85.0, alias="ISSUER_FUZZY_MATCH_THRESHOLD"
@@ -229,7 +229,7 @@ class Settings(BaseSettings):
 
     # --- Metadata forensics (app/services/forensics/metadata_forensics.py) ---
     # A file modified AFTER it was created is itself the anomaly
-    # (CLAUDE.md section 3.1/3.2), so this is only a timestamp-jitter
+    # (SPECIFICATION.md section 3.1/3.2), so this is only a timestamp-jitter
     # tolerance, not a "how long a gap is acceptable" allowance: PDF dates
     # have whole-second resolution and a generator that writes CreationDate
     # and ModDate a moment apart is not an edit. A ModDate more than this
@@ -252,7 +252,7 @@ class Settings(BaseSettings):
     # duplicate_check.py) ---
     # Max Hamming distance (0-64 — imagehash's default 64-bit pHash)
     # between a new page's hash and a prior page's hash before it counts
-    # as a near-duplicate match (CLAUDE.md section 3.2). Deliberately
+    # as a near-duplicate match (SPECIFICATION.md section 3.2). Deliberately
     # conservative by default — this should only catch near-identical
     # resubmissions/copies, not merely similar-looking documents (e.g.
     # two different invoices sharing the same template) — configurable so

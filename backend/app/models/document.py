@@ -3,7 +3,7 @@
 
 Original files are stored immutably in Azure Blob Storage; `file_hash` is
 the SHA-256 of the original bytes, recorded at upload time so the stored
-original can be integrity-checked later (CLAUDE.md section 3.5, Evidence
+original can be integrity-checked later (SPECIFICATION.md section 3.5, Evidence
 repository). `document_type` is filled in later by the classification
 step — it is nullable at upload time.
 
@@ -58,7 +58,7 @@ class Document(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     # Structured extraction output: {"core_fields": {...}, "additional_fields": [...]}
     # — each field carries its own {value, confidence, uncertain}, per
-    # CLAUDE.md section 3.6. JSON on SQLite so the test suite (in-memory
+    # SPECIFICATION.md section 3.6. JSON on SQLite so the test suite (in-memory
     # SQLite, see tests/conftest.py) doesn't need Postgres-only JSONB.
     extracted_fields: Mapped[dict | None] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite"), nullable=True

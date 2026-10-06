@@ -1,6 +1,6 @@
 """
 Signature comparison service — crop-and-upload and vision-comparison
-logic for the signature verification flow (CLAUDE.md §2.3).
+logic for the signature verification flow (SPECIFICATION.md §2.3).
 
 Two responsibilities:
   1. `crop_and_upload_signature` — given a document's blob URL and a
@@ -119,7 +119,7 @@ def encode_image_as_data_uri(image_bytes: bytes, content_type: str = "image/png"
 
 
 # ---------------------------------------------------------------------------
-# Pixel-identical reuse check (classical CV — no model, CLAUDE.md §4)
+# Pixel-identical reuse check (classical CV — no model, SPECIFICATION.md §4)
 # ---------------------------------------------------------------------------
 #
 # A vision model asked "do these look alike?" answers "consistent" for two

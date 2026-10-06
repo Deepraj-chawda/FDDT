@@ -1,5 +1,5 @@
 """
-PDF metadata forensics (CLAUDE.md section 3.1 "Metadata/digital
+PDF metadata forensics (SPECIFICATION.md section 3.1 "Metadata/digital
 forensics" / 3.2). An exhaustive pass over a PDF's own embedded
 metadata — the Info dictionary, the separate XMP metadata stream
 (including custom/private namespaces and the xmpMM:History revision
@@ -10,7 +10,7 @@ ExifTool and NOT a page-to-image render: both of those would either
 miss the PDF's own embedded metadata entirely or read a re-encoded
 copy of it, not the real thing.
 
-PDF-only for now (CLAUDE.md's "starting with PDF documents only" scope
+PDF-only for now (SPECIFICATION.md's "starting with PDF documents only" scope
 note) — see app/tasks/metadata_forensics_task.py for the content-type
 gate that enforces this.
 
@@ -19,7 +19,7 @@ field_validation_service.py uses (that check has a small, fixed set of
 named sub-checks; this one has an open-ended, growing list of
 individual signals). Every extracted piece of data becomes its own
 entry: `severity: "info"` when it's just data being recorded for later
-use (the document ID chain, revision counts, XMP history — CLAUDE.md
+use (the document ID chain, revision counts, XMP history — SPECIFICATION.md
 sections 3.3/6.3 want these stored even with no baseline to compare
 against yet), escalated to "low"/"medium"/"high" when something is
 actually anomalous. `analyze_pdf_metadata()`'s overall pass/flag verdict
@@ -363,7 +363,7 @@ def _detect_signature(pdf: pikepdf.Pdf) -> dict[str, Any]:
 
 def _document_id_chain(pdf: pikepdf.Pdf, xmp: dict[str, Any]) -> dict[str, Any]:
     """Stored regardless of whether there's a baseline to compare
-    against yet — CLAUDE.md sections 3.3 (duplicate/lineage analysis)
+    against yet — SPECIFICATION.md sections 3.3 (duplicate/lineage analysis)
     and 6.3 (investigation evidence) want these on record."""
     trailer_id = pdf.trailer.get("/ID")
     original_id = current_id = None
@@ -410,8 +410,14 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
         # make every document with an XMP stream falsely report an
         # orphaned object of its own metadata.
         reachable = _find_reachable_objgens(pdf)
+        # Indirect scalars (e.g. a stream's /Length written as its own object,
+        # common in scanner output) come back from pikepdf as plain Python
+        # ints/floats with no objgen — and an orphaned number cannot hide
+        # deleted content, so they are skipped.
         candidate_objgens = {
-            obj.objgen for obj in pdf.objects if not _is_structural_object(obj)
+            obj.objgen
+            for obj in pdf.objects
+            if isinstance(obj, pikepdf.Object) and not _is_structural_object(obj)
         }
         orphaned = sorted(candidate_objgens - reachable)
         findings.append(

@@ -1,5 +1,5 @@
 """
-Copy-move forgery detection (CLAUDE.md section 3.2 "Tampering/
+Copy-move forgery detection (SPECIFICATION.md section 3.2 "Tampering/
 alteration detection"). Looks for a region of a page duplicated
 elsewhere on the *same* page — a common way to cover up or fabricate
 content (e.g. pasting a clean signature/stamp over an edited line item).
@@ -10,7 +10,7 @@ automated check over a whole PDF's rendered pages. Kept from the
 reference tool: its keypoint-detect → response-filter → radius-match →
 distance/angle clustering pipeline, unchanged. Dropped: the FastAPI/
 upload/mask/visualization (colored-line-overlay image) scaffolding —
-CLAUDE.md 4 says not to generate/store any such image; the frontend
+SPECIFICATION.md 4 says not to generate/store any such image; the frontend
 draws the highlight live from the bounding boxes below instead.
 """
 from __future__ import annotations

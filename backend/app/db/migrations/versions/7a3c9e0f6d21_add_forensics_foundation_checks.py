@@ -5,7 +5,7 @@ Revises: 9fbd0685971d
 Create Date: 2026-09-13 09:00:00.000000
 
 Adds the pieces needed for the first three forensics/validation checks
-(CLAUDE.md sections 3.1/2.2 — date/amount/consistency validation, issuer
+(SPECIFICATION.md sections 3.1/2.2 — date/amount/consistency validation, issuer
 verification; cross-document consistency reuses the existing
 cross_document_findings table and needs no schema change):
 

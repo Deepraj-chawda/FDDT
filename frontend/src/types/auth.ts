@@ -1,6 +1,6 @@
 // Mirrors backend/app/schemas/auth.py and backend/app/models/user.py
 // (UserRole). Keep these in sync with the backend schemas by hand for
-// now — see CLAUDE.md section 2 (Forms: React Hook Form + Zod, "schema
+// now — see SPECIFICATION.md section 2 (Forms: React Hook Form + Zod, "schema
 // validation mirrored from backend Pydantic models").
 
 // Company roles (user < reviewer_l1 < reviewer_l2) belong to exactly one

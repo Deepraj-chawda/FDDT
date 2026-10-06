@@ -14,7 +14,7 @@ ORIGINALS ARE ONLY READ. Each original file is downloaded from Blob Storage
 purely so it can (a) be re-hashed, to prove the report's chain-of-custody
 hash still matches the stored bytes, and (b) be rendered to page images for
 the annotated-evidence pages. Nothing is ever written back to the original
-blob (CLAUDE.md section 4: original files are stored immutably).
+blob (SPECIFICATION.md section 4: original files are stored immutably).
 """
 from __future__ import annotations
 
@@ -60,7 +60,9 @@ DASH = "—"
 #   Field exception (rule-based) -> solid purple box: deterministic comparisons
 #   of extracted values, so neither pixel forensics (red/orange) nor model
 #   judgment (dashed).
-AnnotationKind = Literal["ela", "copy_move", "model", "field", "page_level"]
+#   Font mismatch (font consistency check) -> solid fuchsia box around the
+#   text set in an out-of-place font.
+AnnotationKind = Literal["ela", "copy_move", "model", "field", "font", "page_level"]
 
 _MATERIAL_SEVERITIES = ("medium", "high")
 # Notes derived from other checks / explanatory notices — never findings in
@@ -74,6 +76,11 @@ CHECK_CATALOG: list[tuple[DocumentCheckType, str, str]] = [
         DocumentCheckType.metadata_forensics,
         "Metadata forensics",
         "PDF metadata, edit history and incremental-save markers.",
+    ),
+    (
+        DocumentCheckType.font_consistency,
+        "Font consistency",
+        "Text set in a different font family from the text around it (text layer, or OCR font recognition on scans).",
     ),
     (
         DocumentCheckType.error_level_analysis,
@@ -116,8 +123,11 @@ CROSS_DOCUMENT_DESC = "Issuer, date and amount compared pairwise across every do
 REQUIRED_CORE_FIELDS = ("issuer", "reference_number", "date", "amount")
 _SUBCHECK_TITLES = {
     "date_in_future": "Future-dated document",
-    "subtotal_line_item_consistency": "Subtotal / line-item mismatch",
+    "line_item_arithmetic": "Line item miscalculation",
+    "subtotal_line_item_consistency": "Line items do not add up",
     "total_tax_consistency": "Total / tax miscalculation",
+    "tax_rate_consistency": "Tax / rate miscalculation",
+    "amount_in_words_consistency": "Amount in words differs from figures",
     "reference_number_format": "Reference number format",
 }
 SIGNATURE_COMPARISON_LABEL = "Signature comparison (advisory)"
@@ -145,6 +155,8 @@ _EVENT_LABELS = {
     "tampering_checks_failed": "ELA and copy-move checks failed",
     "duplicate_check_completed": "Duplicate detection completed",
     "visual_inconsistency_review_completed": "Visual inconsistency review completed",
+    "font_consistency_completed": "Font consistency check completed",
+    "font_consistency_failed": "Font consistency check failed",
     "signature_stamp_detection_completed": "Signature / stamp detection completed",
     "signature_reference_created": "Signature reference set by reviewer",
     "signature_comparison_completed": "Signature comparison completed",
@@ -423,6 +435,14 @@ def _describe_finding(
     """(kind, drawn caption, plain exception line) for one localized-check
     finding, or None for a check type this doesn't draw."""
     name = str(item.get("finding") or "")
+    if check_type == DocumentCheckType.font_consistency:
+        scanned = (item.get("data") or {}).get("source") == "ocr"
+        return (
+            "font" if located else "page_level",
+            f"Font mismatch {DASH} text set in a different font family" + (" (scan, estimated)" if scanned else ""),
+            "Font consistency: text set in a different font family from the text around it"
+            + (" (OCR font recognition on a scan)" if scanned else ""),
+        )
     if check_type == DocumentCheckType.error_level_analysis:
         if located:
             return "ela", f"ELA {DASH} possible tamper region", "ELA: possible tamper region"

@@ -74,6 +74,7 @@ const OVERLAY_COLOR_BY_CHECK_TYPE: Partial<Record<DocumentCheck["check_type"], O
   error_level_analysis: "destructive",
   copy_move_detection: "warning",
   visual_inconsistency_review: "ai",
+  font_consistency: "font",
 }
 
 function isFindingArray(details: unknown): details is Finding[] {
@@ -239,7 +240,7 @@ function KeyValueList({ details }: { details: Record<string, unknown> }) {
 // backend/app/services/signature_detection_service.py's result shape:
 // details = { signature_expected, detected: [{kind, description, confidence,
 // bounding_box}], bounding_box }. Presence/placement only — worded that way
-// on purpose (CLAUDE.md §2.3: never imply verification).
+// on purpose (SPECIFICATION.md §2.3: never imply verification).
 interface SignatureDetectionDetails {
   signature_expected?: boolean
   detected?: { kind: string; description: string; confidence: string; bounding_box: BoundingBox }[]

@@ -1,5 +1,5 @@
 """
-Error Level Analysis (CLAUDE.md section 3.2 "Tampering/alteration
+Error Level Analysis (SPECIFICATION.md section 3.2 "Tampering/alteration
 detection"). Detects localized JPEG-recompression-error anomalies that
 can indicate a region of a page was edited after the rest of it was
 last saved/scanned.
@@ -14,12 +14,12 @@ unused here). Dropped: the FastAPI/form scaffolding, and the LUT
 contrast-stretch + desaturate steps the reference tool used only to
 produce a nicer-to-*look-at* preview image — not needed here since we
 threshold the raw error magnitude ourselves (see _regions_for_page)
-rather than render one, and CLAUDE.md 4 says not to generate/store any
+rather than render one, and SPECIFICATION.md 4 says not to generate/store any
 such image anyway. Added: connected-components region-finding +
 normalized bounding boxes, so a flag points at a place on the page, not
 just a yes/no.
 
-Known limitation (do not oversell in UI copy per CLAUDE.md section 4):
+Known limitation (do not oversell in UI copy per SPECIFICATION.md section 4):
 ELA is a probabilistic signal, not a standalone verdict — weak against
 print-and-rescan tampering, and prone to false positives on legitimately
 recompressed scans or already-JPEG-heavy source images. Every finding
@@ -57,7 +57,7 @@ from app.services.forensics.pdf_render import RenderedPage
 
 Severity = Literal["info", "low", "medium", "high"]
 
-# --- Fixed parameters (CLAUDE.md: an automated check, not the reference
+# --- Fixed parameters (SPECIFICATION.md: an automated check, not the reference
 # tool's interactive one — nothing here is user-tunable) ---
 
 # The reference tool's own default JPEG requality/output-scale.
@@ -70,7 +70,7 @@ _ERROR_GAIN = _SCALE / 20  # the reference tool's `scale / 20` term
 MIN_REGION_AREA_FRACTION = 0.002
 # A component covering more of the page than this reads as uniform
 # whole-page recompression noise — legitimately recompressed scans do
-# this everywhere (CLAUDE.md's named false-positive risk) — not a
+# this everywhere (SPECIFICATION.md's named false-positive risk) — not a
 # localized edit, so it's excluded rather than flagged.
 MAX_REGION_AREA_FRACTION = 0.6
 

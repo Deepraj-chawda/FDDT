@@ -4,7 +4,7 @@ Revision ID: 4b7d0e1f3a52
 Revises: 9c2f4a7b1e08
 Create Date: 2026-09-16 09:00:00.000000
 
-Adds the storage needed for duplicate/near-duplicate detection (CLAUDE.md
+Adds the storage needed for duplicate/near-duplicate detection (SPECIFICATION.md
 section 3.2 — see app/services/forensics/duplicate_check.py and
 app/tasks/document_checks_duplicate_task.py): one row per rendered PDF
 page's perceptual hash. A dedicated table rather than a column on

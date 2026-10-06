@@ -1,10 +1,10 @@
 """
 Celery task: visual inconsistency review — a vision-capable Azure
-OpenAI model's structured per-page read (CLAUDE.md section 3.2's
-secondary "Claude vision API" review pass), folded together with the
-AI-generated-content question (CLAUDE.md section 3.4) into one check —
+OpenAI model's structured per-page read (SPECIFICATION.md section 3.2's
+secondary vision-model review pass), folded together with the
+AI-generated-content question (SPECIFICATION.md section 3.4) into one check —
 see app/services/visual_inconsistency_service.py's module docstring for
-the full reasoning (Azure AI Content Safety, the API CLAUDE.md section
+the full reasoning (Azure AI Content Safety, the API SPECIFICATION.md section
 2 names for AI-generated-content detection, has no such capability at
 all).
 
@@ -15,7 +15,7 @@ independent forensics tasks, since it only needs the PDF's own rendered
 pages, not OCR text or a classified document_type.
 
 PDF-only for now, same gate as every other forensics task in this
-codebase (CLAUDE.md's "starting with PDF documents only" scope note).
+codebase (SPECIFICATION.md's "starting with PDF documents only" scope note).
 """
 import uuid
 
@@ -49,7 +49,7 @@ def _latest_metadata_forensics_result(db, document_id: uuid.UUID) -> dict | None
     (app/tasks/metadata_forensics_task.py) and this task are both
     enqueued independently right after upload, so there's no guarantee
     either has finished before the other — this reads whatever's there
-    at the moment this task happens to run, same as CLAUDE.md's original
+    at the moment this task happens to run, same as SPECIFICATION.md's original
     "cross-check against the metadata_forensics result" ask allows for."""
     check = db.execute(
         select(DocumentCheck)
@@ -67,7 +67,7 @@ def _append_metadata_correlation(analysis: dict, metadata_result: dict | None) -
     correlation note only means something once there's something on
     this side to correlate. Elevates confidence (severity="high") when
     metadata_forensics agrees, keeps it low/informational when it
-    disagrees or hasn't run yet, per CLAUDE.md's original ask for this
+    disagrees or hasn't run yet, per SPECIFICATION.md's original ask for this
     cross-check."""
     if metadata_result is None:
         note = Finding(

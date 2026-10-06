@@ -52,7 +52,7 @@ def _page(image: np.ndarray, *, has_image_content: bool = True, page_number: int
 
 
 def test_not_applicable_when_no_page_has_embedded_image():
-    """CLAUDE.md's exemption for born-digital, text-native pages — no
+    """SPECIFICATION.md's exemption for born-digital, text-native pages — no
     embedded raster image anywhere means nothing for a recompression-
     error signal to exist in. Also this repo's actual behavior today:
     every one of the 12 real sample-documents/ PDFs takes this path."""
@@ -88,7 +88,7 @@ def test_high_frequency_splice_is_flagged_with_matching_bounding_box():
     # A mostly-blank base with a little content (not the dense
     # _textured_page fixture) — representative of the realistic case
     # this check is actually meant for: a scanned form with a signature/
-    # stamp in an otherwise blank area (CLAUDE.md section 3.1). Tried
+    # stamp in an otherwise blank area (SPECIFICATION.md section 3.1). Tried
     # against the busy _textured_page base during development: the
     # splice signal didn't clear the page's own noise floor there
     # either, for the same reason a realistic text splice didn't (see

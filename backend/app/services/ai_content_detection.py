@@ -1,7 +1,7 @@
 """
 AI-generated-document detection — NOT a standalone service/check_type.
 
-CLAUDE.md sections 2/3.4 name "Azure AI Content Safety or Hive
+SPECIFICATION.md sections 2/3.4 name "Azure AI Content Safety or Hive
 Moderation — pick one" for this. Investigated 2026-09-17 and neither
 panned out as a standalone integration: Azure AI Content Safety has no
 synthetic-content/AI-generated-image detection capability at all

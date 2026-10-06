@@ -1,5 +1,5 @@
 """
-Initial `risk_rules` seed (CLAUDE.md section 3.3) — one rule per distinct
+Initial `risk_rules` seed (SPECIFICATION.md section 3.3) — one rule per distinct
 flaggable condition the built checks actually produce. Loaded by the
 Alembic migration that adds the versioned rules table, and reused by
 tests (`seed_risk_rules`).
@@ -21,7 +21,7 @@ Scores are summed and capped at 100; default tiers are low < 30, medium
     (incremental saves, ELA recompression regions) are 8-25: several
     together matter, one alone usually does not.
   - Probabilistic vision-model judgments (visual inconsistencies, "looks
-    AI-generated") are deliberately low, 8-12. CLAUDE.md is explicit that
+    AI-generated") are deliberately low, 8-12. SPECIFICATION.md is explicit that
     these are best-effort signals, never a standalone verdict.
   - Weak data-plausibility signals (malformed reference number, issuer/
     date noise) are 6-15.
@@ -210,7 +210,7 @@ SEED_RULES: list[dict[str, Any]] = [
         "check_type": "error_level_analysis",
         "condition": _finding("error_level_analysis", finding="recompression_error_region"),
         # ELA is a hint, not a verdict: weak against print-and-rescan and
-        # prone to false positives on recompressed scans (CLAUDE.md 3.2).
+        # prone to false positives on recompressed scans (SPECIFICATION.md 3.2).
         "weight": 25,
         "severity": "medium",
         "reason_template": "'{document}': {count} localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page {page}.",
@@ -234,6 +234,29 @@ SEED_RULES: list[dict[str, Any]] = [
         "weight": 35,
         "severity": "high",
         "reason_template": "'{document}': {count} region(s) were copied and pasted within the same page (copy-move detection), first on page {page}.",
+    },
+    # ------------------------------------------------------ font consistency
+    {
+        "rule_id": "font.inconsistency",
+        "category": FORENSICS,
+        "check_type": "font_consistency",
+        # "high" findings come from the PDF's text layer: the font names
+        # themselves, not a judgment — a hard signal, weighted like copy-move.
+        "condition": _finding("font_consistency", finding="font_inconsistency", severity_in=["high"]),
+        "weight": 40,
+        "severity": "high",
+        "reason_template": "'{document}': {count} piece(s) of text are set in a different font family from the text around them — a sign they were typed in after the document was produced. {description}",
+    },
+    {
+        "rule_id": "font.inconsistency_scanned",
+        "category": FORENSICS,
+        "check_type": "font_consistency",
+        # "medium" findings come from OCR font recognition on a scanned page:
+        # an estimate, corroborated across several words, so weighted lower.
+        "condition": _finding("font_consistency", finding="font_inconsistency", severity_in=["medium"]),
+        "weight": 25,
+        "severity": "medium",
+        "reason_template": "'{document}': on the scanned page, {count} word(s) look like a different font from the text around them (OCR font recognition — an estimate). {description}",
     },
     # -------------------------------------------- visual review (vision model)
     {
@@ -286,7 +309,7 @@ SEED_RULES: list[dict[str, Any]] = [
         "category": FORENSICS,
         "check_type": "visual_inconsistency_review",
         "condition": _finding("visual_inconsistency_review", finding="ai_generation_assessment", severity_in=["medium", "high"]),
-        # Experimental, unproven on scanned business documents (CLAUDE.md
+        # Experimental, unproven on scanned business documents (SPECIFICATION.md
         # 3.2/4): the lowest weight in the set, never a standalone verdict.
         # It fires per document, and vision models over-report it on clean
         # synthetic/scanned documents, so 2 documents at 6 each must stay
@@ -330,6 +353,37 @@ SEED_RULES: list[dict[str, Any]] = [
         "check_type": "field_validation",
         "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "total_tax_consistency"},
         "weight": 20,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.line_item_arithmetic_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # A printed line total that is not quantity x unit price: almost never
+        # an innocent typo on a system-generated document.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "line_item_arithmetic"},
+        "weight": 25,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.tax_rate_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "tax_rate_consistency"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.amount_in_words_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # The figures were changed but the amount in words was not (or vice
+        # versa) — a classic sign of an edited total.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "amount_in_words_consistency"},
+        "weight": 25,
         "severity": "high",
         "reason_template": "'{document}': {reason}",
     },
@@ -398,7 +452,7 @@ SEED_RULES: list[dict[str, Any]] = [
         "category": VERIFICATION,
         "check_type": "signature_comparison",
         "condition": {"match": "signature_match", "result": "inconsistent"},
-        # Advisory only (CLAUDE.md 2.3): a qualitative visual comparison, so
+        # Advisory only (SPECIFICATION.md 2.3): a qualitative visual comparison, so
         # weighted as a strong reason to look, not a verdict.
         "weight": 25,
         "severity": "medium",

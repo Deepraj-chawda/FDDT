@@ -1,28 +1,26 @@
 """
-Visual inconsistency review (CLAUDE.md section 3.2's "Image/PDF
-manipulation analysis" secondary Claude-vision pass), folded together
+Visual inconsistency review (SPECIFICATION.md section 3.2's "Image/PDF
+manipulation analysis" secondary vision-model pass), folded together
 with section 3.4's AI-generated-document detection into ONE check
 rather than two — see app/services/ai_content_detection.py's docstring
-for the full reasoning: Azure AI Content Safety (the API CLAUDE.md
+for the full reasoning: Azure AI Content Safety (the API SPECIFICATION.md
 section 2 names for AI-generated-content detection) turns out to have
 no synthetic-content/AI-generated-image detection capability at all
 (confirmed against Microsoft's own "what's new" changelog and REST API
 reference as of 2026-09 — its only image endpoint scores four harm
 categories: Hate, SelfHarm, Sexual, Violence), and Hive Moderation
-(CLAUDE.md's named alternative) has no workable free tier for this
+(SPECIFICATION.md's named alternative) has no workable free tier for this
 project. Rather than call a nonexistent endpoint or stand up a paid
 third-party account for a local dev foundation, the AI-generation
 question is asked as a sixth structured item alongside the five visual-
 consistency categories in the SAME per-page vision-model call — one
 check/one vendor, not two.
 
-Uses the existing Azure OpenAI deployment (app/services/llm_service.py)
-— NOT the Claude API, despite CLAUDE.md section 2 naming Claude for
-this kind of call; see llm_service.py's own module docstring for why
-this project already made that substitution project-wide.
+Uses the existing Azure OpenAI deployment (app/services/llm_service.py),
+the same model behind classification and extraction.
 
 Runs on EVERY uploaded PDF page, unconditionally — NOT gated on
-ela_tampering/copy_move_detection firing first (CLAUDE.md's ask: a
+ela_tampering/copy_move_detection firing first (SPECIFICATION.md's ask: a
 different technique, model-based visual judgment rather than
 pixel-level analysis, that can catch what those miss, or agree with
 them and strengthen confidence).

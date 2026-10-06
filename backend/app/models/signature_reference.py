@@ -5,7 +5,7 @@ comparison.
 
 `person_name` is REQUIRED and manually typed by the reviewer who
 creates the reference — the system never attempts to auto-extract or
-pre-fill it (CLAUDE.md §2.3: "manual signer name entry").
+pre-fill it (SPECIFICATION.md §2.3: "manual signer name entry").
 
 `is_library=True` rows are saved for future cross-case use (data
 collection only at this phase — no automatic library-wide comparison
