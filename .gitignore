@@ -107,3 +107,6 @@ desktop.ini
 *.p12
 id_rsa*
 *.id_rsa
+
+# Local zip bundles at the repo root (docs exports, bulk upload test archives)
+/*.zip
