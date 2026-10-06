@@ -161,7 +161,7 @@ def check_fee_benchmark(
     if not rows:
         return {
             "status": "not_checked",
-            "reason": f"Not checked: no published fees on file for {issuer.name}"
+            "reason": f"Not checked: no published fees on file for {issuer.name.rstrip('.')}"
                       + (f" ({grade})" if grade else "") + ".",
         }
     year = _document_year(extracted_fields, ocr_text)

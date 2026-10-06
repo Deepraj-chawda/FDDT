@@ -199,8 +199,29 @@ class TestRunDocumentChecks:
         events = session.query(AuditLog).filter_by(document_id=document_id).all()
         assert {e.event_type for e in events} == {"document_checks_completed"}
 
+    def test_issuer_with_an_empty_registry_is_not_checked(self, task_session_factory, monkeypatch):
+        # Nothing to compare against is not evidence of anything (rule
+        # issuer.not_in_registry v2).
+        case_id, [document_id] = _seed_case_with_documents(task_session_factory, document_count=1)
+        _mark_complete(
+            task_session_factory, document_id, _extracted_fields(issuer="Totally Unknown Co")
+        )
+        monkeypatch.setattr(document_checks_module.run_cross_document_checks, "delay", MagicMock())
+
+        document_checks_module.run_document_checks(str(document_id))
+
+        session = task_session_factory()
+        check = (
+            session.query(DocumentCheck)
+            .filter_by(document_id=document_id, check_type=DocumentCheckType.issuer_verification)
+            .one()
+        )
+        assert check.result["result"] == "not_checked"
+        assert "registry has no active entries" in check.result["details"]["reason"]
+
     def test_issuer_not_in_registry_is_flagged(self, task_session_factory, monkeypatch):
         case_id, [document_id] = _seed_case_with_documents(task_session_factory, document_count=1)
+        _seed_registry_entry(task_session_factory, "Meridian Industrial Supplies LLC")
         _mark_complete(
             task_session_factory, document_id, _extracted_fields(issuer="Totally Unknown Co")
         )
