@@ -198,10 +198,13 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "metadata.javascript_or_openaction",
         "category": FORENSICS,
         "check_type": "metadata_forensics",
+        # v2: the finding is only raised for executable/outward-reaching
+        # content (JavaScript, Launch, URI, SubmitForm, ImportData, GoToR/E),
+        # not for an /OpenAction that only sets the initial view.
         "condition": _finding("metadata_forensics", finding="javascript_or_openaction", severity_in=["medium", "high"]),
         "weight": 10,
         "severity": "medium",
-        "reason_template": "'{document}' embeds JavaScript or an open-action — unusual for a business document.",
+        "reason_template": "'{document}' embeds JavaScript or an action that runs code or reaches outside the document — unusual for a business document. {description}",
     },
     # -------------------------------------------------------- image tampering
     {
@@ -488,6 +491,16 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "The signature on '{document}' is pixel-identical to the reference on file for {person}, yet the printed signer beneath it differs. {reason}",
     },
 ]
+
+
+# The version of each built-in rule's definition, where it is past 1. Bumped
+# when what a rule matches changes meaning (its check was changed), together
+# with a migration that gives every company a new version row of that rule
+# (app/db/migrations/versions/a9d3f6b2c8e4_check_accuracy_fixes.py) — never by
+# editing old rows, so assessments made before keep their own versions.
+SEED_RULE_VERSIONS: dict[str, int] = {
+    "metadata.javascript_or_openaction": 2,
+}
 
 
 def ensure_rule_templates(db) -> int:

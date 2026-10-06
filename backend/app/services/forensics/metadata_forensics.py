@@ -320,7 +320,48 @@ def _find_reachable_objgens(pdf: pikepdf.Pdf) -> set[tuple[int, int]]:
     return visited
 
 
+# Action types that run code, open something outside the document, or send
+# data out. Anything else an /OpenAction or /AA can hold — a destination
+# array ([page /Fit], [page /XYZ ...]) or a /GoTo to one of the document's own
+# pages, which scanners and office tools write routinely — only decides what
+# the viewer shows first.
+_RISKY_ACTION_TYPES = {"/JavaScript", "/Launch", "/URI", "/SubmitForm", "/ImportData", "/GoToR", "/GoToE"}
+# How deep to follow /Next action chains and nested /AA dictionaries.
+_MAX_ACTION_DEPTH = 8
+
+
+def _risky_actions(action: Any, where: str, depth: int = 0) -> list[str]:
+    """Risky action types (with where they sit) in one /OpenAction or /AA
+    entry, following its /Next chain."""
+    if depth > _MAX_ACTION_DEPTH or not isinstance(action, pikepdf.Dictionary):
+        return []  # a destination array (or anything not an action) is harmless
+    found: list[str] = []
+    kind = action.get("/S")
+    if kind is not None and str(kind) in _RISKY_ACTION_TYPES:
+        found.append(f"{str(kind)[1:]} action in {where}")
+    elif "/JS" in action:
+        found.append(f"JavaScript (/JS) in {where}")
+    following = action.get("/Next")
+    for item in following if isinstance(following, pikepdf.Array) else [following]:
+        found.extend(_risky_actions(item, where, depth + 1))
+    return found
+
+
+def _additional_actions(obj: Any, where: str) -> list[str]:
+    aa = obj.get("/AA") if isinstance(obj, pikepdf.Dictionary) else None
+    if not isinstance(aa, pikepdf.Dictionary):
+        return []
+    found: list[str] = []
+    for trigger, action in aa.items():
+        found.extend(_risky_actions(action, f"{where} {trigger}"))
+    return found
+
+
 def _detect_javascript_openaction(pdf: pikepdf.Pdf) -> dict[str, Any]:
+    """Executable or outward-reaching content: a /JavaScript name tree, any
+    /JS key, or an /OpenAction or /AA (document, page, form field or
+    annotation) whose action type is in _RISKY_ACTION_TYPES. `risky` is the
+    verdict; `open_action` only records that an /OpenAction exists."""
     root = pdf.Root
     open_action = "/OpenAction" in root
     has_js = False
@@ -332,7 +373,44 @@ def _detect_javascript_openaction(pdf: pikepdf.Pdf) -> dict[str, Any]:
         names_array = js_tree.get("/Names") if isinstance(js_tree, pikepdf.Dictionary) else None
         if names_array is not None:
             js_count = len(names_array) // 2
-    return {"open_action": open_action, "embedded_javascript": has_js, "javascript_count": js_count}
+
+    risky: list[str] = []
+    if open_action:
+        risky.extend(_risky_actions(root["/OpenAction"], "/OpenAction"))
+    risky.extend(_additional_actions(root, "document /AA"))
+    for number, page in enumerate(pdf.pages, start=1):
+        risky.extend(_additional_actions(page.obj, f"page {number} /AA"))
+        for annot in page.obj.get("/Annots") or []:
+            if isinstance(annot, pikepdf.Dictionary):
+                risky.extend(_risky_actions(annot.get("/A"), f"page {number} annotation /A"))
+                risky.extend(_additional_actions(annot, f"page {number} annotation /AA"))
+    acroform = root.get("/AcroForm")
+    fields = acroform.get("/Fields") if isinstance(acroform, pikepdf.Dictionary) else None
+    for field in fields or []:
+        risky.extend(_additional_actions(field, "form field /AA"))
+    # Any other /JS key anywhere (e.g. an action reached some other way).
+    if not risky and not has_js:
+        for obj in pdf.objects:
+            if isinstance(obj, pikepdf.Dictionary) and "/JS" in obj:
+                risky.append("JavaScript (/JS) in an action object")
+                break
+
+    open_action_kind = None
+    if open_action:
+        target = root["/OpenAction"]
+        open_action_kind = (
+            "destination" if isinstance(target, pikepdf.Array)
+            else str(target.get("/S", "/?"))[1:] if isinstance(target, pikepdf.Dictionary)
+            else "other"
+        )
+    return {
+        "open_action": open_action,
+        "open_action_kind": open_action_kind,
+        "embedded_javascript": has_js,
+        "javascript_count": js_count,
+        "risky_actions": sorted(set(risky)),
+        "risky": has_js or bool(risky),
+    }
 
 
 def _detect_optional_content(pdf: pikepdf.Pdf) -> dict[str, Any]:
@@ -696,17 +774,27 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
 
         # --- #7 embedded JavaScript / OpenAction ---
         js = _detect_javascript_openaction(pdf)
-        js_flagged = js["open_action"] or js["embedded_javascript"]
+        if js["risky"]:
+            what = list(js["risky_actions"])
+            if js["embedded_javascript"]:
+                what.insert(0, f"a document-level JavaScript name tree ({js['javascript_count']} script(s))")
+            description = (
+                "This PDF contains executable or outward-reaching content — "
+                + "; ".join(what)
+                + " — unusual for a business document."
+            )
+        elif js["open_action"]:
+            description = (
+                f"The PDF's OpenAction only sets the initial view ({js['open_action_kind']}); "
+                "no JavaScript, launch, link-out or form-submit action found."
+            )
+        else:
+            description = "No OpenAction or embedded JavaScript found."
         findings.append(
             Finding(
                 finding="javascript_or_openaction",
-                severity="medium" if js_flagged else "info",
-                description=(
-                    "This PDF contains an OpenAction and/or embedded JavaScript — unusual "
-                    "for a business document."
-                    if js_flagged
-                    else "No OpenAction or embedded JavaScript found."
-                ),
+                severity="medium" if js["risky"] else "info",
+                description=description,
                 data=js,
             )
         )

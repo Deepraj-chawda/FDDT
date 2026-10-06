@@ -541,6 +541,88 @@ def test_no_openaction_is_not_flagged():
     assert findings["javascript_or_openaction"]["severity"] == "info"
 
 
+def _js_finding(build) -> dict:
+    pdf = pikepdf.new()
+    pdf.add_blank_page()
+    pdf.add_blank_page()
+    build(pdf)
+    buf = io.BytesIO()
+    pdf.save(buf)
+    findings = {f["finding"]: f for f in analyze_pdf_metadata(buf.getvalue())["details"]}
+    return findings["javascript_or_openaction"]
+
+
+def test_openaction_destination_array_is_not_flagged():
+    # What office scanners write: open on page 1, fit to window.
+    finding = _js_finding(lambda pdf: setattr(pdf.Root, "OpenAction", pikepdf.Array([pdf.pages[0].obj, pikepdf.Name.Fit])))
+    assert finding["severity"] == "info"
+    assert finding["data"]["open_action"] is True
+    assert finding["data"]["open_action_kind"] == "destination"
+    assert "initial view" in finding["description"]
+
+
+def test_openaction_xyz_destination_and_internal_goto_are_not_flagged():
+    def build(pdf):
+        pdf.Root.OpenAction = pikepdf.Dictionary(
+            S=pikepdf.Name.GoTo, D=pikepdf.Array([pdf.pages[1].obj, pikepdf.Name.XYZ, 0, 792, 0])
+        )
+
+    finding = _js_finding(build)
+    assert finding["severity"] == "info"
+    assert finding["data"]["open_action_kind"] == "GoTo"
+
+
+@pytest.mark.parametrize("kind", ["/Launch", "/URI", "/SubmitForm", "/ImportData", "/GoToR", "/GoToE"])
+def test_openaction_with_external_action_is_flagged(kind):
+    finding = _js_finding(lambda pdf: setattr(pdf.Root, "OpenAction", pikepdf.Dictionary(S=pikepdf.Name(kind))))
+    assert finding["severity"] == "medium"
+    assert finding["data"]["risky_actions"] == [f"{kind[1:]} action in /OpenAction"]
+
+
+def test_page_additional_action_launch_is_flagged():
+    def build(pdf):
+        pdf.pages[1].obj.AA = pikepdf.Dictionary(O=pikepdf.Dictionary(S=pikepdf.Name.Launch, F="cmd.exe"))
+
+    finding = _js_finding(build)
+    assert finding["severity"] == "medium"
+    assert "Launch action in page 2 /AA /O" in finding["description"]
+
+
+def test_javascript_chained_after_harmless_goto_is_flagged():
+    def build(pdf):
+        pdf.Root.OpenAction = pikepdf.Dictionary(
+            S=pikepdf.Name.GoTo,
+            D=pikepdf.Array([pdf.pages[0].obj, pikepdf.Name.Fit]),
+            Next=pikepdf.Dictionary(S=pikepdf.Name.URI, URI="https://example.com"),
+        )
+
+    assert _js_finding(build)["severity"] == "medium"
+
+
+def test_javascript_name_tree_is_flagged_without_openaction():
+    def build(pdf):
+        script = pdf.make_indirect(pikepdf.Dictionary(S=pikepdf.Name.JavaScript, JS="app.alert(1)"))
+        pdf.Root.Names = pikepdf.Dictionary(JavaScript=pikepdf.Dictionary(Names=pikepdf.Array(["init", script])))
+
+    finding = _js_finding(build)
+    assert finding["severity"] == "medium"
+    assert finding["data"]["embedded_javascript"] is True
+    assert finding["data"]["open_action"] is False
+
+
+def test_reference_mfp_scans_openaction_is_not_flagged():
+    """CASE-DB43653A / CASE-DE627FA2: Develop ineo+ scans with
+    /OpenAction [page 1 /Fit] and nothing executable."""
+    from pathlib import Path
+
+    samples = Path(__file__).resolve().parents[2] / "sample-documents" / "tampered_test_samples"
+    for name in ("case1.pdf", "case2.pdf"):
+        result = analyze_pdf_metadata((samples / name).read_bytes())
+        findings = {f["finding"]: f for f in result["details"]}
+        assert findings["javascript_or_openaction"]["severity"] == "info", name
+        assert result["result"] == "pass", name
+
+
 # --- Optional Content Groups -------------------------------
 
 
