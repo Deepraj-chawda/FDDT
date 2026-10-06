@@ -45,6 +45,7 @@ from app.core.config import settings
 from app.models.case import Case
 from app.models.document import Document
 from app.models.document_page_hash import DocumentPageHash
+from app.models.user import User
 from app.services.forensics.pdf_render import RenderedPage
 
 
@@ -64,6 +65,12 @@ class PageMatch:
     matched_document_filename: str
     matched_case_id: uuid.UUID
     matched_case_number: str
+    # Whether the matched document is the very same file (identical SHA-256)
+    # rather than only a perceptually similar page, and who submitted it —
+    # so a reviewer can tell a re-upload of the same file (often their own
+    # test upload) from a different file that looks the same.
+    identical_file: bool = False
+    matched_submitter: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         # Shaped as a Finding dict — the same {finding, severity,
@@ -76,6 +83,22 @@ class PageMatch:
         # convention, satisfying "store which prior document(s) it
         # matched against, and the distance" without inventing a new
         # details shape.
+        submitter = f", submitted by {self.matched_submitter}" if self.matched_submitter else ""
+        if self.identical_file:
+            what = (
+                f"Page {self.page} matches page {self.matched_page} of \"{self.matched_document_filename}\" in case "
+                f"{self.matched_case_number}{submitter}, and the two files are byte-for-byte identical "
+                "(same SHA-256) — the exact same file re-uploaded."
+            )
+        else:
+            what = (
+                f"Page {self.page} is a near-identical match (perceptual hash "
+                f"Hamming distance {self.distance}) to page {self.matched_page} "
+                f"of \"{self.matched_document_filename}\" in case "
+                f"{self.matched_case_number}{submitter} — a possible duplicate or "
+                "near-duplicate resubmission. The files themselves differ (different SHA-256): "
+                "only the page images are perceptually similar."
+            )
         return {
             "finding": "near_duplicate_page",
             # High, not medium: unlike ELA's recompression-error signal
@@ -84,13 +107,7 @@ class PageMatch:
             # threshold) — a match that clears it is a strong signal, not
             # a borderline one.
             "severity": "high",
-            "description": (
-                f"Page {self.page} is a near-identical match (perceptual hash "
-                f"Hamming distance {self.distance}) to page {self.matched_page} "
-                f"of \"{self.matched_document_filename}\" in case "
-                f"{self.matched_case_number} — a possible duplicate or "
-                "near-duplicate resubmission."
-            ),
+            "description": what,
             "page": self.page,
             "data": {
                 "matched_document_id": str(self.matched_document_id),
@@ -99,6 +116,8 @@ class PageMatch:
                 "matched_case_number": self.matched_case_number,
                 "matched_page": self.matched_page,
                 "distance": self.distance,
+                "identical_file": self.identical_file,
+                "matched_submitter": self.matched_submitter,
             },
         }
 
@@ -134,10 +153,15 @@ def find_matches(
     # Joined with Document/Case up front (not resolved per-match after the
     # fact) — see PageMatch's docstring for why the finding needs this
     # captured now rather than via a read-time lookup.
+    own_hash = db.execute(select(Document.file_hash).where(Document.id == document_id)).scalar_one_or_none()
     prior_rows = db.execute(
-        select(DocumentPageHash, Document.original_filename, Document.case_id, Case.case_number)
+        select(
+            DocumentPageHash, Document.original_filename, Document.case_id, Case.case_number,
+            Document.file_hash, User.full_name, User.email,
+        )
         .join(Document, Document.id == DocumentPageHash.document_id)
         .join(Case, Case.id == Document.case_id)
+        .outerjoin(User, User.id == Case.submitted_by_user_id)
         .where(
             DocumentPageHash.company_id == company_id,
             Document.company_id == company_id,
@@ -151,7 +175,7 @@ def find_matches(
     for page_number, hex_hash in enumerate(page_hashes, start=1):
         this_hash = imagehash.hex_to_hash(hex_hash)
         best: PageMatch | None = None
-        for hash_row, filename, case_id, case_number in prior_rows:
+        for hash_row, filename, case_id, case_number, file_hash, submitter_name, submitter_email in prior_rows:
             # imagehash's `-` returns numpy.int64 (not JSON-serializable
             # into the result jsonb column) — cast to a plain int here,
             # the one place the value originates.
@@ -165,6 +189,8 @@ def find_matches(
                     matched_document_filename=filename,
                     matched_case_id=case_id,
                     matched_case_number=case_number,
+                    identical_file=bool(own_hash) and file_hash == own_hash,
+                    matched_submitter=submitter_name or submitter_email,
                 )
         if best is not None:
             matches.append(best)

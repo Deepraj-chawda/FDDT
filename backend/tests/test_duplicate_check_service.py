@@ -65,13 +65,13 @@ def seeded_case(db_session):
     return case, user
 
 
-def _make_document(db_session, case, user, *, filename="doc.pdf") -> Document:
+def _make_document(db_session, case, user, *, filename="doc.pdf", file_hash="0" * 64) -> Document:
     document = Document(
         case_id=case.id,
         uploaded_by_user_id=user.id,
         original_filename=filename,
         blob_storage_path=f"https://fake.blob/{filename}",
-        file_hash="0" * 64,
+        file_hash=file_hash,
         content_type="application/pdf",
     )
     db_session.add(document)
@@ -217,3 +217,29 @@ def test_multi_page_document_matches_on_the_right_page(db_session, seeded_case):
     assert finding["page"] == 2
     assert finding["data"]["matched_document_id"] == str(first_document.id)
     assert finding["data"]["matched_page"] == 2
+
+
+def test_finding_says_whether_the_same_file_was_reuploaded_and_by_whom(db_session, seeded_case):
+    case, user = seeded_case
+    user.full_name = "Test Reviewer"
+    page = _textured_page(7)
+    first = _make_document(db_session, case, user, filename="original.pdf", file_hash="a" * 64)
+    run_duplicate_check(db_session, company_id=first.company_id, document_id=first.id, pages=[page])
+
+    same = _make_document(db_session, case, user, filename="again.pdf", file_hash="a" * 64)
+    [finding] = run_duplicate_check(db_session, company_id=same.company_id, document_id=same.id, pages=[page])["details"]
+    assert finding["data"]["identical_file"] is True
+    assert finding["data"]["matched_submitter"] == "Test Reviewer"
+    assert "byte-for-byte identical (same SHA-256)" in finding["description"]
+    assert "the exact same file re-uploaded" in finding["description"]
+    assert "submitted by Test Reviewer" in finding["description"]
+
+    similar = _make_document(db_session, case, user, filename="edited.pdf", file_hash="b" * 64)
+    result = run_duplicate_check(
+        db_session, company_id=similar.company_id, document_id=similar.id,
+        pages=[_near_duplicate(page, vendor_text="ACME")],
+    )
+    finding = result["details"][0]
+    assert finding["severity"] == "high"  # scoring unchanged
+    assert finding["data"]["identical_file"] is False
+    assert "different SHA-256" in finding["description"] and "perceptually similar" in finding["description"]
