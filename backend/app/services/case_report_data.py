@@ -45,6 +45,7 @@ from app.services.field_exception_service import (
     cross_document_regions,
     with_field_regions,
 )
+from app.services.case_link_service import find_linked_cases
 from app.services.field_regions import field_label, format_field_value, humanize, valid_box
 from app.services.risk_scoring_service import latest_assessment, pipeline_status
 from app.services.storage_service import StorageService
@@ -129,6 +130,9 @@ _SUBCHECK_TITLES = {
     "tax_rate_consistency": "Tax / rate miscalculation",
     "amount_in_words_consistency": "Amount in words differs from figures",
     "reference_number_format": "Reference number format",
+    "iban_trn_validation": "Invalid IBAN / TRN",
+    "rescan_conflict": "Printed and re-scanned",
+    "period_quantity_consistency": "Months charged differ from months due",
 }
 SIGNATURE_COMPARISON_LABEL = "Signature comparison (advisory)"
 SIGNATURE_COMPARISON_DESC = (
@@ -340,6 +344,12 @@ class CoverageRow:
 
 
 @dataclass
+class LinkedCaseRow:
+    case_number: str
+    reasons: list[str]
+
+
+@dataclass
 class ReportData:
     report_id: uuid.UUID
     generated_at: datetime
@@ -367,6 +377,9 @@ class ReportData:
     findings: list[FindingRow] = field(default_factory=list)
     technical: list[TechnicalBlock] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
+    # Other cases sharing a scanner, parent or family/student ID — a reviewer
+    # note, never scored (app/services/case_link_service.py).
+    linked_cases: list[LinkedCaseRow] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -578,6 +591,11 @@ def derive_findings(
                 )
             continue
 
+        # -- the issuer's fee benchmark flags whatever the registry match was
+        bench = (details.get("fee_benchmark") or {}) if isinstance(details, dict) else {}
+        if check_type == DocumentCheckType.issuer_verification and isinstance(bench, dict) and bench.get("status") == "flag":
+            add_exception(source=label, text=f"Fee benchmark: {bench.get('reason')}", severity="high")
+
         if result != "flag":
             continue
         _, summary = _summarize_check(check_type, check)
@@ -672,6 +690,11 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
     if check_type == DocumentCheckType.issuer_verification and isinstance(details, dict):
         name = details.get("issuer_name")
         matched = details.get("matched_registry_name")
+        bench = details.get("fee_benchmark") if isinstance(details.get("fee_benchmark"), dict) else {}
+        if result == "not_checked":
+            return "not_checked", _shorten(str(details.get("reason") or "Not checked."), 220)
+        if bench.get("status") == "flag":
+            return "flag", _shorten(f"Issuer matched '{matched}'. Fee benchmark: {bench.get('reason')}", 260)
         if result == "flag":
             return "flag", _shorten(
                 f"Issuer '{name}' did not match any known issuer in the registry." if name
@@ -1475,6 +1498,10 @@ def collect_report_data(
             signature_comparisons=sum(len(v) for v in matches_by_doc.values()),
         ),
         exceptions=[e for s in sections for e in s.exceptions] + cross_exceptions,
+        linked_cases=[
+            LinkedCaseRow(link.case_number, link.reasons)
+            for link in find_linked_cases(db, case.company_id, case.id)
+        ],
         findings=findings_rows,
         technical=technical_blocks(ran, multi_document=len(documents) >= 2, fields_located=fields_located),
         assumptions=build_assumptions(

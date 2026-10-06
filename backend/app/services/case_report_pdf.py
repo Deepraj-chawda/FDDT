@@ -102,6 +102,7 @@ _RESULT = {
     "review": ("Review", "#92400E", "#FEF3C7"),
     "failed": ("Failed", "#991B1B", "#FEE2E2"),
     "not_applicable": ("N/A", "#475569", "#E2E8F0"),
+    "not_checked": ("Not checked", "#475569", "#E2E8F0"),
     "in_progress": ("In progress", "#475569", "#E2E8F0"),
 }
 _CROSS_RESULT = {
@@ -325,6 +326,17 @@ def _all_checks_html(d: ReportData) -> str:
             "cross-document check when it ran; nothing is re-computed for this report.</p>"
         )
         parts.append(_cross_table(d.cross_document))
+    if d.linked_cases:
+        parts.append("<h3>Linked cases (reviewer note, not scored)</h3>")
+        parts.append(
+            "<p>Other cases of this company that share a scanning device, a parent/guardian or a family/student "
+            "ID with this one. Shared office scanners are common, so this is context for the reviewer only; it "
+            "does not affect the risk score.</p>"
+        )
+        parts.append('<table cellspacing="0"><tr><th width="18%" align="left">Case</th><th align="left">Shared</th></tr>')
+        for link in d.linked_cases:
+            parts.append(f"<tr><td>{_e(link.case_number)}</td><td>{_e('; '.join(link.reasons))}</td></tr>")
+        parts.append("</table>")
     return "".join(parts)
 
 
