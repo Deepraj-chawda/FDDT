@@ -277,7 +277,7 @@ def _ai_generation_finding(page: RenderedPage, run1: Any, run2: Any) -> Finding:
 #     (observed 0.03-0.1 of the page off, see signature_detection_service),
 #     so its box is grown by _MODEL_BOX_MARGIN before measuring.
 #
-#  2. Tilt/misalignment findings that are just the scan's skew. The text
+#  2. Tilt/rotation findings that are just the scan's skew. The text
 #     angle inside the finding's box is measured (projection profile) and
 #     compared with the page's overall skew and with the bands of page just
 #     above and below it; within _SKEW_TOLERANCE_DEG of any of them it is the
@@ -294,10 +294,11 @@ _FILTERED_CATEGORIES = {"visual_text_alignment", "visual_resolution_sharpness_co
 _REGION_OVERLAP = 0.30
 _MODEL_BOX_MARGIN = 0.08
 _SIGNATURE_WORDS_RE = re.compile(r"signature|signed|stamp|seal|handwrit|initials", re.IGNORECASE)
-_TILT_WORDS_RE = re.compile(
-    r"tilt|rotat|skew|slant|angle|crooked|askew|not (?:horizontally )?(?:aligned|level|straight)|misalign",
-    re.IGNORECASE,
-)
+# Only findings about ROTATION are judged by angle: a row shifted up/down or
+# sideways ("misaligned", "offset", "not on the baseline") is a position
+# claim that matching angles says nothing about, so those are never dropped
+# by the skew test.
+_TILT_WORDS_RE = re.compile(r"tilt|rotat|skew|slant|angled|crooked|askew", re.IGNORECASE)
 _SKEW_TOLERANCE_DEG = 0.7
 _SKEW_SEARCH_DEG = 3.0
 _SKEW_STEP_DEG = 0.05

@@ -146,9 +146,14 @@ def test_a_block_tilted_against_its_surroundings_is_kept():
     assert result["result"] == "flag" and finding["severity"] == "high"
 
 
-def test_offset_without_tilt_wording_is_not_judged_by_skew():
-    finding = _finding("text_alignment", {"x": 0.2, "y": 0.3, "width": 0.6, "height": 0.1},
-                       "The amount is shifted to the right of its column.")
+@pytest.mark.parametrize("text", [
+    "The amount is shifted to the right of its column.",
+    # Sample16/17: a retyped row sits off the baseline of a straight digital page.
+    "The text in the second item description cell is misaligned vertically compared to the first and third items.",
+    "The line is slightly lower than the line above it, indicating misalignment in the itemized list.",
+])
+def test_offset_findings_are_never_judged_by_skew(text):
+    finding = _finding("text_alignment", {"x": 0.2, "y": 0.3, "width": 0.6, "height": 0.1}, text)
     assert apply_region_filters(_result(finding), None, _lines_page(0.0))["result"] == "flag"
 
 
