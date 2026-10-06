@@ -25,6 +25,7 @@ from app.services.storage_service import get_storage_service_for_task
 from app.tasks.celery_app import celery_app
 from app.tasks.tenant import open_task_session, resolve_company_for_document
 from app.tasks.signature_comparison_task import run_signature_comparison
+from app.tasks.visual_inconsistency_task import refilter_visual_review
 
 _ERROR_MESSAGE_MAX_LENGTH = 4000
 
@@ -70,6 +71,13 @@ def run_signature_detection(document_id: str, company_id: str | None = None) -> 
                 status=DocumentCheckStatus.completed,
                 result=result,
             )
+            # The visual review's signature/stamp filter needs these regions;
+            # re-apply it if that review finished first.
+            if pages:
+                try:
+                    refilter_visual_review(db, document, pages)
+                except Exception:  # noqa: BLE001 - never fail detection over it
+                    pass
             record_event(
                 db,
                 "signature_stamp_detection_completed",

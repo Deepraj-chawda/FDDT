@@ -40,10 +40,12 @@ what was said and why it did or didn't survive.
 from __future__ import annotations
 
 import base64
+import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
 import cv2
+import numpy as np
 
 from app.services.forensics.pdf_render import RenderedPage
 from app.services.llm_service import LLMService, PageVisualAnalysis, VisualCategoryFinding
@@ -256,6 +258,212 @@ def _ai_generation_finding(page: RenderedPage, run1: Any, run2: Any) -> Finding:
             "run_2": run2.model_dump(),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Post-filters: things the vision model reports that are not anomalies
+# ---------------------------------------------------------------------------
+#
+# Two kinds of model findings are explained by the page itself, and are kept
+# in `details` for the reviewer but demoted to "info" (not scored), with the
+# reason, by `apply_region_filters`:
+#
+#  1. Alignment and sharpness findings ABOUT A SIGNATURE OR STAMP. Pen
+#     strokes and rubber-stamp ink never sit on the typed baseline and are
+#     always softer than printed text. A finding is about one when it covers
+#     at least _REGION_OVERLAP of a detected signature/stamp region
+#     (signature_stamp_detection) and either names a signature/stamp in its
+#     text or is itself mostly that region. The model's boxes are rough
+#     (observed 0.03-0.1 of the page off, see signature_detection_service),
+#     so its box is grown by _MODEL_BOX_MARGIN before measuring.
+#
+#  2. Tilt/misalignment findings that are just the scan's skew. The text
+#     angle inside the finding's box is measured (projection profile) and
+#     compared with the page's overall skew and with the bands of page just
+#     above and below it; within _SKEW_TOLERANCE_DEG of any of them it is the
+#     page's own skew (or the gradual warp of a photographed page that was
+#     printed and scanned again), not a pasted-in element, which would
+#     differ from its surroundings.
+#
+# Filtering is reversible and idempotent: a demoted finding keeps its
+# original severity and description in data["region_filter"], and every call
+# first restores them, so it can be re-run when the signature detection
+# arrives later (the two checks run in parallel).
+
+_FILTERED_CATEGORIES = {"visual_text_alignment", "visual_resolution_sharpness_consistency"}
+_REGION_OVERLAP = 0.30
+_MODEL_BOX_MARGIN = 0.08
+_SIGNATURE_WORDS_RE = re.compile(r"signature|signed|stamp|seal|handwrit|initials", re.IGNORECASE)
+_TILT_WORDS_RE = re.compile(
+    r"tilt|rotat|skew|slant|angle|crooked|askew|not (?:horizontally )?(?:aligned|level|straight)|misalign",
+    re.IGNORECASE,
+)
+_SKEW_TOLERANCE_DEG = 0.7
+_SKEW_SEARCH_DEG = 3.0
+_SKEW_STEP_DEG = 0.05
+_NEIGHBOUR_BAND = 0.08  # page height above/below a region compared with it
+_MIN_INK_PIXELS = 200
+# Findings that are notes about the scored ones, re-derived after filtering.
+_NOTE_FINDINGS = {"experimental_signal_notice", "metadata_forensics_correlation"}
+
+
+def _area(box: dict[str, float]) -> float:
+    return max(0.0, box["width"]) * max(0.0, box["height"])
+
+
+def _intersection(a: dict[str, float], b: dict[str, float]) -> float:
+    w = min(a["x"] + a["width"], b["x"] + b["width"]) - max(a["x"], b["x"])
+    h = min(a["y"] + a["height"], b["y"] + b["height"]) - max(a["y"], b["y"])
+    return max(0.0, w) * max(0.0, h)
+
+
+def _grown(box: dict[str, float], margin: float) -> dict[str, float]:
+    x, y = max(0.0, box["x"] - margin), max(0.0, box["y"] - margin)
+    return {
+        "x": x,
+        "y": y,
+        "width": min(1.0, box["x"] + box["width"] + margin) - x,
+        "height": min(1.0, box["y"] + box["height"] + margin) - y,
+    }
+
+
+def _signature_regions(signature_result: dict[str, Any] | None) -> list[dict[str, Any]]:
+    details = (signature_result or {}).get("details")
+    detected = details.get("detected") if isinstance(details, dict) else None
+    regions = []
+    for item in detected or []:
+        box = item.get("bounding_box") if isinstance(item, dict) else None
+        if isinstance(box, dict) and all(isinstance(box.get(k), (int, float)) for k in ("x", "y", "width", "height")):
+            regions.append({"kind": item.get("kind") or "signature", **box})
+    return regions
+
+
+def _signature_overlap(finding: dict[str, Any], regions: list[dict[str, Any]]) -> str | None:
+    box = finding.get("bounding_box")
+    if not isinstance(box, dict) or not regions:
+        return None
+    grown = _grown(box, _MODEL_BOX_MARGIN)
+    names_one = bool(_SIGNATURE_WORDS_RE.search(finding.get("description") or ""))
+    for region in regions:
+        if region.get("page", box.get("page")) != box.get("page") or _area(region) <= 0:
+            continue
+        inter = _intersection(grown, region)
+        if inter / _area(region) >= _REGION_OVERLAP and (names_one or inter / max(_area(grown), 1e-9) >= _REGION_OVERLAP):
+            why = (
+                "handwritten signatures and stamps never follow the typed text's baseline"
+                if finding.get("finding") == "visual_text_alignment"
+                else "pen strokes and rubber-stamp ink are naturally softer than printed text"
+            )
+            return f"it is about the detected {region['kind']} (covers {inter / _area(region):.0%} of it) — {why}"
+    return None
+
+
+def _ink(image: np.ndarray) -> np.ndarray:
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+    _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    return bw
+
+
+def estimate_skew(ink: np.ndarray, *, scale: float = 1.0) -> float | None:
+    """Dominant angle (degrees) of the text lines / rules in a binarized
+    region: the rotation that makes its horizontal projection most peaked
+    (projection-profile deskew), searched over ±_SKEW_SEARCH_DEG. None when
+    there is too little ink to tell."""
+    if scale != 1.0:
+        ink = cv2.resize(ink, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    ys, xs = np.nonzero(ink)
+    if len(xs) < _MIN_INK_PIXELS:
+        return None
+    xs = xs - ink.shape[1] / 2.0
+    ys = ys.astype(float)
+    best, best_score = None, -1.0
+    for deg in np.arange(-_SKEW_SEARCH_DEG, _SKEW_SEARCH_DEG + 1e-9, _SKEW_STEP_DEG):
+        projected = np.round(ys - xs * np.tan(np.deg2rad(deg)))
+        hist = np.bincount((projected - projected.min()).astype(int))
+        score = float(np.dot(hist, hist))
+        if score > best_score:
+            best, best_score = float(deg), score
+    return None if best is None else round(best, 2)
+
+
+def _crop(ink: np.ndarray, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    h, w = ink.shape[:2]
+    return ink[int(max(0.0, y0) * h):int(min(1.0, y1) * h), int(max(0.0, x0) * w):int(min(1.0, x1) * w)]
+
+
+def _page_skew(finding: dict[str, Any], pages_by_number: dict[int, RenderedPage], cache: dict) -> str | None:
+    box = finding.get("bounding_box")
+    page = pages_by_number.get((box or {}).get("page") or finding.get("page"))
+    if not isinstance(box, dict) or page is None or not _TILT_WORDS_RE.search(finding.get("description") or ""):
+        return None
+    if page.page_number not in cache:
+        ink = _ink(page.image)
+        cache[page.page_number] = (ink, estimate_skew(_crop(ink, 0.03, 0.03, 0.97, 0.97), scale=0.5))
+    ink, page_angle = cache[page.page_number]
+    x, y, w, h = box["x"], box["y"], box["width"], box["height"]
+    local = estimate_skew(_crop(ink, x, y, x + w, y + h))
+    if local is None:
+        return None
+    references = {
+        "the page's overall skew": page_angle,
+        "the page just above it": estimate_skew(_crop(ink, 0.05, y - _NEIGHBOUR_BAND, 0.95, y)),
+        "the page just below it": estimate_skew(_crop(ink, 0.05, y + h, 0.95, y + h + _NEIGHBOUR_BAND)),
+    }
+    for label, angle in references.items():
+        if angle is not None and abs(local - angle) <= _SKEW_TOLERANCE_DEG:
+            return (
+                f"the region's text runs at {local:+.2f}°, within {_SKEW_TOLERANCE_DEG}° of {label} "
+                f"({angle:+.2f}°) — skew from scanning, not a separately placed element"
+            )
+    return None
+
+
+def apply_region_filters(
+    result: dict[str, Any], signature_result: dict[str, Any] | None, pages: list[RenderedPage]
+) -> dict[str, Any]:
+    """Demote alignment/sharpness findings explained by a signature/stamp or
+    by the scan's skew (see the section comment above), then recompute the
+    check's result. Returns `result`, changed in place."""
+    details = result.get("details")
+    if not isinstance(details, list):
+        return result
+    regions = _signature_regions(signature_result)
+    pages_by_number = {p.page_number: p for p in pages}
+    cache: dict = {}
+    for finding in details:
+        if not isinstance(finding, dict) or finding.get("finding") not in _FILTERED_CATEGORIES:
+            continue
+        data = finding.setdefault("data", {})
+        previous = data.pop("region_filter", None)
+        if previous:  # restore, then judge again with the current inputs
+            finding["severity"] = previous["original_severity"]
+            finding["description"] = previous["original_description"]
+        if finding.get("severity") not in ("medium", "high"):
+            continue
+        reason = _signature_overlap(finding, regions)
+        if reason is None and finding["finding"] == "visual_text_alignment":
+            reason = _page_skew(finding, pages_by_number, cache)
+        if reason is None:
+            continue
+        data["region_filter"] = {
+            "original_severity": finding["severity"],
+            "original_description": finding["description"],
+            "reason": reason,
+        }
+        finding["severity"] = "info"
+        finding["description"] = f"{finding['description']} Not counted: {reason}."
+
+    flagged = any(
+        isinstance(f, dict) and f.get("finding") not in _NOTE_FINDINGS and f.get("severity") in ("medium", "high")
+        for f in details
+    )
+    if result.get("result") in ("pass", "flag"):
+        result["result"] = "flag" if flagged else "pass"
+    if not flagged:
+        # A note correlating THIS check's flag with metadata forensics no
+        # longer applies once nothing here is flagged.
+        result["details"] = [f for f in details if not (isinstance(f, dict) and f.get("finding") == "metadata_forensics_correlation")]
+    return result
 
 
 def run_visual_inconsistency_review(llm: LLMService, pages: list[RenderedPage]) -> dict[str, Any]:

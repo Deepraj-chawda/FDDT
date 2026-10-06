@@ -277,6 +277,8 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "visual.alignment_inconsistency",
         "category": FORENSICS,
         "check_type": "visual_inconsistency_review",
+        # v2: findings about a signature/stamp, or matching the scan's skew, are not counted
+        # (apply_region_filters in app/services/visual_inconsistency_service.py).
         "condition": _finding("visual_inconsistency_review", finding="visual_text_alignment", severity_in=["medium", "high"]),
         "weight": 10,
         "severity": "medium",
@@ -295,6 +297,8 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "visual.sharpness_inconsistency",
         "category": FORENSICS,
         "check_type": "visual_inconsistency_review",
+        # v2: findings about a signature/stamp are not counted
+        # (apply_region_filters in app/services/visual_inconsistency_service.py).
         "condition": _finding("visual_inconsistency_review", finding="visual_resolution_sharpness_consistency", severity_in=["medium", "high"]),
         "weight": 10,
         "severity": "medium",
@@ -543,6 +547,8 @@ SEED_RULE_VERSIONS: dict[str, int] = {
     "field.subtotal_line_item_mismatch": 2,
     "field.tax_rate_mismatch": 2,
     "font.inconsistency_scanned": 2,
+    "visual.alignment_inconsistency": 2,
+    "visual.sharpness_inconsistency": 2,
 }
 
 

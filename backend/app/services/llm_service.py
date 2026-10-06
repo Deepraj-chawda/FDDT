@@ -562,7 +562,9 @@ def _page_visual_analysis_json_schema() -> dict[str, Any]:
                 "the same field type (e.g. are all dollar amounts in the same font)?"
             ),
             "text_alignment": _visual_category_schema(
-                "Does all text sit on a consistent baseline within its section?"
+                "Does all text sit on a consistent baseline within its section? Handwritten "
+                "signatures and stamps never follow text baselines; uniform skew of the whole "
+                "page from scanning is not an anomaly."
             ),
             "color_contrast_consistency": _visual_category_schema(
                 "Are there any regions with a noticeably different background shade, "
@@ -570,7 +572,7 @@ def _page_visual_analysis_json_schema() -> dict[str, Any]:
             ),
             "resolution_sharpness_consistency": _visual_category_schema(
                 "Does any region look noticeably sharper, blurrier, or more pixelated than the "
-                "rest of the page?"
+                "rest of the page? Pen signatures and stamp ink are naturally softer than print."
             ),
             "shadow_lighting_consistency": _visual_category_schema(
                 "For any photographed (not purely digital) content, does lighting/shadow "
@@ -823,12 +825,16 @@ and size for what should be the same field type (e.g. are all dollar \
 amounts in the same font)? Note any exceptions with their approximate \
 location.
 2. Text alignment: Does all text sit on a consistent baseline within \
-its section? Note any text that appears misaligned or offset.
+its section? Note any text that appears misaligned or offset. \
+Handwritten signatures and stamps never follow text baselines; uniform \
+skew of the whole page from scanning is not an anomaly.
 3. Color/contrast consistency: Are there any regions with a noticeably \
 different background shade, saturation, or contrast than the \
 surrounding page, as if a patch was pasted in?
 4. Resolution/sharpness consistency: Does any region look noticeably \
-sharper, blurrier, or more pixelated than the rest of the page?
+sharper, blurrier, or more pixelated than the rest of the page? Pen \
+signatures and rubber-stamp ink are naturally softer than printed text \
+and are not an anomaly.
 5. Shadow/lighting consistency: For any photographed (not purely \
 digital) content, does lighting/shadow direction look consistent \
 across the page?

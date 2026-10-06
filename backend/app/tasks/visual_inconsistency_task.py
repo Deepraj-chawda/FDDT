@@ -19,7 +19,7 @@ codebase (SPECIFICATION.md's "starting with PDF documents only" scope note).
 """
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.db import tenancy
 from app.db.session import SessionLocal
@@ -30,7 +30,11 @@ from app.services.check_store import save_check
 from app.services.forensics.pdf_render import render_pdf_pages
 from app.services.llm_service import get_llm_service
 from app.services.storage_service import get_storage_service_for_task
-from app.services.visual_inconsistency_service import Finding, run_visual_inconsistency_review
+from app.services.visual_inconsistency_service import (
+    Finding,
+    apply_region_filters,
+    run_visual_inconsistency_review,
+)
 from app.services.risk_scoring_service import request_case_scoring
 from app.tasks.celery_app import celery_app
 from app.tasks.tenant import open_task_session, resolve_company_for_document
@@ -42,6 +46,53 @@ def _is_pdf(document: Document) -> bool:
     if document.content_type == "application/pdf":
         return True
     return document.original_filename.lower().endswith(".pdf")
+
+
+def lock_visual_filters(db, document_id: uuid.UUID) -> None:
+    """Serialise, per document, the two writers of the visual review's
+    region filters: this task (filters with whatever signature detection
+    exists) and signature detection (re-filters the stored review once it has
+    regions). Each takes this transaction-scoped lock before reading the
+    other's row, so whichever runs second sees the first's committed result."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": f"visual-filters:{document_id}"})
+
+
+def completed_check_result(db, document_id: uuid.UUID, check_type: DocumentCheckType) -> dict | None:
+    check = db.execute(
+        select(DocumentCheck).where(
+            DocumentCheck.document_id == document_id,
+            DocumentCheck.check_type == check_type,
+            DocumentCheck.status == DocumentCheckStatus.completed,
+        )
+    ).scalar_one_or_none()
+    return check.result if check is not None and isinstance(check.result, dict) else None
+
+
+def refilter_visual_review(db, document: Document, pages) -> bool:
+    """Re-apply the region filters to the stored visual review with the
+    current signature/stamp regions (called by signature detection once it
+    has them). Returns whether the stored result changed. The caller
+    commits."""
+    lock_visual_filters(db, document.id)
+    visual = completed_check_result(db, document.id, DocumentCheckType.visual_inconsistency_review)
+    if visual is None or visual.get("result") not in ("pass", "flag"):
+        return False
+    import copy
+
+    before = copy.deepcopy(visual)
+    signature = completed_check_result(db, document.id, DocumentCheckType.signature_stamp_detection)
+    after = apply_region_filters(visual, signature, pages)
+    if after == before:
+        return False
+    save_check(
+        db,
+        document=document,
+        check_type=DocumentCheckType.visual_inconsistency_review,
+        status=DocumentCheckStatus.completed,
+        result=after,
+    )
+    return True
 
 
 def _latest_metadata_forensics_result(db, document_id: uuid.UUID) -> dict | None:
@@ -134,6 +185,15 @@ def run_visual_inconsistency_review_task(document_id: str, company_id: str | Non
                 )
             else:
                 analysis = run_visual_inconsistency_review(get_llm_service(), pages)
+                # Signature/stamp and scan-skew explanations (see
+                # apply_region_filters). Signature detection runs in
+                # parallel; if it finishes later it re-applies these.
+                lock_visual_filters(db, document.id)
+                analysis = apply_region_filters(
+                    analysis,
+                    completed_check_result(db, document.id, DocumentCheckType.signature_stamp_detection),
+                    pages,
+                )
                 if analysis["result"] == "flag":
                     _append_metadata_correlation(analysis, _latest_metadata_forensics_result(db, document.id))
 
