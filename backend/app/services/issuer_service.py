@@ -16,6 +16,17 @@ catches transliteration variance the registry doesn't have an exact
 Arabic entry for (e.g. a registry entry that's only ever been recorded
 in English).
 
+OCR noise is normalized before matching (`issuer_name_variants`): trademark
+signs and their misreads glued to the last word ("ACADEMYO" for "ACADEMY®")
+are stripped, and a bilingual name ("أكاديمية الخليج ... THE GULF ...
+ACADEMY") is also matched part by part — its Arabic and Latin parts
+separately — keeping the best score.
+
+`verify_issuer` builds the stored issuer_verification result. When the
+registry has NO active entries that could apply to the document (none at all,
+or none for its country / kind of issuer), an unmatched issuer is reported as
+"not_checked" — there was nothing to check it against — instead of "flag".
+
 NOTE: `issuer_registry` is seeded (see the Alembic migrations that
 create/extend it) with a small set of FAKE test entries for local
 development/pipeline testing only. This registry must be populated with
@@ -24,8 +35,9 @@ relevant) before this check is meaningful in production.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from rapidfuzz import fuzz, process, utils
 from sqlalchemy import select
@@ -47,6 +59,44 @@ class IssuerMatchResult:
     # same entity), or None (no match by either method, or nothing to
     # compare).
     matched_via: Literal["fuzzy", "llm"] | None = None
+
+
+# Organisation words a trademark sign (® ™) is often printed after; OCR reads
+# the sign as a trailing "O"/"0" glued to the word ("ACADEMYO").
+_ORG_WORDS = {
+    "ACADEMY", "SCHOOL", "SCHOOLS", "NURSERY", "COLLEGE", "UNIVERSITY", "INSTITUTE", "CENTER", "CENTRE",
+    "COMPANY", "LLC", "INC", "LTD", "LIMITED", "GROUP", "TRADING", "HOSPITAL", "CLINIC", "EST", "CORP",
+    "CORPORATION", "SERVICES", "SOLUTIONS", "INTERNATIONAL", "BANK",
+}
+_TRADEMARK_RE = re.compile(r"[®™©℗]|\((?:R|TM|C)\)", re.IGNORECASE)
+_ARABIC = r"؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿"
+_ARABIC_RUN_RE = re.compile(rf"[{_ARABIC}][{_ARABIC}\s\-]*")
+
+
+def _strip_trademark_misread(word: str) -> str:
+    bare = word.rstrip(".,;:")
+    if len(bare) > 3 and bare[-1] in "Oo0" and bare[:-1].upper() in _ORG_WORDS:
+        return bare[:-1]
+    return word
+
+
+def issuer_name_variants(name: str) -> list[str]:
+    """The extracted name, an OCR-cleaned copy, and its Arabic and Latin
+    parts on their own (for a bilingual letterhead), without duplicates."""
+    cleaned = _TRADEMARK_RE.sub(" ", name)
+    cleaned = " ".join(_strip_trademark_misread(w) for w in cleaned.split())
+    variants = [name.strip(), cleaned]
+    arabic = " ".join(m.group(0).strip() for m in _ARABIC_RUN_RE.finditer(cleaned)).strip()
+    latin = " ".join(_ARABIC_RUN_RE.sub(" ", cleaned).split())
+    if arabic and latin and re.search(r"[A-Za-z]{3}", latin):
+        variants += [arabic, latin]
+    seen: set[str] = set()
+    out = []
+    for v in variants:
+        if v and v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
 
 
 def _no_match(threshold: float, *, best_match_name: str | None = None, best_match_score: float | None = None) -> IssuerMatchResult:
@@ -108,9 +158,11 @@ def match_issuer(
     # differences alone (e.g. "TECHSOURCE SOLUTIONS INC." vs. "TechSource
     # Solutions Inc.") tank rapidfuzz's score far more than a human would
     # judge them as actually different issuers.
-    best = process.extractOne(
-        issuer_name, candidate_strings, scorer=fuzz.WRatio, processor=utils.default_process
-    )
+    best = None
+    for variant in issuer_name_variants(issuer_name):
+        found = process.extractOne(variant, candidate_strings, scorer=fuzz.WRatio, processor=utils.default_process)
+        if found is not None and (best is None or found[1] > best[1]):
+            best = found
     best_name = best[0] if best else None
     # rapidfuzz's score is a C-computed float (e.g. 28.000000000000004) —
     # round for a value that's meant to be read by a reviewer, not just
@@ -148,3 +200,103 @@ def match_issuer(
             )
 
     return _no_match(effective_threshold, best_match_name=best_name, best_match_score=best_score)
+
+
+# ---------------------------------------------------------------------------
+# The stored issuer_verification result
+# ---------------------------------------------------------------------------
+
+# document_type (app/services/classification_service.py) -> the kind of
+# registry entry that can be its issuer; None = any kind.
+_ISSUER_TYPE_FOR_DOCUMENT = {
+    "school_document": "school",
+    "vendor_invoice": "vendor",
+    "commercial_invoice": "vendor",
+    "procurement_documentation": "vendor",
+    "travel_invoice": "vendor",
+}
+_COUNTRY_FOR_CURRENCY = {
+    "AED": "AE", "SAR": "SA", "QAR": "QA", "KWD": "KW", "BHD": "BH", "OMR": "OM", "EGP": "EG",
+    "JOD": "JO", "INR": "IN", "PKR": "PK", "GBP": "GB",
+}
+
+
+def document_country(extracted_fields: dict[str, Any]) -> str | None:
+    """The document's country, from a printed IBAN or else the currency."""
+    for field in extracted_fields.get("additional_fields") or []:
+        if isinstance(field, dict) and "iban" in (field.get("field_name") or "").lower():
+            value = re.sub(r"\s", "", str(field.get("value") or "")).upper()
+            if re.match(r"^[A-Z]{2}\d{2}", value):
+                return value[:2]
+    currency = (((extracted_fields.get("core_fields") or {}).get("amount") or {}).get("currency") or "").upper()
+    return _COUNTRY_FOR_CURRENCY.get(currency)
+
+
+def relevant_registry_rows(
+    db: Session, company_id, *, document_type: str | None, country: str | None
+) -> list[IssuerRegistry]:
+    """Active registry entries that could be this document's issuer: of a
+    matching kind (or "other") and country (or no country on file)."""
+    wanted = _ISSUER_TYPE_FOR_DOCUMENT.get(document_type or "")
+    rows = db.execute(
+        select(IssuerRegistry).where(IssuerRegistry.company_id == company_id, IssuerRegistry.is_active.is_(True))
+    ).scalars().all()
+    return [
+        r for r in rows
+        if (wanted is None or r.type.value in (wanted, "other"))
+        and (country is None or r.country is None or r.country.upper() == country)
+    ]
+
+
+def verify_issuer(
+    db: Session,
+    company_id,
+    extracted_fields: dict[str, Any],
+    *,
+    document_type: str | None = None,
+    ocr_text: str | None = None,
+    llm_service: LLMService | None = None,
+    before_slow_call=None,
+) -> dict[str, Any]:
+    """{"result": "pass" | "flag" | "not_checked", "details": {...}} for the
+    issuer_verification check, including the fee benchmark sub-check
+    (app/services/fee_benchmark_service.py) under details["fee_benchmark"]."""
+    from app.services.fee_benchmark_service import check_fee_benchmark
+
+    issuer_name = ((extracted_fields.get("core_fields") or {}).get("issuer") or {}).get("value")
+    match = match_issuer(db, company_id, issuer_name, llm_service=llm_service, before_slow_call=before_slow_call)
+    details: dict[str, Any] = {
+        "issuer_name": issuer_name,
+        "matched_registry_name": match.best_match_name,
+        "match_score": match.best_match_score,
+        "matched_via": match.matched_via,
+        "threshold": match.threshold,
+    }
+    registry_row = None
+    if match.matched:
+        result = "pass"
+        registry_row = _row_for_name(db, company_id, match.best_match_name)
+    else:
+        country = document_country(extracted_fields)
+        if relevant_registry_rows(db, company_id, document_type=document_type, country=country):
+            result = "flag"
+        else:
+            result = "not_checked"
+            kind = _ISSUER_TYPE_FOR_DOCUMENT.get(document_type or "")
+            scope = " ".join(p for p in (f"{kind} issuers" if kind else None, f"in {country}" if country else None) if p)
+            details["reason"] = (
+                "Not checked: the issuer registry has no active entries"
+                + (f" for {scope}" if scope else "")
+                + ", so there was nothing to compare this issuer against."
+            )
+    details["fee_benchmark"] = check_fee_benchmark(db, company_id, registry_row, extracted_fields, ocr_text)
+    return {"result": result, "details": details}
+
+
+def _row_for_name(db: Session, company_id, name: str | None) -> IssuerRegistry | None:
+    if not name:
+        return None
+    rows = db.execute(
+        select(IssuerRegistry).where(IssuerRegistry.company_id == company_id, IssuerRegistry.is_active.is_(True))
+    ).scalars().all()
+    return next((r for r in rows if name in (r.name, r.name_arabic)), None)

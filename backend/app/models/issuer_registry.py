@@ -36,6 +36,11 @@ class IssuerRegistry(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Bas
     # issuer has a known Arabic name on file.
     name_arabic: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     tax_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # ISO 3166-1 alpha-2 country the issuer operates in ("AE"), when known.
+    # Decides whether the registry has entries relevant to a document at all
+    # (app/services/issuer_service.py): with none, an unmatched issuer is
+    # "not checked" rather than "not in registry".
+    country: Mapped[str | None] = mapped_column(String(2), nullable=True)
     type: Mapped[IssuerType] = mapped_column(
         Enum(IssuerType, name="issuer_registry_type"), default=IssuerType.other, nullable=False
     )

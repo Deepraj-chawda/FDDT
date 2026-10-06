@@ -32,7 +32,7 @@ from app.services.audit_service import record_event
 from app.services.check_store import save_check
 from app.services.cross_document_service import find_cross_document_mismatches
 from app.services.field_validation_service import validate_fields
-from app.services.issuer_service import match_issuer
+from app.services.issuer_service import verify_issuer
 from app.services.llm_service import LLMConfigurationError, get_llm_service
 from app.services.risk_scoring_service import request_case_scoring
 from app.tasks.celery_app import celery_app
@@ -101,9 +101,6 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
             )
 
         try:
-            issuer_name = ((extracted_fields.get("core_fields") or {}).get("issuer") or {}).get(
-                "value"
-            )
             try:
                 llm_service = get_llm_service()
             except LLMConfigurationError:
@@ -116,24 +113,24 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
             # issuer match may make an Azure OpenAI call, and no connection
             # should be held while it runs.
             db.commit()
-            match = match_issuer(
-                db, document.company_id, issuer_name, llm_service=llm_service, before_slow_call=db.commit
+            # Registry match ("not_checked" when the registry has nothing that
+            # could apply) and the fee benchmark sub-check — app/services/
+            # issuer_service.py.
+            result = verify_issuer(
+                db,
+                document.company_id,
+                extracted_fields,
+                document_type=document.document_type,
+                ocr_text=document.ocr_text,
+                llm_service=llm_service,
+                before_slow_call=db.commit,
             )
             save_check(
                 db,
                 document=document,
                 check_type=DocumentCheckType.issuer_verification,
                 status=DocumentCheckStatus.completed,
-                result={
-                "result": "pass" if match.matched else "flag",
-                "details": {
-                "issuer_name": issuer_name,
-                "matched_registry_name": match.best_match_name,
-                "match_score": match.best_match_score,
-                "matched_via": match.matched_via,
-                "threshold": match.threshold,
-                },
-                },
+                result=result,
             )
         except Exception as exc:  # noqa: BLE001 - see comment above.
             save_check(

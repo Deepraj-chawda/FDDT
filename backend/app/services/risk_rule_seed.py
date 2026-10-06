@@ -478,12 +478,27 @@ SEED_RULES: list[dict[str, Any]] = [
         "category": VERIFICATION,
         "check_type": "issuer_verification",
         "condition": {"match": "check_result", "check_type": "issuer_verification", "result": "flag"},
+        # v2: the check reports "not_checked" (and this does not fire) when
+        # the registry has no active entries for the document's country or
+        # kind of issuer; OCR noise in the name is normalized before matching.
         # Fires on ANY document whose issuer isn't in the registry — including
         # evidence documents from third parties (e.g. a payment processor) —
         # so on its own it must stay below "medium" (30).
         "weight": 15,
         "severity": "medium",
         "reason_template": "Issuer '{issuer}' on '{document}' did not match any known issuer in the registry.",
+    },
+    {
+        "rule_id": "issuer.fee_benchmark_deviation",
+        "category": VERIFICATION,
+        "check_type": "issuer_verification",
+        # A charge far above the known issuer's published fee for that grade
+        # and year (app/services/fee_benchmark_service.py). Only runs for
+        # registry-matched issuers with benchmark fees on file.
+        "condition": {"match": "sub_check", "check_type": "issuer_verification", "sub_check": "fee_benchmark"},
+        "weight": 20,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
     },
     {
         "rule_id": "signature.expected_missing",
@@ -549,6 +564,7 @@ SEED_RULE_VERSIONS: dict[str, int] = {
     "font.inconsistency_scanned": 2,
     "visual.alignment_inconsistency": 2,
     "visual.sharpness_inconsistency": 2,
+    "issuer.not_in_registry": 2,
 }
 
 

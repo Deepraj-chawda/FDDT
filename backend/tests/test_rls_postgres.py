@@ -32,7 +32,7 @@ TENANT_TABLES = (
     "cases", "documents", "document_checks", "document_page_hashes", "cross_document_findings",
     "case_actions", "case_risk_assessments", "risk_scores", "risk_rules", "risk_settings",
     "issuer_registry", "signature_references", "signature_matches", "case_reports", "audit_log",
-    "users", "company_usage_stats", "bulk_uploads", "bulk_upload_cases",
+    "users", "company_usage_stats", "bulk_uploads", "bulk_upload_cases", "issuer_fee_benchmarks",
 )
 
 

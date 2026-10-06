@@ -15,6 +15,7 @@ from app.models.cross_document_finding import CrossDocumentFinding, FindingSever
 from app.models.document import Document
 from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
 from app.models.document_page_hash import DocumentPageHash
+from app.models.issuer_fee_benchmark import IssuerFeeBenchmark
 from app.models.issuer_registry import IssuerRegistry, IssuerType
 from app.models.risk_rule import RiskRule
 from app.models.risk_rule_template import RiskRuleTemplate
@@ -45,6 +46,7 @@ __all__ = [
     "DocumentPageHash",
     "CrossDocumentFinding",
     "FindingSeverity",
+    "IssuerFeeBenchmark",
     "IssuerRegistry",
     "IssuerType",
     "RiskRule",

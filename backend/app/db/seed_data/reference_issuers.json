@@ -1,0 +1,31 @@
+{
+  "_note": "Reference issuers and their published fees for the fee benchmark check. Figures are from third-party school listings (verified = false) and must be confirmed against the regulator's approved fee list (ADEK for Abu Dhabi) before being relied on. Loaded into one company with scripts/seed_reference_issuers.py.",
+  "issuers": [
+    {
+      "name": "The Gulf International Private Academy",
+      "name_arabic": "أكاديمية الخليج الدولية الخاصة",
+      "tax_id": "100216382000003",
+      "type": "school",
+      "country": "AE",
+      "benchmarks": [
+        {"academic_year": "2023-24", "grade": "KG2", "item": "tuition", "amount": 12840, "currency": "AED", "source_url": null, "source_note": "Bayut school guide listing (third party)", "verified": false},
+        {"academic_year": "2023-24", "grade": "KG2", "item": "books", "amount": 650, "currency": "AED", "source_url": null, "source_note": "Bayut school guide listing (third party)", "verified": false},
+        {"academic_year": "2023-24", "grade": "KG2", "item": "uniform", "amount": 300, "currency": "AED", "source_url": null, "source_note": "Bayut school guide listing (third party)", "verified": false},
+        {"academic_year": "2020-21", "grade": "KG2", "item": "tuition", "amount": 11800, "currency": "AED", "source_url": null, "source_note": "mabumbe school listing (third party)", "verified": false},
+        {"academic_year": "2020-21", "grade": "KG2", "item": "books", "amount": 650, "currency": "AED", "source_url": null, "source_note": "mabumbe school listing (third party)", "verified": false},
+        {"academic_year": "2020-21", "grade": "KG2", "item": "transport", "amount": 3510, "currency": "AED", "source_url": null, "source_note": "mabumbe school listing (third party)", "verified": false},
+        {"academic_year": "2020-21", "grade": "KG2", "item": "uniform", "amount": 300, "currency": "AED", "source_url": null, "source_note": "mabumbe school listing (third party)", "verified": false}
+      ]
+    },
+    {
+      "name": "Headstart Nursery",
+      "name_arabic": "حضانة هدستارت",
+      "tax_id": null,
+      "type": "school",
+      "country": "AE",
+      "benchmarks": [
+        {"academic_year": "*", "grade": "*", "item": "annual_total", "amount": 20000, "currency": "AED", "source_url": null, "source_note": "Edustoke listing, entry-level annual fee, undated (third party)", "verified": false}
+      ]
+    }
+  ]
+}
