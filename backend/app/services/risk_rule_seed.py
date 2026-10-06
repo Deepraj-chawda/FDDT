@@ -345,6 +345,9 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "field.subtotal_line_item_mismatch",
         "category": CONSISTENCY,
         "check_type": "field_validation",
+        # v2: lines are summed to the cent (one cent per summed line), lines
+        # marked PAID on the document are never summed, and the reason names
+        # the lines summed and left out.
         "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "subtotal_line_item_consistency"},
         "weight": 15,
         "severity": "medium",
@@ -500,6 +503,7 @@ SEED_RULES: list[dict[str, Any]] = [
 # editing old rows, so assessments made before keep their own versions.
 SEED_RULE_VERSIONS: dict[str, int] = {
     "metadata.javascript_or_openaction": 2,
+    "field.subtotal_line_item_mismatch": 2,
 }
 
 

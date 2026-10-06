@@ -73,6 +73,11 @@ def _amount_mismatch_description(doc_a: Document, doc_b: Document) -> str | None
             f"({amount_b:.2f} {currency_b})."
         )
 
+    # The one place a percentage tolerance is used on purpose: this compares
+    # amounts across DIFFERENT documents (an invoice against the payment that
+    # settled it), where bank charges and currency-conversion rounding make
+    # small differences legitimate. Arithmetic within one document is checked
+    # to the cent (app/services/field_validation_service.py).
     if abs(amount_a - amount_b) > max(0.01, max(amount_a, amount_b) * 0.01):
         currency_suffix_a = f" {currency_a}" if currency_a else ""
         currency_suffix_b = f" {currency_b}" if currency_b else ""

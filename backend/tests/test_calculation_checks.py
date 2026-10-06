@@ -123,6 +123,39 @@ def test_excluded_lines_that_actually_count_do_not_cause_a_false_flag():
     assert _validate(core, items)["subtotal_line_item_consistency"]["status"] == "pass"
 
 
+def test_sum_tolerance_is_one_cent_per_summed_line_not_a_percentage():
+    items = [_item(100.01), _item(200.01), _item(300.01)]
+    # 3 lines may drift 3 cents by rounding...
+    assert _validate({"amount": _amount(600.0)}, items)["subtotal_line_item_consistency"]["status"] == "pass"
+    # ...but not 4, and a single line not even 2.
+    assert _validate({"amount": _amount(599.99)}, items)["subtotal_line_item_consistency"]["status"] == "flag"
+    assert _validate({"amount": _amount(100.0)}, [_item(100.02)])["subtotal_line_item_consistency"]["status"] == "flag"
+
+
+def test_headstart_sum_mismatch_wording_and_summed_lines():
+    # CASE-DB43653A after line-item parsing: term 1 counts, registration is paid.
+    items = [
+        dict(_item(500, counts=False, description="REGISTRATION FEES"), status="paid"),
+        dict(_item(22000, 4, 5500, description="FEE FOR TERM 1"), status="due"),
+        dict(_item(16500, 3, 5500, description="FEE FOR TERM 2"), status="due"),
+        dict(_item(16600, 3, 6000, description="FEE FOR TERM 3"), status="due"),
+    ]
+    sub = _validate({"amount": _amount(55500.0)}, items)["subtotal_line_item_consistency"]
+    assert sub["status"] == "flag"
+    assert sub["reason"].startswith("Line items = 55,100.00, stated total 55,500.00, difference 400.00")
+    assert "line 1 (REGISTRATION FEES): 500.00 (marked paid)" in sub["reason"]
+    assert sub["summed_lines"] == [
+        "line 2 (FEE FOR TERM 1): 22,000.00", "line 3 (FEE FOR TERM 2): 16,500.00", "line 4 (FEE FOR TERM 3): 16,600.00",
+    ]
+    assert sub["excluded_lines"] == ["line 1 (REGISTRATION FEES): 500.00"]
+
+
+def test_a_line_marked_paid_is_never_summed_by_the_fallback():
+    # Summing the paid line too would match, but the document says it is paid.
+    items = [dict(_item(100.0, counts=False), status="paid"), _item(500.0)]
+    assert _validate({"amount": _amount(600.0)}, items)["subtotal_line_item_consistency"]["status"] == "flag"
+
+
 def test_legacy_additional_field_line_items_still_work():
     fields = {"core_fields": {"subtotal": _amount(150.0)},
               "additional_fields": [{"field_name": "item1_total", "value": "100.00"},

@@ -225,9 +225,16 @@ def _sum_target(core_fields: dict[str, Any]) -> tuple[str, float, str] | None:
     return "amount", total, f"total {_money(total)}"
 
 
+def _line_names(lines: list[tuple[int, dict[str, Any], float]]) -> list[str]:
+    return [f"{_line_label(i, item)}: {_money(total)}" for i, item, total in lines]
+
+
 def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str, Any]]) -> dict[str, Any] | None:
     """The structured line-item version of subtotal_line_item_consistency;
-    None when there are no structured line totals to use."""
+    None when there are no structured line totals to use. Lines marked paid
+    (status "paid", read from the document's own PAID marker — see
+    app/services/line_item_parsing.py) are listed but never summed. The
+    result names the lines that were summed and the ones left out."""
     priced = [(i, item, _num(item.get("line_total"))) for i, item in enumerate(line_items, start=1)]
     priced = [(i, item, total) for i, item, total in priced if total is not None]
     counted = [(i, item, total) for i, item, total in priced if item.get("counts_toward_total", True)]
@@ -238,24 +245,46 @@ def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str
         return {"status": "skipped", "reason": "No subtotal or total to compare the line items against."}
     field, expected, label = target
     counted_sum = sum(total for _, _, total in counted)
-    allowance = _rounding_allowance(len(priced) + 1)
+    excluded = [p for p in priced if p not in counted]
+    detail = {"summed_lines": _line_names(counted), "excluded_lines": _line_names(excluded)}
+    # Rounding only: one cent per summed line (a printed sum of rounded
+    # amounts can only drift that far). A percentage would hide real edits —
+    # 1% of 55,500 is 555.
+    allowance = _rounding_allowance(len(counted))
     if abs(counted_sum - expected) <= allowance:
-        return {"status": "pass", "reason": f"The {len(counted)} line item(s) add up to the {label}."}
+        return {"status": "pass", "reason": f"The {len(counted)} line item(s) add up to the {label}.", **detail}
     # The extraction's "counts toward total" call is a judgment: if every
-    # priced line together matches instead, that is not an inconsistency.
-    all_sum = sum(total for _, _, total in priced)
-    if len(priced) != len(counted) and abs(all_sum - expected) <= allowance:
-        return {"status": "pass", "reason": f"The {len(priced)} line item(s) add up to the {label}."}
+    # priced line together matches instead, that is not an inconsistency —
+    # unless a line is marked paid on the document itself.
+    unpaid = [p for p in priced if p[1].get("status") != "paid"]
+    all_sum = sum(total for _, _, total in unpaid)
+    if len(unpaid) != len(counted) and abs(all_sum - expected) <= _rounding_allowance(len(unpaid)):
+        return {
+            "status": "pass",
+            "reason": f"The {len(unpaid)} line item(s) add up to the {label}.",
+            "summed_lines": _line_names(unpaid),
+            "excluded_lines": _line_names([p for p in priced if p not in unpaid]),
+        }
     terms = " + ".join(_money(total) for _, _, total in counted)
-    return _flag(
-        f"The line items add up to {_money(counted_sum)} ({terms}), but the document states the {label} — "
-        f"a difference of {_money(expected - counted_sum)}.",
-        make_region(
-            core_fields, field,
-            f"Field exception: {'Subtotal' if field == 'subtotal' else 'Total amount'} "
-            f"({format_field_value(field, core_fields.get(field))} vs line items {_money(counted_sum)})",
-        ),
+    left_out = (
+        " Not summed: " + "; ".join(
+            f"{name}{' (marked paid)' if item.get('status') == 'paid' else ''}"
+            for name, (_, item, _) in zip(detail["excluded_lines"], excluded)
+        ) + "."
+        if excluded else ""
     )
+    return {
+        **_flag(
+            f"Line items = {_money(counted_sum)}, stated {label}, difference "
+            f"{_money(abs(expected - counted_sum))} (summed: {terms}).{left_out}",
+            make_region(
+                core_fields, field,
+                f"Field exception: {'Subtotal' if field == 'subtotal' else 'Total amount'} "
+                f"({format_field_value(field, core_fields.get(field))} vs line items {_money(counted_sum)})",
+            ),
+        ),
+        **detail,
+    }
 
 
 def _check_subtotal_line_item_consistency(
