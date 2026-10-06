@@ -1,0 +1,527 @@
+{
+ "case_number": "CASE-DB43653A",
+ "pdf": "sample-documents/tampered_test_samples/case1.pdf",
+ "sha256": "910eb0b646a448aa87ae22b0a1a4865f35c7a7b4956f971df204467f32f12af9",
+ "document_type": "school_document",
+ "ocr_text": "حضانة هذ ستارت\nHeadstart NURSERY\nSep 6, 2022\nHEADSTART NURSERY\nINVOICE\nNum: 10139/ 20220906\nSTUDENTS NAME: HAMDA AHMED SALEM ALKINDI\nSTUDENT ID NO: HSN1278\n1. REGISTRATION FEES: 500 PAID\n2. FEE FOR TERM 1 (September) PAID (October-November-December) DUE NUMBER OF DAYS PER WEEK: 5 DAYS\nFEE:\n5,500 PER MONTH X 4 MONTH = 22,000\n3. FEE FOR TERM 2 (January-February-March) DUE\nNUMBER OF DAYS PER WEEK: 5 DAYS FEE: 5,500 PER MONTH X 3 MONTHS = 16,500\n4. FEE FOR TERM 3 (April-May-June) DUE\nNUMBER OF DAYS PER WEEK: 5 DAYS\nFEE: 6,000 PER MONTH X 3 MONTHS = 16,600\nTOTAL FEE FOR TERM 1, 2 AND TERM 3 (FOR THE ACADEMIC YEAR 2022-2023) IS: 55,500\nDIRHAMS: TWENTY THOUSAND FIVE HUNDRED AED ONLY\nPAYMENT CAN BE MADE BY CASH, CHEQUE OR CREDIT CARD.\nBank Name: Abu Dhabi Commercial Bank (ADCB)\nBank Account Number: 10364749020001\nIBAN: AE450030010364749020001\nAccount Title: HeadStart Nursery\nحضانة هدستارت\nFOR HEADSTART NURSERY.\nالعين -ا.ع.م Al Ale - U.A.E. HEADSTART NURSEON\n* RAWAN TAQEZ\nPO Box 84158, Falaj Hazza, Al Ain, UAE | info@headstartnursery.ae | www.headstartnursery.ae Scanned with CamScanner",
+ "extracted_fields": {
+  "line_items": [
+   {
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.9,
+    "line_total": 500.0,
+    "unit_price": 500.0,
+    "description": "REGISTRATION FEES",
+    "bounding_box": {
+     "x": 0.3213,
+     "y": 0.3506,
+     "page": 1,
+     "width": 0.0231,
+     "height": 0.012
+    },
+    "counts_toward_total": false,
+    "line_total_raw_text": "500"
+   },
+   {
+    "discount": null,
+    "quantity": 4.0,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 22000.0,
+    "unit_price": 5500.0,
+    "description": "FEE FOR TERM 1 (September)",
+    "bounding_box": {
+     "x": 0.4328,
+     "y": 0.4328,
+     "page": 1,
+     "width": 0.0451,
+     "height": 0.0128
+    },
+    "counts_toward_total": false,
+    "line_total_raw_text": "22,000"
+   },
+   {
+    "discount": null,
+    "quantity": 3.0,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 16500.0,
+    "unit_price": 5500.0,
+    "description": "FEE FOR TERM 2 (January-February-March)",
+    "bounding_box": {
+     "x": 0.4368,
+     "y": 0.5149,
+     "page": 1,
+     "width": 0.0404,
+     "height": 0.0141
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "16,500"
+   },
+   {
+    "discount": null,
+    "quantity": 3.0,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 16600.0,
+    "unit_price": 6000.0,
+    "description": "FEE FOR TERM 3 (April-May-June)",
+    "bounding_box": {
+     "x": 0.4354,
+     "y": 0.5982,
+     "page": 1,
+     "width": 0.0438,
+     "height": 0.0125
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "16,600"
+   }
+  ],
+  "core_fields": {
+   "date": {
+    "value": "2022-09-06",
+    "raw_text": "Sep 6, 2022",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.1796,
+     "y": 0.1358,
+     "page": 1,
+     "width": 0.0835,
+     "height": 0.0153
+    }
+   },
+   "amount": {
+    "value": 55500.0,
+    "currency": "AED",
+    "raw_text": "55,500",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.1777,
+     "y": 0.6483,
+     "page": 1,
+     "width": 0.0606,
+     "height": 0.0133
+    }
+   },
+   "issuer": {
+    "value": "HEADSTART NURSERY",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.6948,
+     "y": 0.054,
+     "page": 1,
+     "width": 0.2182,
+     "height": 0.0592
+    }
+   },
+   "subtotal": {
+    "value": null,
+    "currency": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_rate": {
+    "value": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_amount": {
+    "value": null,
+    "currency": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "reference_number": {
+    "value": "10139/ 20220906",
+    "uncertain": false,
+    "confidence": 0.9,
+    "bounding_box": {
+     "x": 0.6994,
+     "y": 0.1856,
+     "page": 1,
+     "width": 0.1093,
+     "height": 0.0165
+    }
+   }
+  },
+  "amount_in_words": {
+   "text": "TWENTY THOUSAND FIVE HUNDRED AED ONLY",
+   "value": 20500.0,
+   "confidence": 0.9,
+   "bounding_box": {
+    "x": 0.1685,
+    "y": 0.6802,
+    "page": 1,
+    "width": 0.4368,
+    "height": 0.0149
+   }
+  },
+  "additional_fields": [
+   {
+    "value": "HAMDA AHMED SALEM ALKINDI",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "student_name",
+    "bounding_box": {
+     "x": 0.3225,
+     "y": 0.2466,
+     "page": 1,
+     "width": 0.2417,
+     "height": 0.0172
+    }
+   },
+   {
+    "value": "HSN1278",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "student_id",
+    "bounding_box": {
+     "x": 0.3134,
+     "y": 0.3004,
+     "page": 1,
+     "width": 0.0685,
+     "height": 0.0137
+    }
+   },
+   {
+    "value": "Abu Dhabi Commercial Bank (ADCB)",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "bank_name",
+    "bounding_box": {
+     "x": 0.2614,
+     "y": 0.7474,
+     "page": 1,
+     "width": 0.2716,
+     "height": 0.0153
+    }
+   },
+   {
+    "value": "10364749020001",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "bank_account_number",
+    "bounding_box": {
+     "x": 0.3437,
+     "y": 0.7648,
+     "page": 1,
+     "width": 0.128,
+     "height": 0.0137
+    }
+   },
+   {
+    "value": "AE450030010364749020001",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "iban",
+    "bounding_box": {
+     "x": 0.2128,
+     "y": 0.7815,
+     "page": 1,
+     "width": 0.2112,
+     "height": 0.0133
+    }
+   },
+   {
+    "value": "HeadStart Nursery",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "account_title",
+    "bounding_box": {
+     "x": 0.3987,
+     "y": 0.1494,
+     "page": 1,
+     "width": 0.1924,
+     "height": 0.0179
+    }
+   },
+   {
+    "value": "PO Box 84158, Falaj Hazza, Al Ain, UAE",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "address",
+    "bounding_box": {
+     "x": 0.0591,
+     "y": 0.9351,
+     "page": 1,
+     "width": 0.3296,
+     "height": 0.0203
+    }
+   },
+   {
+    "value": "info@headstartnursery.ae",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "email",
+    "bounding_box": {
+     "x": 0.4179,
+     "y": 0.9377,
+     "page": 1,
+     "width": 0.2302,
+     "height": 0.0196
+    }
+   },
+   {
+    "value": "www.headstartnursery.ae",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "website",
+    "bounding_box": {
+     "x": 0.6785,
+     "y": 0.9397,
+     "page": 1,
+     "width": 0.2262,
+     "height": 0.0177
+    }
+   }
+  ],
+  "document_type_confidence": 0.95
+ },
+ "visual_inconsistency_review": {
+  "result": "flag",
+  "details": [
+   {
+    "finding": "experimental_signal_notice",
+    "severity": "info",
+    "description": "This check uses a vision-capable language model's visual judgment, run twice independently per page — not deterministic pixel-level analysis like error level analysis or copy-move detection. Every category below is reported regardless of outcome, including a clean 'no issue' result — a finding only counts as confirmed (and affects this check's pass/flag result) if it appeared in both runs or was reported with high confidence in at least one; anything else is shown but marked as not corroborated. Treat this as one probabilistic, experimental signal among several, not a standalone verdict."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "font_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_font_consistency",
+    "severity": "info",
+    "description": "Page 1 — Font consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The text inside the box containing the student name and ID is slightly tilted and not aligned horizontally with the rest of the text on the page, around the middle top area (approx. x=0.15, y=0.22, width=0.7, height=0.1).",
+      "bounding_box": {
+       "x": 0.15,
+       "y": 0.22,
+       "width": 0.7,
+       "height": 0.1
+      }
+     },
+     "run_2": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The text in the main body listing fees is slightly misaligned, particularly the lines with fees and months (e.g., 'FEE: 5,500 PER MONTH X 4 MONTH = 22,000' is not perfectly baseline aligned with the lines above and below).",
+      "bounding_box": {
+       "x": 0.1,
+       "y": 0.3,
+       "width": 0.8,
+       "height": 0.4
+      }
+     },
+     "category": "text_alignment",
+     "run_agreement": "2-of-2 runs"
+    },
+    "page": 1,
+    "finding": "visual_text_alignment",
+    "severity": "high",
+    "description": "Page 1 — Text alignment: The text inside the box containing the student name and ID is slightly tilted and not aligned horizontally with the rest of the text on the page, around the middle top area (approx. x=0.15, y=0.22, width=0.7, height=0.1). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+    "bounding_box": {
+     "x": 0.15,
+     "y": 0.22,
+     "page": 1,
+     "width": 0.7,
+     "height": 0.1
+    }
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "color_contrast_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_color_contrast_consistency",
+    "severity": "info",
+    "description": "Page 1 — Color / contrast consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The stamp and signature near the bottom center of the page appear slightly more pixelated and lower resolution compared to the rest of the text, around (x=0.3, y=0.75, width=0.4, height=0.1).",
+      "bounding_box": {
+       "x": 0.3,
+       "y": 0.75,
+       "width": 0.4,
+       "height": 0.1
+      }
+     },
+     "run_2": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The stamp and signature near the bottom center appear slightly blurrier and less sharp compared to the rest of the text, which is crisp and clear.",
+      "bounding_box": {
+       "x": 0.3,
+       "y": 0.75,
+       "width": 0.4,
+       "height": 0.1
+      }
+     },
+     "category": "resolution_sharpness_consistency",
+     "run_agreement": "2-of-2 runs"
+    },
+    "page": 1,
+    "finding": "visual_resolution_sharpness_consistency",
+    "severity": "high",
+    "description": "Page 1 — Resolution / sharpness consistency: The stamp and signature near the bottom center of the page appear slightly more pixelated and lower resolution compared to the rest of the text, around (x=0.3, y=0.75, width=0.4, height=0.1). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+    "bounding_box": {
+     "x": 0.3,
+     "y": 0.75,
+     "page": 1,
+     "width": 0.4,
+     "height": 0.1
+    }
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "shadow_lighting_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_shadow_lighting_consistency",
+    "severity": "info",
+    "description": "Page 1 — Shadow / lighting consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "description": "The document shows typical characteristics of a scanned paper invoice with natural imperfections such as slight text tilt and stamp pixelation. There are no signs of synthetic generation or AI artifacts.",
+      "likely_ai_generated": false
+     },
+     "run_2": {
+      "confidence": "high",
+      "description": "The document shows natural variations in text alignment and sharpness typical of scanned documents with added stamps and signatures. The fonts and layout are consistent with a real scanned invoice, and the presence of a handwritten signature and stamp with slight blur supports authenticity rather than synthetic generation.",
+      "likely_ai_generated": false
+     },
+     "flagged": false,
+     "run_agreement": "not flagged"
+    },
+    "page": 1,
+    "finding": "ai_generation_assessment",
+    "severity": "info",
+    "description": "Page 1: no notable signs of AI-generated/synthetic content reported."
+   },
+   {
+    "finding": "metadata_forensics_correlation",
+    "severity": "high",
+    "description": "metadata_forensics also flagged this document — independent techniques (file-structure/metadata analysis vs. a vision model's visual read) agreeing is a stronger combined signal than either alone."
+   }
+  ]
+ },
+ "signature_stamp_detection": {
+  "result": "pass",
+  "details": {
+   "detected": [
+    {
+     "kind": "signature",
+     "confidence": "high",
+     "refinement": "embedded_image",
+     "description": "Handwritten signature near the bottom left above the printed name 'RAWAN TAQEZ'.",
+     "bounding_box": {
+      "x": 0.15576470613880317,
+      "y": 0.8748537041735565,
+      "page": 1,
+      "width": 0.11038656462340796,
+      "height": 0.033550564832834806
+     }
+    },
+    {
+     "kind": "stamp",
+     "confidence": "high",
+     "refinement": "embedded_image",
+     "description": "Oval company stamp with Arabic and English text near the bottom center above the signature.",
+     "bounding_box": {
+      "x": 0.3661220550464318,
+      "y": 0.8313341318463883,
+      "page": 1,
+      "width": 0.1499088920645616,
+      "height": 0.072216641484806
+     }
+    }
+   ],
+   "bounding_box": {
+    "x": 0.15576470613880317,
+    "y": 0.8748537041735565,
+    "page": 1,
+    "width": 0.11038656462340796,
+    "height": 0.033550564832834806
+   },
+   "signature_expected": true
+  }
+ },
+ "duplicate_detection": {
+  "result": "flag",
+  "details": [
+   {
+    "data": {
+     "distance": 0,
+     "matched_page": 1,
+     "matched_case_id": "37b33cbb-5764-4202-99f2-c2e646458468",
+     "matched_case_number": "CASE-37B33CBB",
+     "matched_document_id": "9b307958-2a7a-4425-afaf-4144666ed431",
+     "matched_document_filename": "sample_font20.pdf"
+    },
+    "page": 1,
+    "finding": "near_duplicate_page",
+    "severity": "high",
+    "description": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample_font20.pdf\" in case CASE-37B33CBB — a possible duplicate or near-duplicate resubmission."
+   }
+  ]
+ }
+}
