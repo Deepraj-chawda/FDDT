@@ -179,6 +179,50 @@ def test_tax_rate_without_subtotal_uses_total_less_tax():
     assert _validate(core)["tax_rate_consistency"]["status"] == "pass"
 
 
+GIPA_ITEMS = [
+    _item(52130.0, description="Tuition Fees"), _item(650.0, description="Books"), _item(300.0, description="Uniform"),
+    _item(550.0, description="Technology Fee"), _item(3510.0, description="Transport"),
+]
+
+
+def test_mixed_rate_vat_on_a_subset_of_lines_passes_and_names_it():
+    # CASE-DE627FA2: 5% VAT on uniform + technology fee only (850), 42.50.
+    core = {"amount": _amount(57182.5), "tax_rate": _rate(5), "tax_amount": _amount(42.5)}
+    result = _validate(core, GIPA_ITEMS)["tax_rate_consistency"]
+    assert result["status"] == "pass"
+    assert result["reason"].startswith("Tax applies to {Uniform, Technology Fee} = 850.00")
+    assert result["taxed_lines"] == ["line 3 (Uniform)", "line 4 (Technology Fee)"]
+
+
+def test_tax_no_subset_explains_is_still_flagged():
+    core = {"amount": _amount(57183.0), "tax_rate": _rate(5), "tax_amount": _amount(43.0)}
+    result = _validate(core, GIPA_ITEMS)["tax_rate_consistency"]
+    assert result["status"] == "flag"
+    assert "No combination of the line items explains it" in result["reason"]
+
+
+def test_subset_tolerance_is_one_cent_per_taxed_line():
+    core = {"amount": _amount(1000.0), "tax_rate": _rate(5), "tax_amount": _amount(10.02)}
+    items = [_item(200.0, description="A"), _item(780.0, description="B")]
+    # 5% of 200 = 10.00: 2 cents off one taxed line is more than rounding.
+    assert _validate(core, items)["tax_rate_consistency"]["status"] == "flag"
+    core["tax_amount"] = _amount(10.01)
+    assert _validate(core, items)["tax_rate_consistency"]["status"] == "pass"
+
+
+def test_paid_lines_are_not_a_taxed_base():
+    core = {"amount": _amount(1015.0), "tax_rate": _rate(5), "tax_amount": _amount(15.0)}
+    items = [dict(_item(300.0, counts=False, description="Deposit"), status="paid"), _item(700.0, description="Fee")]
+    assert _validate(core, items)["tax_rate_consistency"]["status"] == "flag"
+
+
+def test_more_than_twenty_lines_only_tries_the_whole_subtotal():
+    core = {"amount": _amount(2105.0), "tax_rate": _rate(5), "tax_amount": _amount(5.0)}
+    items = [_item(100.0, description=f"L{i}") for i in range(21)]
+    result = _validate(core, items)["tax_rate_consistency"]
+    assert result["status"] == "flag" and "No combination" not in result["reason"]
+
+
 # --- amount in words --------------------------------------------------------------
 
 

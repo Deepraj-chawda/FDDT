@@ -30,7 +30,9 @@ returned `details` dict:
     line should validate total == subtotal, not be flagged for
     "missing" tax). Skipped when there's no subtotal to check against.
   - tax_rate_consistency: the tax amount equals the taxable base x the
-    stated tax rate.
+    stated tax rate — the whole subtotal, or (mixed-rate invoices, where only
+    some charges are taxed) the sum of some subset of the payable line items;
+    the matching subset is named. All subsets are tried up to 20 lines.
   - amount_in_words_consistency: the amount written out in words equals
     the total (or the subtotal). English words are read here
     (app/services/amount_words.py), not taken from the extraction model,
@@ -362,7 +364,34 @@ def _check_total_tax_consistency(core_fields: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _check_tax_rate_consistency(core_fields: dict[str, Any]) -> dict[str, Any]:
+# Above this many line items, trying every subset of them as the taxed base
+# (2^n) is too slow; only the whole subtotal is tried.
+_MAX_TAX_SUBSET_LINES = 20
+
+
+def _taxed_subset(
+    lines: list[tuple[int, dict[str, Any], float]], rate: float, tax: float
+) -> list[tuple[int, dict[str, Any], float]] | None:
+    """The smallest set of line items that `rate` % of gives `tax` — for
+    mixed-rate invoices, where only some charges are taxed (UAE school
+    invoices: tuition, books and transport zero-rated; uniform and
+    technology fees at 5%). Tolerance: one cent per taxed line (rounding
+    only)."""
+    from itertools import combinations
+
+    if not 0 < len(lines) <= _MAX_TAX_SUBSET_LINES or rate <= 0:
+        return None
+    for size in range(1, len(lines) + 1):
+        allowance = _rounding_allowance(size)
+        for subset in combinations(lines, size):
+            if abs(sum(t for _, _, t in subset) * rate / 100 - tax) <= allowance:
+                return list(subset)
+    return None
+
+
+def _check_tax_rate_consistency(
+    core_fields: dict[str, Any], line_items: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     rate = _num((core_fields.get("tax_rate") or {}).get("value"))
     tax = _num((core_fields.get("tax_amount") or {}).get("value"))
     if rate is None or tax is None:
@@ -378,8 +407,29 @@ def _check_tax_rate_consistency(core_fields: dict[str, Any]) -> dict[str, Any]:
     expected = base * rate / 100
     if abs(expected - tax) <= _rounding_allowance(2):
         return {"status": "pass", "reason": f"Tax {_money(tax)} is {rate:g}% of the {base_label}."}
+    payable = [
+        (i, item, t)
+        for i, item in enumerate(line_items or [], start=1)
+        if (t := _num(item.get("line_total"))) is not None
+        and item.get("counts_toward_total", True)
+        and item.get("status") != "paid"
+    ]
+    subset = _taxed_subset(payable, rate, tax)
+    if subset is not None:
+        names = ", ".join((item.get("description") or f"line {i}").strip() for i, item, _ in subset)
+        taxed = sum(t for _, _, t in subset)
+        return {
+            "status": "pass",
+            "reason": f"Tax applies to {{{names}}} = {_money(taxed)}: {rate:g}% of it is {_money(tax)} "
+                      f"(the other line items are not taxed).",
+            "taxed_lines": [_line_label(i, item) for i, item, _ in subset],
+        }
+    no_subset = (
+        " No combination of the line items explains it either."
+        if 0 < len(payable) <= _MAX_TAX_SUBSET_LINES else ""
+    )
     return _flag(
-        f"Tax {_money(tax)} is not {rate:g}% of the {base_label} (expected {_money(expected)}).",
+        f"Tax {_money(tax)} is not {rate:g}% of the {base_label} (expected {_money(expected)}).{no_subset}",
         make_region(
             core_fields, "tax_amount",
             f"Field exception: Tax amount ({format_field_value('tax_amount', core_fields.get('tax_amount'))} "
@@ -463,7 +513,7 @@ def validate_fields(extracted_fields: dict[str, Any]) -> dict[str, Any]:
             core_fields, additional_fields, line_items
         ),
         "total_tax_consistency": _check_total_tax_consistency(core_fields),
-        "tax_rate_consistency": _check_tax_rate_consistency(core_fields),
+        "tax_rate_consistency": _check_tax_rate_consistency(core_fields, line_items),
         "amount_in_words_consistency": _check_amount_in_words_consistency(
             core_fields, extracted_fields.get("amount_in_words")
         ),

@@ -377,6 +377,8 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "field.tax_rate_mismatch",
         "category": CONSISTENCY,
         "check_type": "field_validation",
+        # v2: passes when the tax is the rate applied to any subset of the
+        # payable line items (mixed-rate / partly zero-rated invoices).
         "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "tax_rate_consistency"},
         "weight": 15,
         "severity": "medium",
@@ -504,6 +506,7 @@ SEED_RULES: list[dict[str, Any]] = [
 SEED_RULE_VERSIONS: dict[str, int] = {
     "metadata.javascript_or_openaction": 2,
     "field.subtotal_line_item_mismatch": 2,
+    "field.tax_rate_mismatch": 2,
 }
 
 
