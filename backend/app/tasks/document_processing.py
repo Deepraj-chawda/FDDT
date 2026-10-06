@@ -30,6 +30,7 @@ from app.services.check_store import save_check
 from app.services.extraction_service import classify_and_extract
 from app.services.field_locator_service import attach_field_locations
 from app.services.forensics.font_consistency import analyze_font_consistency
+from app.services.line_item_parsing import enrich_extracted_fields
 from app.services.llm_service import get_llm_service
 from app.services.ocr_service import OCRPage, get_ocr_service
 from app.services.risk_scoring_service import request_case_scoring
@@ -49,7 +50,7 @@ def _is_pdf(document: Document) -> bool:
     return document.content_type == "application/pdf" or document.original_filename.lower().endswith(".pdf")
 
 
-def _run_font_consistency(db, document: Document, storage, ocr_pages: list[OCRPage]) -> None:
+def _run_font_consistency(db, document: Document, pdf_bytes: bytes | None, ocr_pages: list[OCRPage]) -> None:
     """The font consistency check (app/services/forensics/font_consistency.py).
     Runs here rather than as its own task because scanned pages need this
     task's OCR font estimates. Best effort: a failure is stored as a failed
@@ -57,7 +58,9 @@ def _run_font_consistency(db, document: Document, storage, ocr_pages: list[OCRPa
     if not _is_pdf(document):
         return
     try:
-        result = analyze_font_consistency(storage.download_bytes(document.blob_storage_path), ocr_pages)
+        if pdf_bytes is None:
+            raise RuntimeError("The PDF could not be downloaded for the font consistency check.")
+        result = analyze_font_consistency(pdf_bytes, ocr_pages)
         save_check(
             db,
             document=document,
@@ -138,9 +141,25 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
                 fields_located = attach_field_locations(ocr_result.pages, extracted_fields)
             except Exception:  # noqa: BLE001
                 fields_located = 0
+            pdf_bytes = None
+            if _is_pdf(document):
+                try:
+                    pdf_bytes = storage.download_bytes(document.blob_storage_path)
+                except Exception:  # noqa: BLE001 - only the PDF-based steps below need it
+                    pdf_bytes = None
+            # Line items read from the OCR layout itself (one-row fee tables,
+            # "rate PER unit X qty = total" lines, PAID/DUE markers) and the
+            # PDF's producer info — app/services/line_item_parsing.py. Best
+            # effort: the model's extraction is kept as is if this fails.
+            try:
+                extracted_fields = enrich_extracted_fields(
+                    extracted_fields, ocr_text=ocr_result.text, ocr_tables=ocr_result.tables, pdf_bytes=pdf_bytes
+                )
+            except Exception:  # noqa: BLE001
+                pass
             # Before the document is marked complete, so the case is never
             # scored without it.
-            _run_font_consistency(db, document, storage, ocr_result.pages)
+            _run_font_consistency(db, document, pdf_bytes, ocr_result.pages)
             document.extracted_fields = extracted_fields
             document.processing_status = DocumentProcessingStatus.complete
             document.processing_error = None
