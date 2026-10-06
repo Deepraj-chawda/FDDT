@@ -1,0 +1,141 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample16_Arabic_Case_Invoice.pdf\" in case CASE-8D8C00E1 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-20 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2026-772-INV-DHAF' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 3 line-item field(s)."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 6,500.00 is 5% of the subtotal 130,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 130000.00 + tax 6500.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "شركة الظفرة للخدمات الهندسية والسلامة النووية والبيئية ذ.م.م",
+        "match_score": 51.43,
+        "matched_registry_name": "مؤسسة النخبة للأنظمة التقنية",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.05288791174742913,
+          "page": 1,
+          "width": 0.1766830217843796,
+          "x": 0.12983435540668165,
+          "y": 0.49274426241535696
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05288791174742913,
+            "page": 1,
+            "width": 0.1766830217843796,
+            "x": 0.12983435540668165,
+            "y": 0.49274426241535696
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.08728679680215107,
+            "page": 1,
+            "width": 0.11795462766278358,
+            "x": 0.44132617382676503,
+            "y": 0.4850792150112205
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-8D8C00E1",
+      "CASE-94B0146F",
+      "CASE-97EAD181"
+    ],
+    "company": "Default Company",
+    "file": "Sample15_Arabic_Case_Invoice.pdf",
+    "representative_case": "CASE-97EAD181",
+    "sha256": "4441a05e1d9ca92d1f33baa75b075922117430577ef14d75b5765254c43a04de"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample15_Arabic_Case_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample16_Arabic_Case_Invoice.pdf\" in case CASE-8D8C00E1 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'شركة الظفرة للخدمات الهندسية والسلامة النووية والبيئية ذ.م.م' on 'Sample15_Arabic_Case_Invoice.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 55,
+    "score": 55
+  }
+}

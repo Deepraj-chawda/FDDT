@@ -1,0 +1,227 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0453,
+            "page": 1,
+            "width": 0.6156,
+            "x": 0.0955,
+            "y": 0.752
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 69 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.0338,
+            "page": 1,
+            "width": 0.6208,
+            "x": 0.0769,
+            "y": 0.7841
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 41 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample13_Arabic_cp_ela_Evidence.pdf\" in case CASE-91206BB0 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0616,
+            "page": 1,
+            "width": 0.0901,
+            "x": 0.8144,
+            "y": 0.8756
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (136,500.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-24 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '20260824-910482-FAB-FT' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "بنك أبوظبي الأول | First Abu Dhabi Bank (FAB)",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.022700000000000053,
+          "page": 1,
+          "width": 0.11599999999999999,
+          "x": 0.16699999999999998,
+          "y": 0.6279
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.022700000000000053,
+            "page": 1,
+            "width": 0.11599999999999999,
+            "x": 0.16699999999999998,
+            "y": 0.6279
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.060167796610169466,
+            "page": 1,
+            "width": 0.256,
+            "x": 0.582,
+            "y": 0.6194
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0861360C",
+      "CASE-370CE650",
+      "CASE-91206BB0",
+      "CASE-C76B35B8",
+      "CASE-D768259F",
+      "CASE-E4B31A87"
+    ],
+    "company": "testcompany",
+    "file": "Sample13_Arabic_cp_ela_Evidence.pdf",
+    "representative_case": "CASE-C76B35B8",
+    "sha256": "16be1bd21ae004be7876848c823fa2f7aede4ea8ccf5239a75f2303f48c08002"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample13_Arabic_cp_ela_Evidence.pdf': 2 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample13_Arabic_cp_ela_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample13_Arabic_cp_ela_Evidence.pdf\" in case CASE-91206BB0 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample13_Arabic_cp_ela_Evidence.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'بنك أبوظبي الأول | First Abu Dhabi Bank (FAB)' on 'Sample13_Arabic_cp_ela_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample13_Arabic_cp_ela_Evidence.pdf': editing software was found in its metadata. info./Producer mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample13_Arabic_cp_ela_Evidence.pdf' was modified after it was created. The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 160,
+    "score": 100
+  }
+}

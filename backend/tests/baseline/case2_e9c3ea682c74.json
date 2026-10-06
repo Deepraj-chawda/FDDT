@@ -1,0 +1,195 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample21.pdf\" in case CASE-CF609781 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2023-07-05 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '52086' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 5 line item(s) add up to the total 57,182.50 less tax 42.50 (57,140.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "flag",
+          "text": "Tax 42.50 is not 5% of the total less tax 57,140.00 (expected 2,857.00)."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "أكاديمية الخليج الدولية الخاصة THE GULF INTERNATIONAL PRIVATE ACADEMYO",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains an OpenAction and/or embedded JavaScript — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.09999999999999998,
+          "page": 1,
+          "width": 0.13772111553784863,
+          "x": 0.0792788844621514,
+          "y": 0.6704000000000001
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.09999999999999998,
+            "page": 1,
+            "width": 0.13772111553784863,
+            "x": 0.0792788844621514,
+            "y": 0.6704000000000001
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.030839453589476817,
+            "page": 1,
+            "width": 0.17774061233635774,
+            "x": 0.4435666737507419,
+            "y": 0.6418454453403686
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.08421485555778407,
+            "page": 1,
+            "width": 0.16907563633477984,
+            "x": 0.6857814920890231,
+            "y": 0.6328509725165152
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.15,
+            "page": 1,
+            "width": 0.4,
+            "x": 0.1,
+            "y": 0.8
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Text alignment: The signatures at the bottom are misaligned and have different baselines compared to the typed text around them, notably in the Registration Department and Accounts Department areas (approx. bounding box x:0.1, y:0.8, width:0.4, height:0.15). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": null,
+          "finding": "metadata_forensics_correlation",
+          "page": null,
+          "severity": "high",
+          "text": "metadata_forensics also flagged this document — independent techniques (file-structure/metadata analysis vs. a vision model's visual read) agreeing is a stronger combined signal than either alone."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-A7705426",
+      "CASE-CF609781",
+      "CASE-DE627FA2"
+    ],
+    "company": "testcompany",
+    "file": "case2.pdf",
+    "representative_case": "CASE-DE627FA2",
+    "sha256": "e9c3ea682c7407ba50d8564f90fb668ee106280583b785e4f80ea151456a70b6"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case2.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample21.pdf\" in case CASE-CF609781 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "field.tax_rate_mismatch": {
+      "points": 15,
+      "reason": "'case2.pdf': Tax 42.50 is not 5% of the total less tax 57,140.00 (expected 2,857.00).",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'أكاديمية الخليج الدولية الخاصة THE GULF INTERNATIONAL PRIVATE ACADEMYO' on 'case2.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'case2.pdf' embeds JavaScript or an open-action — unusual for a business document.",
+      "version": 1
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'case2.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The signatures at the bottom are misaligned and have different baselines compared to the typed text around them, notably in the Registration Department and Accounts Department areas (approx. bounding box x:0.1, y:0.8, width:0.4, height:0.15). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 90,
+    "score": 90
+  }
+}

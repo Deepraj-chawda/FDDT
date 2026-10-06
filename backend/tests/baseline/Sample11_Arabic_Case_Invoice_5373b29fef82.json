@@ -1,0 +1,115 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-09-03 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'AUE-2026-3312' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 2 line-item field(s)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "flag",
+          "text": "Total 42000.00 does not match subtotal 22000.00 (no tax shown) (expected 22000.00)."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "شركة الأفق الهندسية Al Ufuq Engineering Co.",
+        "match_score": 85.5,
+        "matched_registry_name": "Al Falah General Trading LLC",
+        "matched_via": "fuzzy",
+        "threshold": 85.0
+      },
+      "result": "pass"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2026 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2026') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 11 days, 3:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0A108B8F"
+    ],
+    "company": "Default Company",
+    "file": "Sample11_Arabic_Case_Invoice.pdf",
+    "representative_case": "CASE-0A108B8F",
+    "sha256": "5373b29fef820a1aa2775cf095b6e7c2443dc4598d45b6c26f4cf8932a95c5ba"
+  },
+  "rules": {
+    "field.total_tax_mismatch": {
+      "points": 20,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf': Total 42000.00 does not match subtotal 22000.00 (no tax shown) (expected 22000.00).",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2026 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf' was modified after it was created. The file was modified after it was created: ModDate is 11 days, 3:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 65,
+    "score": 65
+  }
+}

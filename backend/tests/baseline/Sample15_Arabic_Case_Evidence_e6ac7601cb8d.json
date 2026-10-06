@@ -1,0 +1,141 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample15_Arabic_Case_Evidence.pdf\" in case CASE-8D8C00E1 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-24 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '20260824-910482-FAB-FT' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "بنك أبوظبي الأول | First Abu Dhabi Bank",
+        "match_score": 27.94,
+        "matched_registry_name": "Al Nukhba Technical Systems Est.",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.05254949053873714,
+          "page": 1,
+          "width": 0.17607896190539352,
+          "x": 0.20195160095781467,
+          "y": 0.5126045625068443
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05254949053873714,
+            "page": 1,
+            "width": 0.17607896190539352,
+            "x": 0.20195160095781467,
+            "y": 0.5126045625068443
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.08771366384887058,
+            "page": 1,
+            "width": 0.11681990198908132,
+            "x": 0.658243651309162,
+            "y": 0.5049749312757105
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-8D8C00E1",
+      "CASE-94B0146F",
+      "CASE-97EAD181"
+    ],
+    "company": "Default Company",
+    "file": "Sample15_Arabic_Case_Evidence.pdf",
+    "representative_case": "CASE-97EAD181",
+    "sha256": "e6ac7601cb8d4419bb1808ea29abec16f2f93a6faafb716fd9edb84281dd7141"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample15_Arabic_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample15_Arabic_Case_Evidence.pdf\" in case CASE-8D8C00E1 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'بنك أبوظبي الأول | First Abu Dhabi Bank' on 'Sample15_Arabic_Case_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 55,
+    "score": 55
+  }
+}

@@ -110,3 +110,6 @@ id_rsa*
 
 # Local zip bundles at the repo root (docs exports, bulk upload test archives)
 /*.zip
+
+# Regression harness input cache (client PDFs, OCR results) — never committed
+backend/tests/regression/_cache/

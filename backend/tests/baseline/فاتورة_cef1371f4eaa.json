@@ -1,0 +1,138 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-20 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2026-772-INV-DHAF' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 3 line-item field(s)."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 6,500.00 is 5% of the subtotal 130,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 130000.00 + tax 6500.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "شركة الظفرة للخدمات الهندسية والسلامة النووية والبيئية ذ.م.م",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.022917647058823598,
+          "page": 1,
+          "width": 0.1389322709163347,
+          "x": 0.10906772908366534,
+          "y": 0.5944
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.022917647058823598,
+            "page": 1,
+            "width": 0.1389322709163347,
+            "x": 0.10906772908366534,
+            "y": 0.5944
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.062000000000000055,
+            "page": 1,
+            "width": 0.19418791946308733,
+            "x": 0.39381208053691275,
+            "y": 0.594
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1FD06F9D",
+      "CASE-2C6DDCB7",
+      "CASE-46C19894",
+      "CASE-622804E7",
+      "CASE-6573A030",
+      "CASE-74E159DB",
+      "CASE-7A08201F",
+      "CASE-888F7C89",
+      "CASE-ACC0FDB8",
+      "CASE-BC06B819",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-DCBA5CC6"
+    ],
+    "company": "testcompany",
+    "file": "فاتورة.pdf",
+    "representative_case": "CASE-6573A030",
+    "sha256": "cef1371f4eaa0e922fbec023a3421d2af7458584bec48f3657246faa41d497bd"
+  },
+  "rules": {
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'شركة الظفرة للخدمات الهندسية والسلامة النووية والبيئية ذ.م.م' on 'فاتورة.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 15,
+    "score": 15
+  }
+}

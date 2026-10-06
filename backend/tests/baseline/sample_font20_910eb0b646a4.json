@@ -1,0 +1,331 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample_font20.pdf\" in case CASE-37B33CBB — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "flag",
+          "text": "The amount in words, 'TWENTY THOUSAND FIVE HUNDRED AED ONLY', is 20,500.00 (read from the words), but the total in figures is 55,500.00."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2022-09-06 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "flag",
+          "text": "1 line item(s) do not add up: line 4 (FEE FOR TERM 3 (April-May-June)): 3 × 6,000.00 = 18,000.00, but the line total printed is 16,600.00."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '10139/ 20220906' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "flag",
+          "text": "The line items add up to 33,100.00 (16,500.00 + 16,600.00), but the document states the total 55,500.00 — a difference of 22,400.00."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01637,
+            "page": 1,
+            "width": 0.05014,
+            "x": 0.43028,
+            "y": 0.43102
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '22,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01597,
+            "page": 1,
+            "width": 0.05174,
+            "x": 0.36588,
+            "y": 0.43152
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'MONTH' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01577,
+            "page": 1,
+            "width": 0.01294,
+            "x": 0.35358,
+            "y": 0.43182
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '4' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01567,
+            "page": 1,
+            "width": 0.04214,
+            "x": 0.21858,
+            "y": 0.43252
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '5,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01767,
+            "page": 1,
+            "width": 0.04544,
+            "x": 0.43428,
+            "y": 0.51312
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '16,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01667,
+            "page": 1,
+            "width": 0.04104,
+            "x": 0.21318,
+            "y": 0.51512
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '5,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01637,
+            "page": 1,
+            "width": 0.03164,
+            "x": 0.39288,
+            "y": 0.54162
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'DUE' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01607,
+            "page": 1,
+            "width": 0.04884,
+            "x": 0.43288,
+            "y": 0.59642
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '16,600' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01687,
+            "page": 1,
+            "width": 0.06564,
+            "x": 0.17518,
+            "y": 0.64652
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '55,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        }
+      ],
+      "result": "flag"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "HEADSTART NURSERY",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains an OpenAction and/or embedded JavaScript — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.072216641484806,
+          "page": 1,
+          "width": 0.1499088920645616,
+          "x": 0.3661220550464318,
+          "y": 0.8313341318463883
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05138645632060046,
+            "page": 1,
+            "width": 0.054117661195642874,
+            "x": 0.4921680774849002,
+            "y": 0.8107871291152645
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.072216641484806,
+            "page": 1,
+            "width": 0.1499088920645616,
+            "x": 0.3661220550464318,
+            "y": 0.8313341318463883
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.07,
+            "page": 1,
+            "width": 0.54,
+            "x": 0.23,
+            "y": 0.16
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Text alignment: The text in the boxed section with student name and ID is slightly rotated and not aligned with the rest of the text on the page, which is horizontally aligned consistently. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": {
+            "height": 0.1,
+            "page": 1,
+            "width": 0.3,
+            "x": 0.35,
+            "y": 0.68
+          },
+          "finding": "visual_resolution_sharpness_consistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Resolution / sharpness consistency: The signature and stamp near the bottom center appear slightly blurrier and less sharp compared to the rest of the text, which is crisp and clear. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-37B33CBB",
+      "CASE-6CB8F7E1",
+      "CASE-6CE43E0C",
+      "CASE-942C8493",
+      "CASE-DB43653A"
+    ],
+    "company": "testcompany",
+    "file": "sample_font20.pdf",
+    "representative_case": "CASE-6CE43E0C",
+    "sha256": "910eb0b646a448aa87ae22b0a1a4865f35c7a7b4956f971df204467f32f12af9"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'sample_font20.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample_font20.pdf\" in case CASE-37B33CBB — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "field.amount_in_words_mismatch": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': The amount in words, 'TWENTY THOUSAND FIVE HUNDRED AED ONLY', is 20,500.00 (read from the words), but the total in figures is 55,500.00.",
+      "version": 1
+    },
+    "field.line_item_arithmetic_mismatch": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': 1 line item(s) do not add up: line 4 (FEE FOR TERM 3 (April-May-June)): 3 × 6,000.00 = 18,000.00, but the line total printed is 16,600.00.",
+      "version": 1
+    },
+    "field.subtotal_line_item_mismatch": {
+      "points": 15,
+      "reason": "'sample_font20.pdf': The line items add up to 33,100.00 (16,500.00 + 16,600.00), but the document states the total 55,500.00 — a difference of 22,400.00.",
+      "version": 1
+    },
+    "font.inconsistency_scanned": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': on the scanned page, 8 word(s) look like a different font from the text around them (OCR font recognition — an estimate). Page 1 (scanned): '22,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'HEADSTART NURSERY' on 'sample_font20.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'sample_font20.pdf' embeds JavaScript or an open-action — unusual for a business document.",
+      "version": 1
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'sample_font20.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The text in the boxed section with student name and ID is slightly rotated and not aligned with the rest of the text on the page, which is horizontally aligned consistently. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    },
+    "visual.sharpness_inconsistency": {
+      "points": 10,
+      "reason": "'sample_font20.pdf': the vision-model review reports a region with different sharpness. Page 1 — Resolution / sharpness consistency: The signature and stamp near the bottom center appear slightly blurrier and less sharp compared to the rest of the text, which is crisp and clear. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 175,
+    "score": 100
+  }
+}

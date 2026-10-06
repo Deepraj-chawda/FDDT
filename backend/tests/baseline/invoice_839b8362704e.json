@@ -1,0 +1,155 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 4) to page 1 of \"Sample17_English_AllFlags_Invoice.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'INV-ENEC-2026-1049' matches the expected format."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 3 line-item field(s)."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 9,000.00 is 5% of the subtotal 180,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 180000.00 + tax 9000.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "AL-SUWAIDI NUCLEAR & PRECISION INSTRUMENTATION LLC",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.03814814814814815,
+          "page": 1,
+          "width": 0.266,
+          "x": 0.617,
+          "y": 0.6224999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.08451764705882348,
+            "page": 1,
+            "width": 0.38092233009708737,
+            "x": 0.0768673139158576,
+            "y": 0.6108
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.03814814814814815,
+            "page": 1,
+            "width": 0.266,
+            "x": 0.617,
+            "y": 0.6224999999999999
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-05AAD4C7",
+      "CASE-081A5D03",
+      "CASE-1FD06F9D",
+      "CASE-2AE16040",
+      "CASE-33FE90A8",
+      "CASE-3ED18F86",
+      "CASE-44AECE73",
+      "CASE-4831DD54",
+      "CASE-55BF92C9",
+      "CASE-74E159DB",
+      "CASE-76DABAF5",
+      "CASE-AAFF956B",
+      "CASE-ACC0FDB8",
+      "CASE-ADFCD2C5",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-F3DDDC12"
+    ],
+    "company": "testcompany",
+    "file": "invoice.pdf",
+    "representative_case": "CASE-081A5D03",
+    "sha256": "839b8362704eb1b400a8e3593bafb85bd0264bacf41e20bf2fd93f9aea1778e7"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 4) to page 1 of \"Sample17_English_AllFlags_Invoice.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'AL-SUWAIDI NUCLEAR & PRECISION INSTRUMENTATION LLC' on 'invoice.pdf' did not match any known issuer in the registry.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 55,
+    "score": 55
+  }
+}
