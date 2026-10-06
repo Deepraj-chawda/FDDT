@@ -10,7 +10,7 @@ What is re-run for each PDF in the case:
   - extraction post-processing (app/services/line_item_parsing.py) on top of
     the case's STORED LLM extraction
   - metadata forensics, ELA, copy-move, font consistency, duplicate detection
-  - field validation and issuer verification (incl. fee benchmarks)
+  - field validation and issuer verification
   - the vision review's region filters, applied to the STORED vision review
     with the STORED signature/stamp detection
 The model outputs already recorded for the case (LLM extraction, vision
@@ -88,7 +88,7 @@ def reassess(case_number: str, report_by: str | None) -> None:
                 ),
                 DocumentCheckType.field_validation: validate_fields(doc.extracted_fields, ocr_text=doc.ocr_text),
                 DocumentCheckType.issuer_verification: verify_issuer(
-                    db, company_id, doc.extracted_fields, document_type=doc.document_type, ocr_text=doc.ocr_text
+                    db, company_id, doc.extracted_fields, document_type=doc.document_type
                 ),
             }
             visual = _stored(db, doc.id, DocumentCheckType.visual_inconsistency_review)

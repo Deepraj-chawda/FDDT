@@ -1,4 +1,4 @@
-"""check accuracy fixes: fee benchmarks, registry country, rule versions
+"""check accuracy fixes: registry country, rule versions
 
 Revision ID: a9d3f6b2c8e4
 Revises: c4d8e2f6a9b1
@@ -7,10 +7,7 @@ Create Date: 2026-10-07 09:00:00.000000
 1. `issuer_registry.country` (ISO alpha-2, nullable): lets issuer
    verification tell "not in the registry" from "the registry has nothing
    for this country/kind of issuer" (reported as not checked).
-2. `issuer_fee_benchmarks`: published fees per issuer / academic year /
-   grade / charge item, for the fee benchmark check. Tenant-owned, with the
-   same RLS policies and grants as the issuer registry it hangs off.
-3. Risk rules — every change goes through the existing versioning, never an
+2. Risk rules — every change goes through the existing versioning, never an
    UPDATE of a rule row:
    - a NEW VERSION (current version + 1) of each rule whose check changed
      meaning (SEED_RULE_VERSIONS in app/services/risk_rule_seed.py), for
@@ -23,8 +20,6 @@ Create Date: 2026-10-07 09:00:00.000000
    - the platform rule template (what new companies start from) is brought
      up to date for both.
 """
-import os
-import re
 import uuid
 from datetime import datetime, timezone
 from typing import Sequence, Union
@@ -44,7 +39,6 @@ NEW_RULE_IDS = (
     "field.iban_trn_validation",
     "metadata.rescan_conflict",
     "field.period_quantity_mismatch",
-    "issuer.fee_benchmark_deviation",
 )
 CHANGE_NOTES = {
     "metadata.javascript_or_openaction": "v2: only JavaScript / launch / link-out / form-submit actions count; a view-setting OpenAction does not",
@@ -60,18 +54,6 @@ CHANGE_NOTES = {
 V1_REASONS = {
     "metadata.javascript_or_openaction": "'{document}' embeds JavaScript or an open-action — unusual for a business document.",
 }
-_IDENT = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
-
-
-def _role(env_name: str, default: str) -> str:
-    from app.core.config import settings
-
-    name = os.environ.get(env_name, getattr(settings, default))
-    if not _IDENT.match(name):
-        raise ValueError(f"{env_name}={name!r} is not a plain lowercase role name")
-    return name
-
-
 def _columns():  # fresh column objects per table (SQLAlchemy can't share them)
     return [
         sa.column("id", postgresql.UUID(as_uuid=True)),
@@ -101,58 +83,17 @@ def _rules_table():
 
 def upgrade() -> None:
     bind = op.get_bind()
-    platform_role = _role("DATABASE_PLATFORM_USER", "database_platform_user")
-    app_role = _role("DATABASE_APP_USER", "database_app_user")
     now = datetime.now(timezone.utc)
 
     # ---- 1. registry country ------------------------------------------------
     op.add_column("issuer_registry", sa.Column("country", sa.String(length=2), nullable=True))
 
-    # ---- 2. fee benchmarks --------------------------------------------------
-    op.create_table(
-        "issuer_fee_benchmarks",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column(
-            "company_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("companies.id"),
-            nullable=False, index=True,
-        ),
-        sa.Column(
-            "issuer_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("issuer_registry.id"),
-            nullable=False, index=True,
-        ),
-        sa.Column("academic_year", sa.String(length=16), nullable=False),
-        sa.Column("grade", sa.String(length=32), nullable=False),
-        sa.Column("item", sa.String(length=32), nullable=False),
-        sa.Column("amount", sa.Float(), nullable=False),
-        sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("source_url", sa.String(length=1024), nullable=True),
-        sa.Column("source_note", sa.String(length=1024), nullable=True),
-        sa.Column("verified", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-    )
-    table = "issuer_fee_benchmarks"
-    op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-    op.execute(
-        f"CREATE POLICY tenant_isolation ON {table} AS PERMISSIVE FOR ALL TO {app_role} "
-        f"USING (company_id = fddt_current_company_id()) "
-        f"WITH CHECK (company_id = fddt_current_company_id())"
-    )
-    op.execute(
-        f"CREATE POLICY platform_all ON {table} AS PERMISSIVE FOR ALL TO {platform_role} "
-        f"USING (true) WITH CHECK (true)"
-    )
-    op.execute(f"REVOKE ALL ON {table} FROM {app_role}")
-    op.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO {app_role}")
-    op.execute(f"REVOKE ALL ON {table} FROM {platform_role}")
-    op.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO {platform_role}")
-
-    # ---- 3. risk rules --------------------------------------------------------
+    # ---- 2. risk rules --------------------------------------------------------
     specs = {s["rule_id"]: s for s in SEED_RULES}
     templates = sa.table("risk_rule_templates", *_columns())
     rules = _rules_table()
 
-    # 3a. New version of each changed rule, per company.
+    # 2a. New version of each changed rule, per company.
     for rule_id in SEED_RULE_VERSIONS:
         spec = specs[rule_id]
         bind.execute(
@@ -195,7 +136,7 @@ def upgrade() -> None:
         if rows:
             op.bulk_insert(rules, rows)
 
-    # 3b. New rules, version 1.
+    # 2b. New rules, version 1.
     for rule_id in NEW_RULE_IDS:
         spec = specs[rule_id]
         common = {
@@ -239,5 +180,4 @@ def downgrade() -> None:
     ids = ", ".join(f"'{r}'" for r in NEW_RULE_IDS)
     op.execute(f"UPDATE risk_rules SET is_active = false WHERE rule_id IN ({ids})")
     op.execute(f"UPDATE risk_rule_templates SET is_active = false WHERE rule_id IN ({ids})")
-    op.drop_table("issuer_fee_benchmarks")
     op.drop_column("issuer_registry", "country")

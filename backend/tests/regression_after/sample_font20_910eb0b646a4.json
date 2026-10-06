@@ -203,18 +203,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "HEADSTART NURSERY",
-        "match_score": 100.0,
-        "matched_registry_name": "Headstart Nursery",
-        "matched_via": "fuzzy",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "pass",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "flag",
-          "text": "Charges far above the issuer's published fees: Total 55,500.00 is 178% above the published 20,000.00 (Headstart Nursery, *; Edustoke listing, entry-level annual fee, undated (third party); third-party listing, not verified). The amount in words (20,500.00) is 2% above the published fee — the words fit the published fee while the figures do not."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],
@@ -304,11 +299,6 @@
       "reason": "'sample_font20.pdf': on the scanned page, 9 word(s) look like a different font from the text around them (OCR font recognition — an estimate). Page 1 (scanned): '22,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned.",
       "version": 2
     },
-    "issuer.fee_benchmark_deviation": {
-      "points": 20,
-      "reason": "'sample_font20.pdf': Charges far above the issuer's published fees: Total 55,500.00 is 178% above the published 20,000.00 (Headstart Nursery, *; Edustoke listing, entry-level annual fee, undated (third party); third-party listing, not verified). The amount in words (20,500.00) is 2% above the published fee — the words fit the published fee while the figures do not.",
-      "version": 1
-    },
     "metadata.rescan_conflict": {
       "points": 10,
       "reason": "'sample_font20.pdf': Printed and re-scanned: the page carries a phone-scanner watermark ('Scanned with CamScanner') but the PDF was produced by an office scanner (Develop ineo+ 759 / PPS - SFO2-A-MFP01). Digital edits made before printing would not be visible to error level analysis.",
@@ -316,7 +306,7 @@
     }
   },
   "score": {
-    "raw": 170,
+    "raw": 150,
     "score": 100
   }
 }

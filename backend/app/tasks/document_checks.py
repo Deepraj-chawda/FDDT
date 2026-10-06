@@ -113,15 +113,13 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
             # issuer match may make an Azure OpenAI call, and no connection
             # should be held while it runs.
             db.commit()
-            # Registry match ("not_checked" when the registry has nothing that
-            # could apply) and the fee benchmark sub-check — app/services/
-            # issuer_service.py.
+            # Registry match, or "not_checked" when the registry has nothing
+            # that could apply — app/services/issuer_service.py.
             result = verify_issuer(
                 db,
                 document.company_id,
                 extracted_fields,
                 document_type=document.document_type,
-                ocr_text=document.ocr_text,
                 llm_service=llm_service,
                 before_slow_call=db.commit,
             )

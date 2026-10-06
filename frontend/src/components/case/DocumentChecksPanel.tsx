@@ -222,26 +222,6 @@ function SubCheckList({ details }: { details: Record<string, SubCheck> }) {
   )
 }
 
-function isSubCheck(value: unknown): value is SubCheck {
-  return !!value && typeof value === "object" && !Array.isArray(value) && "status" in value && "reason" in value
-}
-
-// A fixed-key dict (issuer_verification) that may also carry sub-checks of
-// its own (e.g. fee_benchmark): plain values as a grid, sub-checks listed
-// under it. Values that are neither are left out (never "[object Object]").
-function MixedDetails({ details }: { details: Record<string, unknown> }) {
-  const plain = Object.fromEntries(
-    Object.entries(details).filter(([, v]) => v === null || v === undefined || typeof v !== "object")
-  )
-  const subs = Object.fromEntries(Object.entries(details).filter(([, v]) => isSubCheck(v))) as Record<string, SubCheck>
-  return (
-    <div className="space-y-2.5">
-      {Object.keys(plain).length > 0 && <KeyValueList details={plain} />}
-      {Object.keys(subs).length > 0 && <SubCheckList details={subs} />}
-    </div>
-  )
-}
-
 function KeyValueList({ details }: { details: Record<string, unknown> }) {
   return (
     <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -357,7 +337,7 @@ function CheckCard({ check }: { check: DocumentCheck }) {
               ) : isSubCheckDict(details) ? (
                 <SubCheckList details={details} />
               ) : details && typeof details === "object" ? (
-                <MixedDetails details={details as Record<string, unknown>} />
+                <KeyValueList details={details as Record<string, unknown>} />
               ) : (
                 <p className="text-[11px] text-muted-foreground">No further detail recorded.</p>
               )}

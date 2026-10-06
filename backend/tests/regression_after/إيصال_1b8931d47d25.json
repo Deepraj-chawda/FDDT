@@ -64,18 +64,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "بنك أبوظبي الأول | First Abu Dhabi Bank (FAB)",
-        "match_score": 39.46,
-        "matched_registry_name": "أكاديمية الخليج الدولية الخاصة",
+        "match_score": null,
+        "matched_registry_name": null,
         "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "flag",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],
@@ -149,15 +144,10 @@
       "points": 15,
       "reason": "'إيصال.pdf': Invalid payment identifier(s): IBAN AE4400100000001049182901: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
       "version": 1
-    },
-    "issuer.not_in_registry": {
-      "points": 15,
-      "reason": "Issuer 'بنك أبوظبي الأول | First Abu Dhabi Bank (FAB)' on 'إيصال.pdf' did not match any known issuer in the registry.",
-      "version": 2
     }
   },
   "score": {
-    "raw": 30,
-    "score": 30
+    "raw": 15,
+    "score": 15
   }
 }

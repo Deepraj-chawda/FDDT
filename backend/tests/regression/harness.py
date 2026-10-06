@@ -279,8 +279,7 @@ def replay(entry: Path, db) -> dict[str, Any]:
     verify = _optional("app.services.issuer_service", "verify_issuer")
     if verify is not None:
         results["issuer_verification"] = _call(
-            verify, db, company_id, fields, document_type=stored["document_type"],
-            ocr_text=stored["ocr_text"] or ocr.text, llm_service=None,
+            verify, db, company_id, fields, document_type=stored["document_type"], llm_service=None
         )
     else:
         issuer_name = ((fields.get("core_fields") or {}).get("issuer") or {}).get("value")

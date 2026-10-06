@@ -70,13 +70,7 @@
         "reason": "Not checked: the issuer registry has no active entries, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "not_checked",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],

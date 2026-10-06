@@ -72,19 +72,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "Upload test",
-        "match_score": 42.35,
-        "matched_registry_name": "Headstart Nursery",
+        "match_score": null,
+        "matched_registry_name": null,
         "matched_via": null,
         "reason": "Not checked: the issuer registry has no active entries for vendor issuers in AE, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "not_checked",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [

@@ -12,8 +12,7 @@ rules, and asserts the expected-results table:
 | duplicate.cross_case_match            | either                | either                    |
 | metadata.javascript_or_openaction v2  | pass                  | pass                      |
 | metadata.rescan_conflict              | pass                  | flag 10                   |
-| issuer.not_in_registry                | pass (seeded)         | pass (seeded)             |
-| issuer.fee_benchmark_deviation        | flag 20               | flag 20                   |
+| issuer.not_in_registry                | not checked           | not checked               |
 | field.tax_rate_mismatch v2            | pass (5% of 850)      | not applicable            |
 | field.line_item_arithmetic_mismatch   | no qty x rate lines   | flag 25 (term 3)          |
 | field.subtotal_line_item_mismatch v2  | pass                  | flag 15 (diff 400)        |
@@ -23,7 +22,7 @@ rules, and asserts the expected-results table:
 | font.inconsistency_scanned            | pass                  | flag 25 (incl. 6,000)     |
 | visual.alignment / sharpness v2       | pass                  | pass                      |
 | ELA / copy-move / AI-generation       | pass                  | pass                      |
-| score                                 | 60 (40 without dup)   | 100 (raw 170 / 130)       |
+| score                                 | 40 Medium (0 w/o dup) | 100 High (raw 150 / 110)  |
 """
 from __future__ import annotations
 
@@ -44,7 +43,6 @@ from app.services.line_item_parsing import enrich_extracted_fields
 from app.services.risk_rule_seed import SEED_RULE_VERSIONS, SEED_RULES
 from app.services.risk_scoring_service import _Evidence, evaluate_rules
 from app.services.visual_inconsistency_service import apply_region_filters
-from scripts.seed_reference_issuers import DATA, seed
 from tests.regression.harness import ocr_from_json
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,15 +58,12 @@ def _rules() -> list[RiskRule]:
     return rules
 
 
-def _run(case: str, db, *, seeded: bool = True) -> dict:
+def _run(case: str, db) -> dict:
     stored = json.loads((FIXTURES / case / "stored.json").read_text(encoding="utf-8"))
     ocr = ocr_from_json(json.loads((FIXTURES / case / "ocr.json").read_text(encoding="utf-8")))
     pdf = (ROOT / stored["pdf"]).read_bytes()
     pages = render_pdf_pages(pdf)
     company = db.info["test_company_id"]
-    if seeded:
-        seed(db, company, json.loads(Path(DATA).read_text(encoding="utf-8")))
-        db.commit()
 
     fields = enrich_extracted_fields(stored["extracted_fields"], ocr_text=ocr.text, ocr_tables=ocr.tables, pdf_bytes=pdf)
     checks = {
@@ -78,7 +73,7 @@ def _run(case: str, db, *, seeded: bool = True) -> dict:
         "font_consistency": analyze_font_consistency(pdf, ocr.pages),
         "field_validation": validate_fields(fields, ocr_text=stored["ocr_text"]),
         "issuer_verification": verify_issuer(
-            db, company, fields, document_type=stored["document_type"], ocr_text=stored["ocr_text"]
+            db, company, fields, document_type=stored["document_type"]
         ),
         "visual_inconsistency_review": apply_region_filters(
             stored["visual_inconsistency_review"], stored["signature_stamp_detection"], pages
@@ -112,19 +107,15 @@ def test_gipa_rule_table(db_session):
     for rule in ("metadata.javascript_or_openaction", "issuer.not_in_registry", "field.tax_rate_mismatch",
                  "visual.alignment_inconsistency", "visual.sharpness_inconsistency"):
         assert rule not in rules, rule
-    # Arithmetic is right; nothing else should fire either.
+    # The document is internally consistent: nothing else fires either.
     for rule in ("metadata.rescan_conflict", "field.line_item_arithmetic_mismatch",
                  "field.subtotal_line_item_mismatch", "field.amount_in_words_mismatch",
                  "field.period_quantity_mismatch", "field.iban_trn_validation", "font.inconsistency_scanned",
                  "ela.tamper_region_detected", "copy_move.cluster_detected", "ai.generated_content_suspected"):
         assert rule not in rules, rule
-    # The real concern: tuition ~4x the published fee.
-    weight, version, reason = rules["issuer.fee_benchmark_deviation"]
-    assert weight == 20
-    assert "Tuition Fees 52,130.00 is 306% above the published 12,840.00" in reason
-    assert set(rules) <= {"issuer.fee_benchmark_deviation", "duplicate.cross_case_match"}
+    assert set(rules) <= {"duplicate.cross_case_match"}
     score = sum(w for w, _, _ in rules.values())
-    assert score == (60 if "duplicate.cross_case_match" in rules else 20)
+    assert score == (40 if "duplicate.cross_case_match" in rules else 0)
 
 
 def test_gipa_check_details(db_session):
@@ -137,17 +128,10 @@ def test_gipa_check_details(db_session):
     assert iban["status"] == "pass"
     assert {i["value"] for i in iban["identifiers"]} == {"AE250030000260337020001", "100216382000003"}
     assert [i["source"] for i in run["fields"]["line_items"]] == ["table"] * 5
-    issuer = run["checks"]["issuer_verification"]
-    assert issuer["result"] == "pass" and issuer["details"]["matched_registry_name"]
+    # Empty registry: nothing to check the issuer against.
+    assert run["checks"]["issuer_verification"]["result"] == "not_checked"
     assert run["checks"]["metadata_forensics"]["result"] == "pass"
     assert run["checks"]["visual_inconsistency_review"]["result"] == "pass"
-
-
-def test_gipa_issuer_not_checked_without_registry(db_session):
-    run = _run("CASE-DE627FA2", db_session, seeded=False)
-    assert run["checks"]["issuer_verification"]["result"] == "not_checked"
-    assert "issuer.not_in_registry" not in run["rules"]
-    assert "issuer.fee_benchmark_deviation" not in run["rules"]
 
 
 # --- CASE-DB43653A: Headstart Nursery --------------------------------------------------------
@@ -162,7 +146,6 @@ def test_headstart_rule_table(db_session):
         assert rule not in rules, rule
     expected = {
         "metadata.rescan_conflict": 10,
-        "issuer.fee_benchmark_deviation": 20,
         "field.line_item_arithmetic_mismatch": 25,
         "field.subtotal_line_item_mismatch": 15,
         "field.amount_in_words_mismatch": 25,
@@ -173,7 +156,7 @@ def test_headstart_rule_table(db_session):
         assert rules[rule][0] == weight, rule
     assert set(rules) - set(expected) <= {"duplicate.cross_case_match"}
     raw = sum(w for w, _, _ in rules.values())
-    assert raw == (170 if "duplicate.cross_case_match" in rules else 130)
+    assert raw == (150 if "duplicate.cross_case_match" in rules else 110)
     assert min(100, raw) == 100
 
 
@@ -187,9 +170,7 @@ def test_headstart_check_details(db_session):
     assert "× 4 charged" in _sub(run, "period_quantity_consistency")["reason"]
     assert _sub(run, "rescan_conflict")["reason"].startswith("Printed and re-scanned")
     assert _sub(run, "iban_trn_validation")["status"] == "pass"
-    bench = run["checks"]["issuer_verification"]["details"]["fee_benchmark"]
-    assert "Total 55,500.00 is 178% above the published 20,000.00" in bench["reason"]
-    assert "words fit the published fee" in bench["reason"]
+    assert run["checks"]["issuer_verification"]["result"] == "not_checked"
     amounts = {
         f["data"]["text"] for f in run["checks"]["font_consistency"]["details"]
         if f["finding"] == "font_inconsistency" and f["severity"] == "medium"

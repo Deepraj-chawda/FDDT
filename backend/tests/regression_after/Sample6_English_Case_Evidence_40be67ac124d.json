@@ -72,18 +72,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "OAKRIDGE INTERNATIONAL ACADEMY",
-        "match_score": 78.24,
-        "matched_registry_name": "The Gulf International Private Academy",
+        "match_score": null,
+        "matched_registry_name": null,
         "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "flag",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],
@@ -157,15 +152,10 @@
       "points": 40,
       "reason": "'Sample6_English_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample6_English_Case_Evidence.pdf\" in case CASE-AC10D420 — a possible duplicate or near-duplicate resubmission.",
       "version": 1
-    },
-    "issuer.not_in_registry": {
-      "points": 15,
-      "reason": "Issuer 'OAKRIDGE INTERNATIONAL ACADEMY' on 'Sample6_English_Case_Evidence.pdf' did not match any known issuer in the registry.",
-      "version": 2
     }
   },
   "score": {
-    "raw": 55,
-    "score": 55
+    "raw": 40,
+    "score": 40
   }
 }

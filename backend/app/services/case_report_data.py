@@ -591,11 +591,6 @@ def derive_findings(
                 )
             continue
 
-        # -- the issuer's fee benchmark flags whatever the registry match was
-        bench = (details.get("fee_benchmark") or {}) if isinstance(details, dict) else {}
-        if check_type == DocumentCheckType.issuer_verification and isinstance(bench, dict) and bench.get("status") == "flag":
-            add_exception(source=label, text=f"Fee benchmark: {bench.get('reason')}", severity="high")
-
         if result != "flag":
             continue
         _, summary = _summarize_check(check_type, check)
@@ -690,11 +685,8 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
     if check_type == DocumentCheckType.issuer_verification and isinstance(details, dict):
         name = details.get("issuer_name")
         matched = details.get("matched_registry_name")
-        bench = details.get("fee_benchmark") if isinstance(details.get("fee_benchmark"), dict) else {}
         if result == "not_checked":
             return "not_checked", _shorten(str(details.get("reason") or "Not checked."), 220)
-        if bench.get("status") == "flag":
-            return "flag", _shorten(f"Issuer matched '{matched}'. Fee benchmark: {bench.get('reason')}", 260)
         if result == "flag":
             return "flag", _shorten(
                 f"Issuer '{name}' did not match any known issuer in the registry." if name

@@ -72,19 +72,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "فندق وأجنحة قصر الواحة الفاخر (ذ.م.م) قطاع الضيافة وخدمات المؤتمرات ورجال الأعمال - فئة ٥ نجوم طريق الملك فهد، حي الصحافة، الرياض، المملكة العربية السعودية",
-        "match_score": 48.45,
-        "matched_registry_name": "أكاديمية الخليج الدولية الخاصة",
+        "match_score": null,
+        "matched_registry_name": null,
         "matched_via": null,
         "reason": "Not checked: the issuer registry has no active entries for vendor issuers in SA, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "not_checked",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],

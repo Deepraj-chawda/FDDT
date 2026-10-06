@@ -65,13 +65,7 @@
         "matched_via": "fuzzy",
         "threshold": 85.0
       },
-      "result": "pass",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: no published fees on file for TechSource Solutions Inc."
-        }
-      }
+      "result": "pass"
     },
     "metadata_forensics": {
       "findings": [],

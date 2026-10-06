@@ -113,18 +113,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "MERIDIAN COMMERCIAL BANK",
-        "match_score": 37.5,
-        "matched_registry_name": "The Gulf International Private Academy",
+        "match_score": null,
+        "matched_registry_name": null,
         "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "flag",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "not_checked",
-          "text": "Not checked: the issuer did not match the registry."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [
@@ -244,11 +239,6 @@
       "reason": "'Sample16_English_Case_Evidence.pdf': Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
       "version": 1
     },
-    "issuer.not_in_registry": {
-      "points": 15,
-      "reason": "Issuer 'MERIDIAN COMMERCIAL BANK' on 'Sample16_English_Case_Evidence.pdf' did not match any known issuer in the registry.",
-      "version": 2
-    },
     "metadata.creation_date_mismatch": {
       "points": 18,
       "reason": "'Sample16_English_Case_Evidence.pdf': the creation dates recorded in its two metadata blocks disagree.",
@@ -281,7 +271,7 @@
     }
   },
   "score": {
-    "raw": 212,
+    "raw": 197,
     "score": 100
   }
 }

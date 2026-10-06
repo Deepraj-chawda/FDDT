@@ -254,15 +254,11 @@ def verify_issuer(
     extracted_fields: dict[str, Any],
     *,
     document_type: str | None = None,
-    ocr_text: str | None = None,
     llm_service: LLMService | None = None,
     before_slow_call=None,
 ) -> dict[str, Any]:
     """{"result": "pass" | "flag" | "not_checked", "details": {...}} for the
-    issuer_verification check, including the fee benchmark sub-check
-    (app/services/fee_benchmark_service.py) under details["fee_benchmark"]."""
-    from app.services.fee_benchmark_service import check_fee_benchmark
-
+    issuer_verification check."""
     issuer_name = ((extracted_fields.get("core_fields") or {}).get("issuer") or {}).get("value")
     match = match_issuer(db, company_id, issuer_name, llm_service=llm_service, before_slow_call=before_slow_call)
     details: dict[str, Any] = {
@@ -272,10 +268,8 @@ def verify_issuer(
         "matched_via": match.matched_via,
         "threshold": match.threshold,
     }
-    registry_row = None
     if match.matched:
         result = "pass"
-        registry_row = _row_for_name(db, company_id, match.best_match_name)
     else:
         country = document_country(extracted_fields)
         if relevant_registry_rows(db, company_id, document_type=document_type, country=country):
@@ -289,14 +283,5 @@ def verify_issuer(
                 + (f" for {scope}" if scope else "")
                 + ", so there was nothing to compare this issuer against."
             )
-    details["fee_benchmark"] = check_fee_benchmark(db, company_id, registry_row, extracted_fields, ocr_text)
     return {"result": result, "details": details}
 
-
-def _row_for_name(db: Session, company_id, name: str | None) -> IssuerRegistry | None:
-    if not name:
-        return None
-    rows = db.execute(
-        select(IssuerRegistry).where(IssuerRegistry.company_id == company_id, IssuerRegistry.is_active.is_(True))
-    ).scalars().all()
-    return next((r for r in rows if name in (r.name, r.name_arabic)), None)

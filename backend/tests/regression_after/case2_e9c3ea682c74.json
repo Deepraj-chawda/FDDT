@@ -72,18 +72,13 @@
     "issuer_verification": {
       "details": {
         "issuer_name": "أكاديمية الخليج الدولية الخاصة THE GULF INTERNATIONAL PRIVATE ACADEMYO",
-        "match_score": 100.0,
-        "matched_registry_name": "أكاديمية الخليج الدولية الخاصة",
-        "matched_via": "fuzzy",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
         "threshold": 85.0
       },
-      "result": "pass",
-      "sub_checks": {
-        "fee_benchmark": {
-          "status": "flag",
-          "text": "Charges far above the issuer's published fees: Tuition Fees 52,130.00 is 306% above the published 12,840.00 (The Gulf International Private Academy KG2, 2023-24; Bayut school guide listing (third party); third-party listing, not verified). The other charges match their published fees within 2% (Books 650.00, Uniform 300.00) — one inflated item among exact ones is typical of an altered figure."
-        }
-      }
+      "result": "not_checked"
     },
     "metadata_forensics": {
       "findings": [],
@@ -155,15 +150,10 @@
       "points": 40,
       "reason": "'case2.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample21.pdf\" in case CASE-CF609781 — a possible duplicate or near-duplicate resubmission.",
       "version": 1
-    },
-    "issuer.fee_benchmark_deviation": {
-      "points": 20,
-      "reason": "'case2.pdf': Charges far above the issuer's published fees: Tuition Fees 52,130.00 is 306% above the published 12,840.00 (The Gulf International Private Academy KG2, 2023-24; Bayut school guide listing (third party); third-party listing, not verified). The other charges match their published fees within 2% (Books 650.00, Uniform 300.00) — one inflated item among exact ones is typical of an altered figure.",
-      "version": 1
     }
   },
   "score": {
-    "raw": 60,
-    "score": 60
+    "raw": 40,
+    "score": 40
   }
 }

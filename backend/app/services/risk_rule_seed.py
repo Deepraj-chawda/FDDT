@@ -489,18 +489,6 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "Issuer '{issuer}' on '{document}' did not match any known issuer in the registry.",
     },
     {
-        "rule_id": "issuer.fee_benchmark_deviation",
-        "category": VERIFICATION,
-        "check_type": "issuer_verification",
-        # A charge far above the known issuer's published fee for that grade
-        # and year (app/services/fee_benchmark_service.py). Only runs for
-        # registry-matched issuers with benchmark fees on file.
-        "condition": {"match": "sub_check", "check_type": "issuer_verification", "sub_check": "fee_benchmark"},
-        "weight": 20,
-        "severity": "high",
-        "reason_template": "'{document}': {reason}",
-    },
-    {
         "rule_id": "signature.expected_missing",
         "category": VERIFICATION,
         "check_type": "signature_stamp_detection",
