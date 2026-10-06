@@ -100,6 +100,9 @@ export function BulkUploadDetailPage() {
           }
           actions={
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/bulk-uploads")}>
+                All bulk uploads
+              </Button>
               <Button variant="outline" onClick={() => navigate("/cases/bulk")}>
                 New bulk upload
               </Button>

@@ -291,14 +291,14 @@ export function CaseDetailPage() {
                       <AlertTriangleIcon className="w-4 h-4" />
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className={`text-xs font-bold leading-tight ${FLAG_TITLE_CLASSES[caseDetail.flag.flag]}`}>
                       {caseDetail.flag.label}
                       {caseDetail.flag.score !== null && (
                         <span className="ml-1.5 font-mono font-semibold opacity-70">{caseDetail.flag.score}/100</span>
                       )}
                     </h3>
-                    <p className={`text-xs leading-relaxed mt-2 ${FLAG_TEXT_CLASSES[caseDetail.flag.flag]}`}>
+                    <p className={`text-xs leading-relaxed mt-2 break-words [overflow-wrap:anywhere] ${FLAG_TEXT_CLASSES[caseDetail.flag.flag]}`}>
                       {caseDetail.flag.description}
                     </p>
                   </div>

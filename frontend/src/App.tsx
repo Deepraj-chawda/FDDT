@@ -13,6 +13,7 @@ import { LoginPage } from "@/pages/LoginPage"
 // stays in the main bundle since it is the first screen.
 const AuditHistoryPage = lazy(() => import("@/pages/AuditHistoryPage").then((m) => ({ default: m.AuditHistoryPage })))
 const BulkUploadDetailPage = lazy(() => import("@/pages/BulkUploadDetailPage").then((m) => ({ default: m.BulkUploadDetailPage })))
+const BulkUploadsListPage = lazy(() => import("@/pages/BulkUploadsListPage").then((m) => ({ default: m.BulkUploadsListPage })))
 const BulkUploadPage = lazy(() => import("@/pages/BulkUploadPage").then((m) => ({ default: m.BulkUploadPage })))
 const CaseDetailPage = lazy(() => import("@/pages/CaseDetailPage").then((m) => ({ default: m.CaseDetailPage })))
 const CaseQueuePage = lazy(() => import("@/pages/CaseQueuePage").then((m) => ({ default: m.CaseQueuePage })))
@@ -59,6 +60,7 @@ function App() {
               <Route path="/review-queue" element={<CaseQueuePage />} />
               <Route path="/cases/new" element={<NewCasePage />} />
               <Route path="/cases/bulk" element={<BulkUploadPage />} />
+              <Route path="/bulk-uploads" element={<BulkUploadsListPage />} />
               <Route path="/bulk-uploads/:bulkUploadId" element={<BulkUploadDetailPage />} />
               <Route path="/cases/:caseId" element={<CaseDetailPage />} />
 

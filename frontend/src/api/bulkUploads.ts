@@ -54,7 +54,14 @@ export function getBulkUpload(
   return apiFetch<BulkUploadDetail>(`/bulk-uploads/${id}${query}`, { token })
 }
 
-export function listBulkUploads(token: string, companyId: string | null = null): Promise<BulkUploadSummary[]> {
-  const query = companyId ? `?company_id=${encodeURIComponent(companyId)}` : ""
+export function listBulkUploads(
+  token: string,
+  companyId: string | null = null,
+  limit: number | null = null,
+): Promise<BulkUploadSummary[]> {
+  const params = new URLSearchParams()
+  if (companyId) params.set("company_id", companyId)
+  if (limit) params.set("limit", String(limit))
+  const query = params.size ? `?${params}` : ""
   return apiFetch<BulkUploadSummary[]>(`/bulk-uploads${query}`, { token })
 }

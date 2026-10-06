@@ -85,9 +85,14 @@ export function BulkUploadPage() {
           title="Bulk upload"
           description="Submit many cases at once: one zip file, one folder per case."
           actions={
-            <Button variant="outline" onClick={() => navigate("/cases/new")}>
-              Submit a single case
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/bulk-uploads")}>
+                All bulk uploads
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/cases/new")}>
+                Submit a single case
+              </Button>
+            </div>
           }
         />
         <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[1fr_420px]">
@@ -238,7 +243,12 @@ export function BulkUploadPage() {
 
             {recent.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-                <h3 className="mb-3 text-base font-bold text-foreground">Recent bulk uploads</h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-base font-bold text-foreground">Recent bulk uploads</h3>
+                  <Link to="/bulk-uploads" className="text-sm font-semibold text-blue-600 hover:underline">
+                    View all
+                  </Link>
+                </div>
                 <ul className="flex flex-col divide-y">
                   {recent.slice(0, 8).map((b) => (
                     <li key={b.id} className="py-2">
