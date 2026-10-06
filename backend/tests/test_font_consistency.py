@@ -279,3 +279,44 @@ def test_scan_ignores_unreliable_words(extra):
 def test_text_layer_wins_over_ocr_on_pages_that_have_one():
     # A digital page is read from its own fonts; OCR estimates for it are ignored.
     assert _font_hits(_invoice(), [_ocr_page(_amounts_in(ODD, 6))]) == []
+
+
+# --- numeric re-check (B3) ---------------------------------------------------------
+
+
+def test_numbers_rechecked_once_several_are_flagged():
+    # 6 amounts scored in Arial; a 7th lists the body face first ("Segoe UI,
+    # Arial") and an 8th has a 0.85 estimate — both the same retyped amounts.
+    odd = _amounts_in(ODD, 6)
+    odd[(6, 2)] = {"font_family": "Segoe UI, Arial, Helvetica, sans-serif"}
+    odd[(7, 2)] = {"font_family": ODD, "font_confidence": 0.85}
+    # 16 rows: dropping a word from the analysis must not tip the amount
+    # column into "set in that font by design" (most of a column).
+    hits = _font_hits(_blank_scan(), [_ocr_page(odd, rows=16)])
+    assert [h["data"]["text"] for h in hits] == [f"{5 + r},500" for r in range(8)]
+    assert {h["severity"] for h in hits} == {"medium"}
+    rechecked = [h for h in hits if h["data"].get("numeric_recheck")]
+    assert [h["data"]["text"] for h in rechecked] == ["11,500", "12,500"]
+    assert "second look" in rechecked[0]["description"]
+    assert {h["data"]["words_in_this_font"] for h in hits} == {8}
+
+
+def test_recheck_never_applies_to_words_or_below_the_lowered_confidence():
+    odd = _amounts_in(ODD, 6)
+    odd[(6, 1)] = {"font_family": "Segoe UI, Arial, sans-serif"}  # a word: never re-checked
+    odd[(7, 2)] = {"font_family": ODD, "font_confidence": 0.75}   # below 0.95 - 0.15
+    hits = _font_hits(_blank_scan(), [_ocr_page(odd, rows=16)])
+    assert [h["data"]["text"] for h in hits] == [f"{5 + r},500" for r in range(6)]
+
+
+def test_no_recheck_without_enough_flagged_numbers():
+    # Fewer than 5 odd amounts are not scored, so nothing triggers a re-check.
+    odd = _amounts_in(ODD, 4)
+    odd[(6, 2)] = {"font_family": "Segoe UI, Arial, sans-serif"}
+    hits = _font_hits(_blank_scan(), [_ocr_page(odd)])
+    assert len(hits) == 4 and not any(h["data"].get("numeric_recheck") for h in hits)
+
+
+def test_clean_scan_has_no_recheck_noise():
+    page = _ocr_page({(r, 2): {"font_family": "Segoe UI, Arial, sans-serif"} for r in range(12)})
+    assert analyze_font_consistency(_blank_scan(), [page])["result"] == "pass"

@@ -256,6 +256,8 @@ SEED_RULES: list[dict[str, Any]] = [
         "check_type": "font_consistency",
         # "medium" findings come from OCR font recognition on a scanned page:
         # an estimate, corroborated across several words, so weighted lower.
+        # v2: once 3+ amounts on a page are scored, the page's other amounts
+        # are re-checked more leniently (app/services/forensics/font_consistency.py).
         "condition": _finding("font_consistency", finding="font_inconsistency", severity_in=["medium"]),
         "weight": 25,
         "severity": "medium",
@@ -540,6 +542,7 @@ SEED_RULE_VERSIONS: dict[str, int] = {
     "metadata.javascript_or_openaction": 2,
     "field.subtotal_line_item_mismatch": 2,
     "field.tax_rate_mismatch": 2,
+    "font.inconsistency_scanned": 2,
 }
 
 

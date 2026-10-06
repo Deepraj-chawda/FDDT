@@ -118,6 +118,11 @@ _OCR_MAX_RELATIVE_SIZE = 1.3
 # On an OCR page, an out-of-place font class is scored ("medium") once it
 # covers at least this many words; fewer are still shown, as "low".
 _OCR_SCORED_MIN_WORDS = 5
+# Once this many NUMBERS on a scanned page are scored as one out-of-place
+# class, the page's other numbers are re-checked (_numeric_recheck) with the
+# font-estimate confidence lowered by 0.15.
+_NUMERIC_RECHECK_MIN = 3
+_NUMERIC_RECHECK_CONFIDENCE = _OCR_MIN_CONFIDENCE - 0.15
 # Document Intelligence family names -> the visual class compared on scans.
 # Families not listed here are not used (no basis to compare them).
 _OCR_FONT_CLASSES = {
@@ -187,6 +192,17 @@ def ocr_font_class(similar_font_family: str | None) -> str | None:
         if name and re.sub(r"[^a-z]", "", name.lower()) not in _GENERIC_FAMILIES:
             return _OCR_FONT_CLASSES.get(font_family(name))
     return None
+
+
+def ocr_font_classes(similar_font_family: str | None) -> set[str]:
+    """Every visual class among ALL the named families in Document
+    Intelligence's similarFontFamily list, not just the first."""
+    classes = set()
+    for candidate in (similar_font_family or "").split(","):
+        name = re.sub(r"[^a-z]", "", candidate.strip().strip("'\"").lower())
+        if name and name not in _GENERIC_FAMILIES and (cls := _OCR_FONT_CLASSES.get(font_family(candidate.strip()))):
+            classes.add(cls)
+    return classes
 
 
 def _script(text: str) -> str:
@@ -359,6 +375,68 @@ def _script_outliers(runs: list[_Run], source: _Source) -> list[tuple[_Run, str,
     return [(r, e, per_family[r.family]) for r, e in found.values()]
 
 
+_NUMERIC_RE = re.compile(r"^[^\w]*\d[\d.,/:\-]*[^\w]*$")
+# An amount as printed: "6,000", "57,182.50", "42.50" — not a reference or
+# invoice number ("10139/"), which is only ever re-checked as part of the
+# original analysis.
+_AMOUNT_RE = re.compile(r"^\d{1,3}(?:,\d{3})+(?:\.\d{1,3})?$|^\d+\.\d{2}$")
+
+
+def _is_numeric(text: str) -> bool:
+    return bool(_NUMERIC_RE.match(text))
+
+
+def _numeric_recheck(
+    ocr_page: OCRPage, page_rect: pymupdf.Rect, outliers: list[tuple[_Run, str, int]]
+) -> list[tuple[_Run, str, int]]:
+    """Amounts retyped in another font usually all are: once at least
+    _NUMERIC_RECHECK_MIN numbers on a scanned page are scored as one
+    out-of-place class, the page's OTHER numbers are looked at again, more
+    leniently — a font estimate down to _NUMERIC_RECHECK_CONFIDENCE, and that
+    class anywhere in the estimate's list of similar families (OCR sometimes
+    lists the body font first: "Segoe UI, Arial, Helvetica" for an Arial
+    figure). Amounts only ("6,000", "42.50"): words and reference numbers are
+    never re-checked, so documents without edited amounts get no extra noise. Returns the additional
+    outliers, with the same expected family and an updated count."""
+    scored_numeric: dict[str, list[tuple[_Run, str, int]]] = {}
+    for run, expected, count in outliers:
+        if count >= OCR.corroborating_words and _is_numeric(run.text):
+            scored_numeric.setdefault(run.family, []).append((run, expected, count))
+    targets = {family: items for family, items in scored_numeric.items() if len(items) >= _NUMERIC_RECHECK_MIN}
+    if not targets:
+        return []
+
+    width, height = page_rect.width, page_rect.height
+    heights = [w.height * height for w in ocr_page.words if w.text.strip()]
+    median = statistics.median(heights) if heights else 0.0
+    flagged_boxes = {tuple(round(v, 1) for v in run.bbox) for run, _, _ in outliers}
+    extra: list[tuple[_Run, str, int]] = []
+    for family, items in targets.items():
+        expected = max({e for _, e, _ in items}, key=lambda e: sum(1 for _, x, _ in items if x == e))
+        found: list[_Run] = []
+        for word in ocr_page.words:
+            text = word.text.strip()
+            box = (word.x * width, word.y * height, (word.x + word.width) * width, (word.y + word.height) * height)
+            if (
+                not _AMOUNT_RE.match(text)
+                or tuple(round(v, 1) for v in box) in flagged_boxes
+                or (word.font_confidence or 0) < _NUMERIC_RECHECK_CONFIDENCE
+                or word.italic_or_handwritten
+                or not _OCR_MIN_RELATIVE_SIZE * median <= word.height * height <= _OCR_MAX_RELATIVE_SIZE * median
+                or family not in ocr_font_classes(word.font_family)
+            ):
+                continue
+            found.append(
+                _Run(
+                    page=ocr_page.page_number, text=text, font=word.font_family or "", family=family,
+                    script=_script(text), size=round(box[3] - box[1], 1), bbox=box, baseline=box[3],
+                )
+            )
+        count = items[0][2] + len(found)
+        extra.extend((run, expected, count) for run in found)
+    return extra
+
+
 def _normalized_box(run: _Run, page_rect: pymupdf.Rect, pad: float = 1.5) -> dict[str, Any]:
     width, height = page_rect.width or 1, page_rect.height or 1
     x0, y0, x1, y1 = run.bbox
@@ -373,7 +451,9 @@ def _normalized_box(run: _Run, page_rect: pymupdf.Rect, pad: float = 1.5) -> dic
     }
 
 
-def _finding(run: _Run, expected: str, family_count: int, source: _Source, page_rect: pymupdf.Rect) -> dict[str, Any]:
+def _finding(
+    run: _Run, expected: str, family_count: int, source: _Source, page_rect: pymupdf.Rect, *, rechecked: bool = False
+) -> dict[str, Any]:
     corroborated = family_count >= source.corroborating_words
     if source is TEXT_LAYER:
         description = (
@@ -386,6 +466,11 @@ def _finding(run: _Run, expected: str, family_count: int, source: _Source, page_
             f"text around it ({expected}), per OCR font recognition — it may have been typed in or "
             "pasted before the page was printed or scanned."
         )
+        if rechecked:
+            description += (
+                f" Found on a second look at this page's numbers: OCR lists {run.family} among the likely fonts "
+                f"for it ({run.font}), as for the other amounts flagged here."
+            )
         if not corroborated:
             description += (
                 f" Only {family_count} word(s) on this page look like this font, so it is shown for review but "
@@ -405,6 +490,7 @@ def _finding(run: _Run, expected: str, family_count: int, source: _Source, page_
             "font_size": run.size,
             "source": source.name,
             "words_in_this_font": family_count,
+            **({"numeric_recheck": True} if rechecked else {}),
         },
     }
 
@@ -437,8 +523,20 @@ def analyze_font_consistency(pdf_bytes: bytes, ocr_pages: list[OCRPage] | None =
                 inventory[r.family] = inventory.get(r.family, 0) + r.chars
                 by_script.setdefault(r.script, []).append(r)
             outliers = [o for group in by_script.values() for o in _script_outliers(group, source)]
+            rechecked: set[int] = set()
+            if source is OCR:
+                extra = _numeric_recheck(ocr_by_page[number], page.rect, outliers)
+                if extra:
+                    rechecked = {id(run) for run, _, _ in extra}
+                    totals = {run.family: count for run, _, count in extra}
+                    outliers = [
+                        (run, expected, totals.get(run.family, count)) for run, expected, count in outliers
+                    ] + extra
             outliers.sort(key=lambda o: (o[0].baseline, o[0].bbox[0]))
-            findings.extend(_finding(run, expected, count, source, page.rect) for run, expected, count in outliers)
+            findings.extend(
+                _finding(run, expected, count, source, page.rect, rechecked=id(run) in rechecked)
+                for run, expected, count in outliers
+            )
     finally:
         doc.close()
 
