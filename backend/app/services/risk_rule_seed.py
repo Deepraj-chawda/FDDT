@@ -396,6 +396,39 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "'{document}': {reason}",
     },
     {
+        "rule_id": "field.iban_trn_validation",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # A printed IBAN with a bad checksum/length, a bank code naming a
+        # different bank, or an account number it doesn't contain; or a UAE
+        # TRN in the wrong format. Nothing on a pass.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "iban_trn_validation"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "metadata.rescan_conflict",
+        "category": FORENSICS,
+        "check_type": "field_validation",
+        # Phone-scanner watermark on an office-MFP PDF: printed and rescanned,
+        # which hides pre-print edits from pixel forensics. Not proof of an
+        # edit on its own, so weighted like other corroborating signals.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "rescan_conflict"},
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.period_quantity_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "period_quantity_consistency"},
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
         "rule_id": "field.reference_number_malformed",
         "category": CONSISTENCY,
         "check_type": "field_validation",

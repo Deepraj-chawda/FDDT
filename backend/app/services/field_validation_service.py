@@ -41,6 +41,15 @@ returned `details` dict:
     like a plausible reference/invoice number (contains a digit, no
     stray/garbled characters) rather than obviously-malformed
     extraction output.
+  - iban_trn_validation: every printed IBAN has its country's length and a
+    valid mod-97 checksum; a UAE IBAN's bank code matches the printed bank
+    and it contains the printed account number; a UAE TRN is 15 digits
+    starting with 100 (app/services/payment_identifiers.py).
+  - rescan_conflict: a phone-scanner watermark ("Scanned with CamScanner")
+    on a PDF produced by an office MFP — printed and re-scanned, so edits
+    made before printing are invisible to pixel forensics.
+  - period_quantity_consistency: a line listing the months it bills as
+    due charges for that many months.
 
 Arithmetic is compared to the cent (one cent of rounding per term), not
 by a percentage: a 1% allowance on a 55,500 total would hide a 400
@@ -61,6 +70,8 @@ from typing import Any
 
 from app.services.amount_words import parse_english_amount
 from app.services.field_regions import format_field_value, make_located_region, make_region
+from app.services.payment_identifiers import normalize as normalize_identifier
+from app.services.payment_identifiers import validate_iban, validate_uae_trn
 
 # A reference/invoice number should have at least one digit and consist
 # only of alphanumerics plus common separators — a weak but effective
@@ -498,10 +509,165 @@ def _check_reference_number_format(core_fields: dict[str, Any]) -> dict[str, Any
     return {"status": "pass", "reason": f"Reference number {raw!r} matches the expected format."}
 
 
-def validate_fields(extracted_fields: dict[str, Any]) -> dict[str, Any]:
+# --- payment identifiers (IBAN / UAE TRN) ---------------------------------------
+
+_IBAN_FIELD_RE = re.compile(r"iban", re.IGNORECASE)
+_TRN_FIELD_RE = re.compile(r"(?:^|_)trn(?:$|_)|tax_registration|vat_(?:number|no|id|registration)", re.IGNORECASE)
+_BANK_NAME_FIELD_RE = re.compile(r"bank_name|(?:^|_)bank$", re.IGNORECASE)
+_ACCOUNT_FIELD_RE = re.compile(r"account_(?:number|no)", re.IGNORECASE)
+# An IBAN printed after its label, for documents whose extraction has no IBAN field.
+_IBAN_IN_TEXT_RE = re.compile(r"\bIBAN\b[^A-Z0-9]{0,30}([A-Z]{2}\d{2}(?:\s?[A-Z0-9]){10,30})")
+
+
+def _fields_named(
+    additional_fields: list[dict[str, Any]], pattern: re.Pattern, exclude: re.Pattern | None = None
+) -> list[dict[str, Any]]:
+    return [
+        f for f in additional_fields
+        if isinstance(f, dict) and f.get("value") and pattern.search(f.get("field_name") or "")
+        and not (exclude and exclude.search(f.get("field_name") or ""))
+    ]
+
+
+def _check_iban_trn_validation(
+    core_fields: dict[str, Any], additional_fields: list[dict[str, Any]], ocr_text: str | None
+) -> dict[str, Any]:
+    """IBAN length/checksum/bank code/account number and UAE TRN format
+    (app/services/payment_identifiers.py)."""
+    found = [(f["value"], f) for f in _fields_named(additional_fields, _IBAN_FIELD_RE)]
+    if not found and ocr_text:
+        found = [(m.group(1), None) for m in _IBAN_IN_TEXT_RE.finditer(ocr_text)]
+    ibans: list[tuple[str, dict[str, Any] | None]] = []
+    seen: set[str] = set()
+    for raw, field in found:
+        if normalize_identifier(raw) not in seen:
+            seen.add(normalize_identifier(raw))
+            ibans.append((raw, field))
+    bank = next((f["value"] for f in _fields_named(additional_fields, _BANK_NAME_FIELD_RE)), None)
+    account = next(
+        (f["value"] for f in _fields_named(additional_fields, _ACCOUNT_FIELD_RE, _IBAN_FIELD_RE)), None
+    )
+    currency = ((core_fields.get("amount") or {}).get("currency") or "").upper()
+    uae = currency == "AED" or any(normalize_identifier(raw).startswith("AE") for raw, _ in ibans)
+    trns = [(f["value"], f) for f in _fields_named(additional_fields, _TRN_FIELD_RE)] if uae else []
+
+    checked: list[dict[str, Any]] = []
+    failed: list[str] = []
+    regions: list[dict[str, Any] | None] = []
+    for raw, field in ibans:
+        result = validate_iban(raw, bank_name=bank, account_number=account)
+        checked.append({"kind": "IBAN", **result})
+        if not result["ok"]:
+            failed.append(f"IBAN {result['value']}: " + "; ".join(result["problems"]))
+            if field is not None:
+                regions.append(
+                    make_located_region(
+                        field, "iban", "IBAN", raw, f"Field exception: IBAN ({'; '.join(result['problems'])})"
+                    )
+                )
+    for raw, field in trns:
+        result = validate_uae_trn(raw)
+        checked.append({"kind": "TRN", **result})
+        if not result["ok"]:
+            failed.append(f"TRN {raw}: " + "; ".join(result["problems"]))
+            regions.append(
+                make_located_region(field, "trn", "TRN", raw, f"Field exception: TRN ({'; '.join(result['problems'])})")
+            )
+    if not checked:
+        return {"status": "skipped", "reason": "No IBAN or UAE TRN on the document."}
+    if failed:
+        return {**_flag("Invalid payment identifier(s): " + " | ".join(failed) + ".", *regions), "identifiers": checked}
+    passed = "; ".join(f"{c['kind']} {c['value']}: {', '.join(c['notes'])}" for c in checked)
+    return {"status": "pass", "reason": f"{passed}.", "identifiers": checked}
+
+
+# --- print-and-rescan -------------------------------------------------------------
+
+# Watermarks phone scanning apps print on every page they produce.
+_PHONE_SCANNER_RE = re.compile(
+    r"scanned\s+with\s+camscanner|\bcamscanner\b|\badobe\s+scan\b|\bmicrosoft\s+lens\b|\boffice\s+lens\b|"
+    r"\bgenius\s+scan\b|\btapscanner\b|\btap\s+scanner\b",
+    re.IGNORECASE,
+)
+# Hardware multifunction printers / office scanners, as named in a PDF's
+# Producer / Creator.
+_MFP_RE = re.compile(
+    r"konica|minolta|bizhub|\bdevelop\b|\bineo\b|\bcanon\b|imagerunner|\bricoh\b|\bxerox\b|"
+    r"\bhp\b|hewlett|\bkyocera\b|taskalfa|\bsharp\b|\bbrother\b|\bepson\b|\bmfp\d*\b",
+    re.IGNORECASE,
+)
+
+
+def _check_rescan_conflict(pdf_info: dict[str, Any] | None, ocr_text: str | None) -> dict[str, Any]:
+    """A phone-scanner watermark inside a PDF made by an office MFP: the page
+    was scanned with a phone app, printed, and scanned again. Either alone is
+    ordinary."""
+    if not pdf_info:
+        return {"status": "skipped", "reason": "PDF producer information not recorded for this document."}
+    device = " / ".join(str(pdf_info[k]) for k in ("Producer", "Creator") if pdf_info.get(k))
+    watermark = _PHONE_SCANNER_RE.search(ocr_text or "")
+    mfp = _MFP_RE.search(device)
+    if watermark and mfp:
+        return _flag(
+            f"Printed and re-scanned: the page carries a phone-scanner watermark ('{watermark.group(0)}') "
+            f"but the PDF was produced by an office scanner ({device}). Digital edits made before printing "
+            "would not be visible to error level analysis."
+        )
+    if watermark:
+        return {
+            "status": "pass",
+            "reason": f"Phone-scanner watermark ('{watermark.group(0)}'), but no office scanner in the PDF metadata.",
+        }
+    return {"status": "pass", "reason": "No phone-scanner watermark on the page."}
+
+
+# --- billing periods vs quantity ----------------------------------------------------
+
+_PERIOD_UNITS = {"MONTH", "MON", "MTH"}
+
+
+def _check_period_quantity_consistency(line_items: list[dict[str, Any]]) -> dict[str, Any]:
+    """A line that lists the months it bills ("(October-November-December)
+    DUE") and a multiplier ("X 4 MONTH") must charge for as many months as it
+    lists as due (app/services/line_item_parsing.py reads both)."""
+    checked = 0
+    wrong: list[str] = []
+    regions: list[dict[str, Any] | None] = []
+    for index, item in enumerate(line_items, start=1):
+        quantity = _num(item.get("quantity"))
+        unit = (item.get("unit") or "").upper()
+        due = item.get("due_periods") or []
+        if not due and not item.get("paid_periods"):
+            due = item.get("unmarked_periods") or []
+        if quantity is None or unit not in _PERIOD_UNITS or not due:
+            continue
+        checked += 1
+        if abs(quantity - len(due)) < 1e-9:
+            continue
+        paid = item.get("paid_periods") or []
+        paid_note = f"; {', '.join(paid)} marked paid" if paid else ""
+        wrong.append(
+            f"{_line_label(index, item)}: {len(due)} months listed as due ({', '.join(due)}{paid_note}), "
+            f"× {_qty(quantity)} charged"
+        )
+        regions.append(
+            make_located_region(
+                item, f"line_item_{index}", f"Line {index}", _money(_num(item.get("line_total")) or 0),
+                f"Field exception: Line {index} ({len(due)} months due, × {_qty(quantity)} charged)",
+            )
+        )
+    if not checked:
+        return {"status": "skipped", "reason": "No line lists its billing months and a month multiplier."}
+    if wrong:
+        return _flag("; ".join(wrong) + ".", *regions)
+    return {"status": "pass", "reason": f"All {checked} line(s) charge for the months they list as due."}
+
+
+def validate_fields(extracted_fields: dict[str, Any], *, ocr_text: str | None = None) -> dict[str, Any]:
     """Run all field-validation sub-checks against one document's
-    `extracted_fields`. Returns {"result": "pass"|"flag", "details": {...}}
-    ready to store directly in a `document_checks.result` jsonb column."""
+    `extracted_fields` (and its OCR text, for the checks that read printed
+    marks). Returns {"result": "pass"|"flag", "details": {...}} ready to
+    store directly in a `document_checks.result` jsonb column."""
     core_fields = extracted_fields.get("core_fields") or {}
     additional_fields = extracted_fields.get("additional_fields") or []
     line_items = [i for i in extracted_fields.get("line_items") or [] if isinstance(i, dict)]
@@ -518,6 +684,9 @@ def validate_fields(extracted_fields: dict[str, Any]) -> dict[str, Any]:
             core_fields, extracted_fields.get("amount_in_words")
         ),
         "reference_number_format": _check_reference_number_format(core_fields),
+        "iban_trn_validation": _check_iban_trn_validation(core_fields, additional_fields, ocr_text),
+        "rescan_conflict": _check_rescan_conflict(extracted_fields.get("pdf_info"), ocr_text),
+        "period_quantity_consistency": _check_period_quantity_consistency(line_items),
     }
     overall = "flag" if any(sub["status"] == "flag" for sub in details.values()) else "pass"
     return {"result": overall, "details": details}

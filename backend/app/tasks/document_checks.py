@@ -82,7 +82,7 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
         extracted_fields = document.extracted_fields or {}
 
         try:
-            field_result = validate_fields(extracted_fields)
+            field_result = validate_fields(extracted_fields, ocr_text=document.ocr_text)
             save_check(
                 db,
                 document=document,

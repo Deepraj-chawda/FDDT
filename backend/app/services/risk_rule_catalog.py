@@ -60,6 +60,7 @@ CHECK_RESULT_TYPES = [
 SUB_CHECKS = [
     "date_in_future", "line_item_arithmetic", "subtotal_line_item_consistency", "total_tax_consistency",
     "tax_rate_consistency", "amount_in_words_consistency", "reference_number_format",
+    "iban_trn_validation", "rescan_conflict", "period_quantity_consistency",
 ]
 CROSS_FIELDS = ["amount", "date", "issuer"]
 # "consistent" is the good outcome; a rule that fires on it would be a mistake.
