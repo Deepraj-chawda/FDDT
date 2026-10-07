@@ -1,0 +1,133 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-09-05 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-09-05 is not after the file's creation (2026-09-14)."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'AIC-WIRE-20260905-2290' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "بنك الاتحاد التجاري Al Ittihad Commercial Bank",
+        "match_score": 85.5,
+        "matched_registry_name": "Al Falah General Trading LLC",
+        "matched_via": "fuzzy",
+        "threshold": 85.0
+      },
+      "result": "pass"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0A108B8F"
+    ],
+    "company": "Default Company",
+    "file": "Sample11_Arabic_Case_Evidence.pdf",
+    "representative_case": "CASE-0A108B8F",
+    "sha256": "242574c83124d56c337ea4e95e88ddff7e0f8af0df60e72cf846271cb8d737b4"
+  },
+  "rules": {},
+  "score": {
+    "raw": 0.0,
+    "score": 0
+  }
+}

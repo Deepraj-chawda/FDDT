@@ -1,0 +1,203 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 matches page 1 of \"case6 School  educational document.pdf\" in case CASE-F64B3E0F, submitted by test1Reviewer L2, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "flag",
+          "text": "The amount in words, 'Fifty Seven Thousand Six Hundred Sixty Dirhams Only', is 57,660.00 (read from the words), but the total in figures is 63,870.00."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2021-06-23 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2021-06-23 is not after the file's creation (2022-07-26)."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "IBAN AE160570000011085820016: checksum (mod 97) valid, bank code 057 not on file; bank name not compared, contains the printed account number 011085820016."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "skipped",
+          "text": "No reference number extracted."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('Repton Foundation School L.L.C.\nFinance\nP.O. Box 45016 Abu Dhabi U.A.E.') names the issuer 'REPTON FOUNDATION SCHOOL L.L.C'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 5 line item(s) add up to the total 63,870.00 less tax 0.00 (63,870.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 0.00 is 0% of the total less tax 63,870.00."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "REPTON FOUNDATION SCHOOL L.L.C",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 0:19:19 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "incremental_updates_present",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 1 incremental update(s) beyond the baseline expected for this file's structure."
+        },
+        {
+          "bbox": null,
+          "finding": "history_absent_despite_revisions",
+          "page": null,
+          "severity": "medium",
+          "text": "The file shows 1 incremental update(s) but has no xmpMM:History revision chain at all."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.14010926365795728,
+          "page": 1,
+          "width": 0.3200141444362124,
+          "x": 0.07185817811733652,
+          "y": 0.8002113741695739
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05910975609756097,
+            "page": 1,
+            "width": 0.10350000000000001,
+            "x": 0.19949999999999998,
+            "y": 0.8765000000000001
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.14010926365795728,
+            "page": 1,
+            "width": 0.3200141444362124,
+            "x": 0.07185817811733652,
+            "y": 0.8002113741695739
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-2745F56C",
+      "CASE-4B297080",
+      "CASE-F64B3E0F"
+    ],
+    "company": "testcompany",
+    "file": "case7School  educational document.pdf",
+    "representative_case": "CASE-2745F56C",
+    "sha256": "c1a11cef261c3141b5b008d1dbc9d87521d8172a78e6fd6217484ac3e39a21ba"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case7School  educational document.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 matches page 1 of \"case6 School  educational document.pdf\" in case CASE-F64B3E0F, submitted by test1Reviewer L2, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded.",
+      "version": 1
+    },
+    "field.amount_in_words_mismatch": {
+      "points": 25,
+      "reason": "'case7School  educational document.pdf': The amount in words, 'Fifty Seven Thousand Six Hundred Sixty Dirhams Only', is 57,660.00 (read from the words), but the total in figures is 63,870.00.",
+      "version": 1
+    },
+    "metadata.history_absent_despite_revisions": {
+      "points": 8,
+      "reason": "'case7School  educational document.pdf' has multiple revisions but no edit history — the history may have been removed.",
+      "version": 1
+    },
+    "metadata.incremental_update_single": {
+      "points": 8,
+      "reason": "'case7School  educational document.pdf' was saved incrementally after its original version — content may have been appended or changed.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'case7School  educational document.pdf' was modified after it was created. The file was modified after it was created: ModDate is 0:19:19 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 96.0,
+    "score": 96
+  }
+}

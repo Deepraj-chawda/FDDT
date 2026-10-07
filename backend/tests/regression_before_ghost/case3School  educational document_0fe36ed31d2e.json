@@ -1,0 +1,221 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2022-07-26 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2022-07-26 is not after the file's creation (2022-08-03)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'LIWA/Inv-2022/2761A' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "flag",
+          "text": "Line items = 53,800.00, stated total 52,300.00, difference 1,500.00 (summed: 52,300.00 + 1,500.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01757,
+            "page": 1,
+            "width": 0.06324,
+            "x": 0.60568,
+            "y": 0.29982
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'Abdulla' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01757,
+            "page": 1,
+            "width": 0.02544,
+            "x": 0.40868,
+            "y": 0.32582
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'for' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01957,
+            "page": 1,
+            "width": 0.11784,
+            "x": 0.12538,
+            "y": 0.89412
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'TOGETHER' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01857,
+            "page": 1,
+            "width": 0.04634,
+            "x": 0.24558,
+            "y": 0.89532
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'FOR' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01867,
+            "page": 1,
+            "width": 0.08234,
+            "x": 0.23028,
+            "y": 0.91372
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'FUTURE' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01877,
+            "page": 1,
+            "width": 0.11214,
+            "x": 0.22808,
+            "y": 0.93182
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'CHILDREN' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        }
+      ],
+      "result": "flag"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "مدرسة ليوا الدولية - فلح هزاع LIWA INTERNATIONAL SCHOOL · FALA/ RAZZA",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.030839453589476817,
+          "page": 1,
+          "width": 0.08578835831373069,
+          "x": 0.2126318148825009,
+          "y": 0.6064589890197681
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.030839453589476817,
+            "page": 1,
+            "width": 0.08578835831373069,
+            "x": 0.2126318148825009,
+            "y": 0.6064589890197681
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-3ABE8978"
+    ],
+    "company": "testcompany",
+    "file": "case3School  educational document.pdf",
+    "representative_case": "CASE-3ABE8978",
+    "sha256": "0fe36ed31d2e09bdf2505cae5050581af70f2de77821b395130db8ca296e3b95"
+  },
+  "rules": {
+    "field.subtotal_line_item_mismatch": {
+      "points": 15,
+      "reason": "'case3School  educational document.pdf': Line items = 53,800.00, stated total 52,300.00, difference 1,500.00 (summed: 52,300.00 + 1,500.00).",
+      "version": 2
+    },
+    "font.inconsistency_scanned": {
+      "points": 25,
+      "reason": "'case3School  educational document.pdf': on the scanned page, 5 word(s) look like a different font from the text around them (OCR font recognition — an estimate). Page 1 (scanned): 'for' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 40.0,
+    "score": 40
+  }
+}

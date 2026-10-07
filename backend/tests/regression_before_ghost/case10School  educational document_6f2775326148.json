@@ -1,0 +1,162 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "limited"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "limited"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (51,475.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2023-06-12 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2023-06-12 is not after the file's creation (2023-06-12)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2616/2023-2024' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('AJYAL INTERNATIONAL SCHOOL - AL FALAH\nAL FALAH CITY - AL FALAH') names the issuer 'ajyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 6 line item(s) add up to the total 51,475.00 less tax 0.00 (51,475.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "ajyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 8 days, 20:46:20 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "editable_text_over_scan",
+          "page": null,
+          "severity": "low",
+          "text": "Page(s) 1: visible, editable text drawn over a page-sized image. Shown for review, not scored: a digitally produced document drawn on a full-page letterhead image is built the same way."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.03400000000000003,
+          "page": 1,
+          "width": 0.07350000000000001,
+          "x": 0.8494,
+          "y": 0.857
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.09270697564849772,
+            "page": 1,
+            "width": 0.14382067773566776,
+            "x": 0.8121800720780069,
+            "y": 0.8221950744217417
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.03400000000000003,
+            "page": 1,
+            "width": 0.07350000000000001,
+            "x": 0.8494,
+            "y": 0.857
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-39CB18BF"
+    ],
+    "company": "testcompany",
+    "file": "case10School  educational document.pdf",
+    "representative_case": "CASE-39CB18BF",
+    "sha256": "6f2775326148bd2e58df7531be2d595b79a370310f56620aab8e560dc0333460"
+  },
+  "rules": {
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'case10School  educational document.pdf' was modified after it was created. The file was modified after it was created: ModDate is 8 days, 20:46:20 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 15.0,
+    "score": 15
+  }
+}

@@ -1,0 +1,387 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "The file was created 46 days before its printed date 2026-08-25 but not modified on or after it — consistent with a document generated in advance."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails | TRN 991001928400003: does not start with 100, as UAE TRNs do | TRN 994012841900003: does not start with 100, as UAE TRNs do."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'INV-NGT-2026-1049' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 3 line-item field(s)."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 994012841900003."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 9,000.00 is 5% of the subtotal 180,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "flag",
+          "text": "Total 197500.00 does not match subtotal 180000.00 + tax 9000.00 (expected 189000.00)."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.35902,
+            "x": 0.1175,
+            "y": 0.35596
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Hermetically Sealed Thermocouple Penetration' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.08512,
+            "x": 0.1175,
+            "y": 0.36754
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Assemblies' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.0126,
+            "x": 0.08238,
+            "y": 0.37333
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '2' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.07706,
+            "x": 0.70969,
+            "y": 0.37333
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '18,000.00' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.07706,
+            "x": 0.84816,
+            "y": 0.37333
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '36,000.00' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01231,
+            "page": 1,
+            "width": 0.39926,
+            "x": 0.1175,
+            "y": 0.38011
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'High-temperature coolant loop thermal sensors calibrated' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.08512,
+            "x": 0.55668,
+            "y": 0.37912
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Assemblies' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01231,
+            "page": 1,
+            "width": 0.14552,
+            "x": 0.1175,
+            "y": 0.39169
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'for Crestview Unit 3' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "NORTHGAITE ENGINEERING SOLUTONS LLC",
+        "match_score": 47.46,
+        "matched_registry_name": "TechSource Solutions Inc.",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "orphaned_objects",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 1 content object(s) (streams, fonts, images, pages or annotations) present in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
+        },
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('PDF-XChange Editor v9.4' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_creation_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /CreationDate (2026-07-10T08:00:00+00:00) disagrees with XMP xmp:CreateDate (2026-09-18T14:22:10+00:00) — tools that scrub or edit one often forget to update the other."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_mod_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /ModDate (2026-07-10T08:00:00+00:00) disagrees with XMP xmp:ModifyDate (2026-09-19T22:45:33+00:00)."
+        },
+        {
+          "bbox": null,
+          "finding": "incremental_updates_present",
+          "page": null,
+          "severity": "high",
+          "text": "Found 3 incremental update(s) beyond the baseline expected for this file's structure."
+        },
+        {
+          "bbox": null,
+          "finding": "history_absent_despite_revisions",
+          "page": null,
+          "severity": "medium",
+          "text": "The file shows 3 incremental update(s) but has no xmpMM:History revision chain at all."
+        },
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.16000000000000003,
+          "page": 1,
+          "width": 0.33999999999999997,
+          "x": 0.58,
+          "y": 0.5499999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.16000000000000003,
+            "page": 1,
+            "width": 0.19,
+            "x": 0.08,
+            "y": 0.5499999999999999
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.16000000000000003,
+            "page": 1,
+            "width": 0.33999999999999997,
+            "x": 0.58,
+            "y": 0.5499999999999999
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-D63AC666"
+    ],
+    "company": "Default Company",
+    "file": "Sample16_English_Case_Invoice.pdf",
+    "representative_case": "CASE-D63AC666",
+    "sha256": "e058a63e7c7210459ccda7ad77e235fc6211bb688ffc11941a414059379a6fc3"
+  },
+  "rules": {
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample16_English_Case_Invoice.pdf': Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails | TRN 991001928400003: does not start with 100, as UAE TRNs do | TRN 994012841900003: does not start with 100, as UAE TRNs do.",
+      "version": 1
+    },
+    "field.total_tax_mismatch": {
+      "points": 20,
+      "reason": "'Sample16_English_Case_Invoice.pdf': Total 197500.00 does not match subtotal 180000.00 + tax 9000.00 (expected 189000.00).",
+      "version": 1
+    },
+    "font.inconsistency": {
+      "points": 40,
+      "reason": "'Sample16_English_Case_Invoice.pdf': 8 piece(s) of text are set in a different font, at a different size, or in a second copy of the same font, from the text around them — a sign they were typed in after the document was produced. Page 1: 'Hermetically Sealed Thermocouple Penetration' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced.",
+      "version": 3
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'NORTHGAITE ENGINEERING SOLUTONS LLC' on 'Sample16_English_Case_Invoice.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    },
+    "metadata.creation_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample16_English_Case_Invoice.pdf': the creation dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.history_absent_despite_revisions": {
+      "points": 8,
+      "reason": "'Sample16_English_Case_Invoice.pdf' has multiple revisions but no edit history — the history may have been removed.",
+      "version": 1
+    },
+    "metadata.incremental_update_multiple": {
+      "points": 20,
+      "reason": "'Sample16_English_Case_Invoice.pdf' has multiple incremental saves after its original version — repeated post-creation edits.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'Sample16_English_Case_Invoice.pdf' embeds JavaScript or an action that runs code or reaches outside the document — unusual for a business document. This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document.",
+      "version": 2
+    },
+    "metadata.mod_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample16_English_Case_Invoice.pdf': the modification dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.orphaned_objects": {
+      "points": 8,
+      "reason": "'Sample16_English_Case_Invoice.pdf' contains orphaned internal objects left behind by editing.",
+      "version": 3
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'Sample16_English_Case_Invoice.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('PDF-XChange Editor v9.4' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 130.0,
+    "score": 100
+  }
+}

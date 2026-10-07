@@ -1,0 +1,315 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0453,
+            "page": 1,
+            "width": 0.6156,
+            "x": 0.0955,
+            "y": 0.752
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 69 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.0338,
+            "page": 1,
+            "width": 0.6208,
+            "x": 0.0769,
+            "y": 0.7841
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 41 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample12_English_Case_Evidence.pdf\" in case CASE-5F2D3700 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0611,
+            "page": 1,
+            "width": 0.0907,
+            "x": 0.8126,
+            "y": 0.8756
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-28 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "flag",
+          "text": "The document is dated 2026-08-28, but its PDF file was created on 2026-08-25 — 3 days earlier — and last modified on 2026-08-27. A file cannot predate its own content: an older document appears to have been edited and re-dated."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'FAB-WIRE-20260828-881920' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01606,
+            "page": 1,
+            "width": 0.04544,
+            "x": 0.69178,
+            "y": 0.55602
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '100%' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01546,
+            "page": 1,
+            "width": 0.04004,
+            "x": 0.81518,
+            "y": 0.65892
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '11:16' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01386,
+            "page": 1,
+            "width": 0.01284,
+            "x": 0.91858,
+            "y": 0.97272
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.01114,
+            "x": 0.89038,
+            "y": 0.97302
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "FIRST ABU DHABI BANK (FAB)",
+        "match_score": 34.55,
+        "matched_registry_name": "Al Nukhba Technical Systems Est.",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.13,
+          "page": 1,
+          "width": 0.33999999999999997,
+          "x": 0.63,
+          "y": 0.62
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.13,
+            "page": 1,
+            "width": 0.34,
+            "x": 0.08,
+            "y": 0.62
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.13,
+            "page": 1,
+            "width": 0.33999999999999997,
+            "x": 0.63,
+            "y": 0.62
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0C6F41F9",
+      "CASE-1BD2A11D",
+      "CASE-3249B03F",
+      "CASE-4C085E81",
+      "CASE-5F2D3700",
+      "CASE-6A2EA2ED",
+      "CASE-6C73A607",
+      "CASE-6FCE2F6C",
+      "CASE-70DA1113",
+      "CASE-7EA12803",
+      "CASE-B4034CC7"
+    ],
+    "company": "Default Company",
+    "file": "Sample12_English_Case_Evidence.pdf",
+    "representative_case": "CASE-3249B03F",
+    "sha256": "94d51aa4f3d79eb4512bcb1be35a3cd75cad6b39cbcb9b4e81bd99348678faf7"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample12_English_Case_Evidence.pdf': 2 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample12_English_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample12_English_Case_Evidence.pdf\" in case CASE-5F2D3700 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample12_English_Case_Evidence.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample12_English_Case_Evidence.pdf': Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'FIRST ABU DHABI BANK (FAB)' on 'Sample12_English_Case_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    },
+    "metadata.document_date_after_file_creation": {
+      "points": 25,
+      "reason": "'Sample12_English_Case_Evidence.pdf': The document is dated 2026-08-28, but its PDF file was created on 2026-08-25 — 3 days earlier — and last modified on 2026-08-27. A file cannot predate its own content: an older document appears to have been edited and re-dated.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample12_English_Case_Evidence.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample12_English_Case_Evidence.pdf' was modified after it was created. The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 170.0,
+    "score": 100
+  }
+}

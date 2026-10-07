@@ -1,0 +1,269 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-22 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-22 is not after the file's creation (2026-09-12)."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 3 line item(s): quantity × unit price matches the line total."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'TS-INV-88431' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the subtotal 18,450.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "flag",
+          "text": "Titled 'TAX INVOICE' but no TRN appears anywhere on it. A UAE tax invoice must carry the supplier's 15-digit Tax Registration Number."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 1,291.50 is 7% of the subtotal 18,450.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 18450.00 + tax 1291.50."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01703,
+            "page": 1,
+            "width": 0.05502,
+            "x": 0.61653,
+            "y": 0.2859
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '1,450.00' is set in Times-Roman, while the text around it uses the helvetica font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01703,
+            "page": 1,
+            "width": 0.06216,
+            "x": 0.75938,
+            "y": 0.2859
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '14,500.00' is set in Times-Roman, while the text around it uses the helvetica font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01782,
+            "page": 1,
+            "width": 0.09953,
+            "x": 0.74173,
+            "y": 0.3607
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '18,450.00 USD' is set in Times-Roman, while the text around it uses the helvetica font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01782,
+            "page": 1,
+            "width": 0.09197,
+            "x": 0.75014,
+            "y": 0.37922
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '1,291.50 USD' is set in Times-Roman, while the text around it uses the helvetica font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.02166,
+            "page": 1,
+            "width": 0.12053,
+            "x": 0.71876,
+            "y": 0.39704
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '19,741.50 USD' is set in Times-Bold, while the text around it uses the helvetica font family — it may have been typed in after the document was produced."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "TECHSOURCE SOLUTIONS INC. Enterprise IT Procurement & Corporate Accounts",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.0255117647058824,
+          "page": 1,
+          "width": 0.10928846153846156,
+          "x": 0.07871153846153844,
+          "y": 0.4628
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.0255117647058824,
+            "page": 1,
+            "width": 0.10928846153846156,
+            "x": 0.07871153846153844,
+            "y": 0.4628
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.06280000000000002,
+            "page": 1,
+            "width": 0.10350000000000004,
+            "x": 0.675,
+            "y": 0.47259999999999996
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "ai_generation_assessment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: the model reports possible signs of AI-generated/synthetic content — The footer text states 'SAMPLE / SYNTHETIC TEST DATA — NOT A REAL DOCUMENT,' indicating this is a synthetic or AI-generated document for testing purposes. This is an experimental, probabilistic signal only; real-world accuracy on scanned business documents (as opposed to the photos/art these detectors are usually tuned for) is unproven."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-2EDE9D85",
+      "CASE-589ECE66",
+      "CASE-7C24EBB6"
+    ],
+    "company": "testcompany",
+    "file": "Sample18_English_FontMismatch_Invoice.pdf",
+    "representative_case": "CASE-589ECE66",
+    "sha256": "34d1da2c0aabc57a5ca41bfad8adc7d9be7ed377743baa3b159a271fd7c7d87a"
+  },
+  "rules": {
+    "ai.generated_content_suspected": {
+      "points": 6,
+      "reason": "'Sample18_English_FontMismatch_Invoice.pdf': the vision-model review reports possible signs of AI-generated content (experimental, probabilistic signal).",
+      "version": 1
+    },
+    "field.tax_invoice_without_trn": {
+      "points": 15,
+      "reason": "'Sample18_English_FontMismatch_Invoice.pdf': Titled 'TAX INVOICE' but no TRN appears anywhere on it. A UAE tax invoice must carry the supplier's 15-digit Tax Registration Number.",
+      "version": 1
+    },
+    "font.inconsistency": {
+      "points": 40,
+      "reason": "'Sample18_English_FontMismatch_Invoice.pdf': 5 piece(s) of text are set in a different font, at a different size, or in a second copy of the same font, from the text around them — a sign they were typed in after the document was produced. Page 1: '1,450.00' is set in Times-Roman, while the text around it uses the helvetica font family — it may have been typed in after the document was produced.",
+      "version": 3
+    }
+  },
+  "score": {
+    "raw": 61.0,
+    "score": 61
+  }
+}

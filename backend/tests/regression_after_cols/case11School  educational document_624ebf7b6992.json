@@ -1,0 +1,243 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        },
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 2,
+          "severity": "high",
+          "text": "Page 2 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        },
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 3,
+          "severity": "high",
+          "text": "Page 3 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2022-11-15 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "flag",
+          "text": "The page says 'Scanned with CamScanner', but the file contains no image at all — nothing was scanned. The line is typed text, added to make the document look like a scan of a real paper."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 4 line item(s): quantity × unit price matches the line total."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'MLC15112287877' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "Phone-scanner watermark ('Scanned with CamScanner'), but no office scanner in the PDF metadata."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('PINK & BLUE NURSERY AL AIN - UAE ★ VERIFIED ★') names the issuer 'حضانة الوردي والأزرق PINK & BLUE NURSERY Al Ain - UAE'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 4 line item(s) add up to the subtotal 10,300.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "flag",
+          "text": "Titled 'TAX INVOICE' but no TRN appears anywhere on it. A UAE tax invoice must carry the supplier's 15-digit Tax Registration Number."
+        },
+        "tax_rate_consistency": {
+          "status": "flag",
+          "text": "The tax rate says 5% tax, but the tax is 0.00 on the subtotal 10,300.00 (5% would be 515.00). A zero-rated fee would not be labelled 5%."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 10300.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "حضانة الوردي والأزرق PINK & BLUE NURSERY Al Ain - UAE",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "web_page_origin",
+          "page": null,
+          "severity": "medium",
+          "text": "The PDF was made by 'PDFium', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Bootstrap 5 stock colours (#0d6efd, #664d03, #6c757d, #d63384, #e9ecef, #f8f9fa)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.05806461538461538,
+          "page": 1,
+          "width": 0.07899999999999996,
+          "x": 0.8275,
+          "y": 0.6488
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05806461538461538,
+            "page": 1,
+            "width": 0.07899999999999996,
+            "x": 0.8275,
+            "y": 0.6488
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.05908715596330272,
+            "page": 2,
+            "width": 0.10350000000000004,
+            "x": 0.8345,
+            "y": 0.6478
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.05806461538461538,
+            "page": 3,
+            "width": 0.07899999999999996,
+            "x": 0.8275,
+            "y": 0.6488
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-7AC9B30F"
+    ],
+    "company": "testcompany",
+    "file": "case11School  educational document.pdf",
+    "representative_case": "CASE-7AC9B30F",
+    "sha256": "624ebf7b699285dd3f499693075b4f4ac5f600fe671da3faaeb2b3c80baaf537"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case11School  educational document.pdf': 3 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar.",
+      "version": 2
+    },
+    "field.fake_scan_watermark": {
+      "points": 25,
+      "reason": "'case11School  educational document.pdf': The page says 'Scanned with CamScanner', but the file contains no image at all — nothing was scanned. The line is typed text, added to make the document look like a scan of a real paper.",
+      "version": 1
+    },
+    "field.tax_invoice_without_trn": {
+      "points": 15,
+      "reason": "'case11School  educational document.pdf': Titled 'TAX INVOICE' but no TRN appears anywhere on it. A UAE tax invoice must carry the supplier's 15-digit Tax Registration Number.",
+      "version": 1
+    },
+    "field.tax_rate_mismatch": {
+      "points": 15,
+      "reason": "'case11School  educational document.pdf': The tax rate says 5% tax, but the tax is 0.00 on the subtotal 10,300.00 (5% would be 515.00). A zero-rated fee would not be labelled 5%.",
+      "version": 3
+    },
+    "metadata.web_page_origin": {
+      "points": 10,
+      "reason": "'case11School  educational document.pdf' was built as a web page and printed to PDF. The PDF was made by 'PDFium', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Bootstrap 5 stock colours (#0d6efd, #664d03, #6c757d, #d63384, #e9ecef, #f8f9fa).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 105.0,
+    "score": 100
+  }
+}

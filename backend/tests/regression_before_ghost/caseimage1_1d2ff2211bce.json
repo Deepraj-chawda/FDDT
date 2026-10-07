@@ -1,0 +1,187 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "flag",
+          "text": "Document date 2027-11-15 is in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'MLG15112257877' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('PINK & BLUE NURSERY AL AIN - UAE VERIFIED') names the issuer 'حضانة الوردي والأزرق\nPINK & BLUE NURSERY METTE'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 10300.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "حضانة الوردي والأزرق\nPINK & BLUE NURSERY METTE",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.06944827586206892,
+          "page": 1,
+          "width": 0.12039655172413799,
+          "x": 0.8345,
+          "y": 0.6410655172413794
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.06944827586206892,
+            "page": 1,
+            "width": 0.12039655172413799,
+            "x": 0.8345,
+            "y": 0.6410655172413794
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.05,
+            "page": 1,
+            "width": 0.4,
+            "x": 0.3,
+            "y": 0.02
+          },
+          "finding": "visual_font_consistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 — Font consistency: The Arabic text at the top center is in a different font style and color (pink) compared to the rest of the document which uses a standard sans-serif font in black or blue. Also, the 'Remarks / Description:' section uses a different font color (yellow background with red text) compared to the main body text. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": {
+            "height": 0.1,
+            "page": 1,
+            "width": 0.4,
+            "x": 0.05,
+            "y": 0.55
+          },
+          "finding": "visual_color_contrast_consistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 — Color / contrast consistency: The 'Remarks / Description:' box has a yellow background that contrasts with the plain white background of the rest of the page. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1630D946"
+    ],
+    "company": "testcompany",
+    "file": "caseimage1.pdf",
+    "representative_case": "CASE-1630D946",
+    "sha256": "1d2ff2211bce7f7ff163213652d0996c612a2aee9e59c632a6419b176f3c86bb"
+  },
+  "rules": {
+    "field.date_in_future": {
+      "points": 25,
+      "reason": "'caseimage1.pdf': Document date 2027-11-15 is in the future.",
+      "version": 1
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'caseimage1.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    },
+    "visual.color_contrast_inconsistency": {
+      "points": 12,
+      "reason": "'caseimage1.pdf': the vision-model review reports a patch with a different background/contrast. Page 1 — Color / contrast consistency: The 'Remarks / Description:' box has a yellow background that contrasts with the plain white background of the rest of the page. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    },
+    "visual.font_inconsistency": {
+      "points": 12,
+      "reason": "'caseimage1.pdf': the vision-model review reports inconsistent fonts. Page 1 — Font consistency: The Arabic text at the top center is in a different font style and color (pink) compared to the rest of the document which uses a standard sans-serif font in black or blue. Also, the 'Remarks / Description:' section uses a different font color (yellow background with red text) compared to the main body text. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 59.0,
+    "score": 59
+  }
+}

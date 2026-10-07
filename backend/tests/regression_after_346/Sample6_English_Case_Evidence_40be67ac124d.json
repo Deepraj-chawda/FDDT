@@ -1,0 +1,181 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample6_English_Case_Evidence.pdf\" in case CASE-AC10D420 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (14,250.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-18 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'REC-2026-0818-8821' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the total 14,250.00."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "OAKRIDGE INTERNATIONAL ACADEMY",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.021931578947368413,
+          "page": 1,
+          "width": 0.136,
+          "x": 0.6320000000000001,
+          "y": 0.6216999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05845254237288133,
+            "page": 1,
+            "width": 0.2570625,
+            "x": 0.1459375,
+            "y": 0.6194
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.021931578947368413,
+            "page": 1,
+            "width": 0.136,
+            "x": 0.6320000000000001,
+            "y": 0.6216999999999999
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1FD06F9D",
+      "CASE-2C1C7304",
+      "CASE-4A072B50",
+      "CASE-574B5439",
+      "CASE-61637697",
+      "CASE-74E159DB",
+      "CASE-8AAF3E05",
+      "CASE-8B6028CA",
+      "CASE-9B9B9220",
+      "CASE-AC10D420",
+      "CASE-ACC0FDB8",
+      "CASE-CE205D2D",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-EB84476F"
+    ],
+    "company": "testcompany",
+    "file": "Sample6_English_Case_Evidence.pdf",
+    "representative_case": "CASE-8B6028CA",
+    "sha256": "40be67ac124d7e9bcca278d129672881ae18314cce52c06b2178be2fafecbc1d"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample6_English_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample6_English_Case_Evidence.pdf\" in case CASE-AC10D420 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 40.0,
+    "score": 40
+  }
+}

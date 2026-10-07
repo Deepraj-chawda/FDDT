@@ -1,0 +1,222 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample7_Arabic_Case_Invoice.pdf\" in case CASE-CF679EE6 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 3 line item(s): quantity × unit price matches the line total."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2026-7731-HTL' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the subtotal 7,500.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 310481920400003."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 1,125.00 is 15% of the subtotal 7,500.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 7500.00 + tax 1125.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "فندق وأجنحة قصر الواحة الفاخر (ذ.م.م) قطاع الضيافة وخدمات المؤتمرات ورجال الأعمال - فئة ٥ نجوم طريق الملك فهد، حي الصحافة، الرياض، المملكة العربية السعودية",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers in SA, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "web_page_origin",
+          "page": null,
+          "severity": "medium",
+          "text": "The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#0f172a, #1e293b, #334155, #475569, #64748b, #e2e8f0)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.029859999999999998,
+          "page": 1,
+          "width": 0.19200000000000003,
+          "x": 0.10400000000000001,
+          "y": 0.5591999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.029859999999999998,
+            "page": 1,
+            "width": 0.19200000000000003,
+            "x": 0.10400000000000001,
+            "y": 0.5591999999999999
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.06659999999999999,
+            "page": 1,
+            "width": 0.24213953488372092,
+            "x": 0.34886046511627905,
+            "y": 0.5426
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-11F0CAA6",
+      "CASE-1C88EFE7",
+      "CASE-1FD06F9D",
+      "CASE-2897F393",
+      "CASE-30D16008",
+      "CASE-3511D44E",
+      "CASE-3D126D3A",
+      "CASE-4B6F6223",
+      "CASE-5A8B6D87",
+      "CASE-6C792535",
+      "CASE-71A8323E",
+      "CASE-74E159DB",
+      "CASE-8BDDEB82",
+      "CASE-99421D4E",
+      "CASE-ACC0FDB8",
+      "CASE-CF679EE6",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-FF8CB078"
+    ],
+    "company": "testcompany",
+    "file": "Sample7_Arabic_Case_Invoice.pdf",
+    "representative_case": "CASE-3D126D3A",
+    "sha256": "c06c5e8200e1603c33ee4eae05e3ebb69f13f6d336c69da0d8fc665c4eff2744"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample7_Arabic_Case_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample7_Arabic_Case_Invoice.pdf\" in case CASE-CF679EE6 — a possible duplicate or near-duplicate resubmission.",
+      "version": 2
+    },
+    "metadata.web_page_origin": {
+      "points": 10,
+      "reason": "'Sample7_Arabic_Case_Invoice.pdf' was built as a web page and printed to PDF. The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#0f172a, #1e293b, #334155, #475569, #64748b, #e2e8f0).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 50.0,
+    "score": 50
+  }
+}

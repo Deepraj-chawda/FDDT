@@ -1,0 +1,171 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-09-03 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-09-03 is not after the file's creation (2026-09-03)."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "TRN 100293819400003: 15 digits, starts with 100."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'AUE-2026-3312' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "Subtotal matches the sum of 2 line-item field(s)."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 100293819400003."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "flag",
+          "text": "Total 42000.00 does not match subtotal 22000.00 (no tax shown) (expected 22000.00)."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "شركة الأفق الهندسية Al Ufuq Engineering Co.",
+        "match_score": 85.5,
+        "matched_registry_name": "Al Falah General Trading LLC",
+        "matched_via": "fuzzy",
+        "threshold": 85.0
+      },
+      "result": "pass"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2026 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2026') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 11 days, 3:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0A108B8F"
+    ],
+    "company": "Default Company",
+    "file": "Sample11_Arabic_Case_Invoice.pdf",
+    "representative_case": "CASE-0A108B8F",
+    "sha256": "5373b29fef820a1aa2775cf095b6e7c2443dc4598d45b6c26f4cf8932a95c5ba"
+  },
+  "rules": {
+    "field.total_tax_mismatch": {
+      "points": 20,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf': Total 42000.00 does not match subtotal 22000.00 (no tax shown) (expected 22000.00).",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2026 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample11_Arabic_Case_Invoice.pdf' was modified after it was created. The file was modified after it was created: ModDate is 11 days, 3:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 60.0,
+    "score": 60
+  }
+}

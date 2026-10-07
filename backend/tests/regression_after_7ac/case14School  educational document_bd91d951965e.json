@@ -1,0 +1,238 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 matches page 1 of \"case13School  educational document.pdf\" in case CASE-0D7E8A5E, submitted by testreviewer L!, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0612,
+            "page": 1,
+            "width": 0.1155,
+            "x": 0.1282,
+            "y": 0.7737
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-03 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-03 is not after the file's creation (2026-09-16)."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "TRN 100364873800003: 15 digits, starts with 100."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'BAB010689' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('THE BRITISH INTERNATIONAL SCHOOL ABU DHABI') names the issuer 'The British International School Abu Dhabi'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 2 line item(s) add up to the total 78,407.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01416,
+            "page": 1,
+            "width": 0.04354,
+            "x": 0.63028,
+            "y": 0.94262
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'require' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01406,
+            "page": 1,
+            "width": 0.01054,
+            "x": 0.67198,
+            "y": 0.94272
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'a' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "The British International School Abu Dhabi",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.03695805609610092,
+          "page": 1,
+          "width": 0.14928190075856612,
+          "x": 0.1260673204259276,
+          "y": 0.8810789961462476
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.11637066486537251,
+            "page": 1,
+            "width": 0.1664048383546641,
+            "x": 0.10611128935442463,
+            "y": 0.7641700047534152
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.03695805609610092,
+            "page": 1,
+            "width": 0.14928190075856612,
+            "x": 0.1260673204259276,
+            "y": 0.8810789961462476
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0D7E8A5E",
+      "CASE-866F937F"
+    ],
+    "company": "testcompany",
+    "file": "case14School  educational document.pdf",
+    "representative_case": "CASE-866F937F",
+    "sha256": "bd91d951965ed892e65d462470993f3dc6984b915e63a1e793742e1900936815"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case14School  educational document.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 matches page 1 of \"case13School  educational document.pdf\" in case CASE-0D7E8A5E, submitted by testreviewer L!, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded.",
+      "version": 2
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'case14School  educational document.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 65.0,
+    "score": 65
+  }
+}

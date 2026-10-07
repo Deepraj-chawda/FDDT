@@ -1,0 +1,167 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample21.pdf\" in case CASE-CF609781 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2023-07-05 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2023-07-05 is not after the file's creation (2023-07-07)."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "IBAN AE250030000260337020001: checksum (mod 97) valid, bank code 003 = ADCB, matching the printed bank name, contains the printed account number 260337020001; TRN 100216382000003: 15 digits, starts with 100."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '52086' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 5 line item(s) add up to the total 57,182.50 less tax 42.50 (57,140.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax applies to {Uniform, Technology Fee} = 850.00: 5% of it is 42.50 (the other line items are not taxed)."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "أكاديمية الخليج الدولية الخاصة THE GULF INTERNATIONAL PRIVATE ACADEMYO",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.09999999999999998,
+          "page": 1,
+          "width": 0.13772111553784863,
+          "x": 0.0792788844621514,
+          "y": 0.6704000000000001
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.09999999999999998,
+            "page": 1,
+            "width": 0.13772111553784863,
+            "x": 0.0792788844621514,
+            "y": 0.6704000000000001
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.030839453589476817,
+            "page": 1,
+            "width": 0.17774061233635774,
+            "x": 0.4435666737507419,
+            "y": 0.6418454453403686
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.08421485555778407,
+            "page": 1,
+            "width": 0.16907563633477984,
+            "x": 0.6857814920890231,
+            "y": 0.6328509725165152
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-A7705426",
+      "CASE-CF609781",
+      "CASE-DE627FA2"
+    ],
+    "company": "testcompany",
+    "file": "case2.pdf",
+    "representative_case": "CASE-DE627FA2",
+    "sha256": "e9c3ea682c7407ba50d8564f90fb668ee106280583b785e4f80ea151456a70b6"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case2.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample21.pdf\" in case CASE-CF609781 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 40.0,
+    "score": 40
+  }
+}

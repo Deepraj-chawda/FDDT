@@ -1,0 +1,169 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0909,
+            "page": 1,
+            "width": 0.3899,
+            "x": 0.2274,
+            "y": 0.2506
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 31 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-14 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'NW-2026-04417' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 430.00 is 5% of the subtotal 8,600.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 8600.00 + tax 430.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "Northwind Office Supplies LLC",
+        "match_score": 85.5,
+        "matched_registry_name": "Al-Suwaidi Nuclear & Precision Instrumentation LLC",
+        "matched_via": "fuzzy",
+        "threshold": 85.0
+      },
+      "result": "pass"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": null,
+        "signature_expected": true
+      },
+      "detected": [],
+      "result": "flag"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.05,
+            "page": 1,
+            "width": 0.8,
+            "x": 0.1,
+            "y": 0.14
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 — Text alignment: The line with 'Standing desks x 10 @ 380.00 ............ 3,800.00 USD' is slightly lower than the line above it, indicating misalignment in the itemized list around vertical position 0.14 to 0.18. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": null,
+          "finding": "ai_generation_assessment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: the model reports possible signs of AI-generated/synthetic content — The document has a very clean, uniform layout with perfect spacing except for a minor text alignment inconsistency, and the footer text 'SAMPLE / SYNTHETIC TEST DATA - NOT A REAL DOCUMENT' explicitly indicates synthetic generation. The overall appearance is consistent with AI or template-generated synthetic documents rather than a scanned or photographed real invoice. This is an experimental, probabilistic signal only; real-world accuracy on scanned business documents (as opposed to the photos/art these detectors are usually tuned for) is unproven."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-30720157"
+    ],
+    "company": "Default Company",
+    "file": "Sample15_English_Mismatch_Invoice.pdf",
+    "representative_case": "CASE-30720157",
+    "sha256": "1649dee021e6e2f2a375e031ee5903daafd9a5b592eeb831b6690a79490f47f0"
+  },
+  "rules": {
+    "ai.generated_content_suspected": {
+      "points": 6,
+      "reason": "'Sample15_English_Mismatch_Invoice.pdf': the vision-model review reports possible signs of AI-generated content (experimental, probabilistic signal).",
+      "version": 1
+    },
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample15_English_Mismatch_Invoice.pdf': 1 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "signature.expected_missing": {
+      "points": 10,
+      "reason": "No signature or stamp was located on 'Sample15_English_Mismatch_Invoice.pdf', though this kind of document normally carries one.",
+      "version": 1
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'Sample15_English_Mismatch_Invoice.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The line with 'Standing desks x 10 @ 380.00 ............ 3,800.00 USD' is slightly lower than the line above it, indicating misalignment in the itemized list around vertical position 0.14 to 0.18. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 61.0,
+    "score": 61
+  }
+}

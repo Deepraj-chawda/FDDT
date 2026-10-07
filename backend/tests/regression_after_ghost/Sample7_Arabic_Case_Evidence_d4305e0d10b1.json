@@ -1,0 +1,173 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample7_Arabic_Case_Evidence.pdf\" in case CASE-CF679EE6 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (8,625.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '994182048192' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "البنك الأهلي السعودي",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in SA, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.03070000000000006,
+          "page": 1,
+          "width": 0.10400000000000001,
+          "x": 0.14400000000000002,
+          "y": 0.6128
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.03070000000000006,
+            "page": 1,
+            "width": 0.10400000000000001,
+            "x": 0.14400000000000002,
+            "y": 0.6128
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.06800000000000006,
+            "page": 1,
+            "width": 0.3266401384083044,
+            "x": 0.5966712802768166,
+            "y": 0.603
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0EF1FAD5",
+      "CASE-1F20A083",
+      "CASE-1FD06F9D",
+      "CASE-2CBAED37",
+      "CASE-3511D44E",
+      "CASE-3D126D3A",
+      "CASE-609B87E8",
+      "CASE-67041F47",
+      "CASE-6C792535",
+      "CASE-74E159DB",
+      "CASE-ACC0FDB8",
+      "CASE-CF679EE6",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-F1B2FE14"
+    ],
+    "company": "testcompany",
+    "file": "Sample7_Arabic_Case_Evidence.pdf",
+    "representative_case": "CASE-3D126D3A",
+    "sha256": "d4305e0d10b18e178449a68b264ca711f11fdde6446e305322adae2084595854"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample7_Arabic_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample7_Arabic_Case_Evidence.pdf\" in case CASE-CF679EE6 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 40.0,
+    "score": 40
+  }
+}

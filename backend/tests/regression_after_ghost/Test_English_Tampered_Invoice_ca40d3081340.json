@@ -1,0 +1,171 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.227,
+            "page": 1,
+            "width": 0.7502,
+            "x": 0.0982,
+            "y": 0.7295
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 63 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.084,
+            "page": 1,
+            "width": 0.1788,
+            "x": 0.075,
+            "y": 0.727
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        },
+        {
+          "bbox": {
+            "height": 0.084,
+            "page": 1,
+            "width": 0.1844,
+            "x": 0.69,
+            "y": 0.876
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-09-16 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'TMP-0001' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "skipped",
+          "text": "PDF producer information not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "ACME CORP",
+        "match_score": 45.0,
+        "matched_registry_name": "Meridian Industrial Supplies LLC",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "metadata_entirely_stripped",
+          "page": null,
+          "severity": "high",
+          "text": "Both the Info dictionary and the XMP metadata stream are completely empty/absent — a fully-scrubbed file is itself a red flag, not just an absence of data."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-BE0DC4A1"
+    ],
+    "company": "Default Company",
+    "file": "Test_English_Tampered_Invoice.pdf",
+    "representative_case": "CASE-BE0DC4A1",
+    "sha256": "ca40d30813402e7490d37e6579e713e21b2c06d255c3871f1273a301d2f4e74a"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Test_English_Tampered_Invoice.pdf': 1 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Test_English_Tampered_Invoice.pdf': 2 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'ACME CORP' on 'Test_English_Tampered_Invoice.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    },
+    "metadata.stripped": {
+      "points": 12,
+      "reason": "'Test_English_Tampered_Invoice.pdf' carries no metadata at all — it may have been scrubbed to hide its origin.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 87.0,
+    "score": 87
+  }
+}

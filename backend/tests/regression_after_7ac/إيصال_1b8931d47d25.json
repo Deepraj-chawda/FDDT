@@ -1,0 +1,210 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-24 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE4400100000001049182901: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '20260824-910482-FAB-FT' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "بنك أبوظبي الأول | First Abu Dhabi Bank (FAB)",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "web_page_origin",
+          "page": null,
+          "severity": "medium",
+          "text": "The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#10b981, #111827, #4b5563, #6b7280, #e2e8f0)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.01849999999999996,
+          "page": 1,
+          "width": 0.1205,
+          "x": 0.16699999999999998,
+          "y": 0.6368
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.01849999999999996,
+            "page": 1,
+            "width": 0.1205,
+            "x": 0.16699999999999998,
+            "y": 0.6368
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.07319999999999993,
+            "page": 1,
+            "width": 0.4285557163531114,
+            "x": 0.508,
+            "y": 0.6134
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-047F0E67",
+      "CASE-0B78C29C",
+      "CASE-0CAB55E0",
+      "CASE-1FD06F9D",
+      "CASE-290A1E3D",
+      "CASE-3C2ADEBB",
+      "CASE-6573A030",
+      "CASE-74E159DB",
+      "CASE-938C3870",
+      "CASE-ACC0FDB8",
+      "CASE-AEE6C99D",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-ED0D638F",
+      "CASE-F88C88FC"
+    ],
+    "company": "testcompany",
+    "file": "إيصال.pdf",
+    "representative_case": "CASE-6573A030",
+    "sha256": "1b8931d47d253a80e006cedebfd5f00fc031d5afdb76787ac2a0cc1c2fcb991a"
+  },
+  "rules": {
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'إيصال.pdf': Invalid payment identifier(s): IBAN AE4400100000001049182901: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "metadata.web_page_origin": {
+      "points": 10,
+      "reason": "'إيصال.pdf' was built as a web page and printed to PDF. The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#10b981, #111827, #4b5563, #6b7280, #e2e8f0).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 25.0,
+    "score": 25
+  }
+}

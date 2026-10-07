@@ -1,0 +1,168 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-28 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'FAB-WIRE-20260828-881920' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "FIRST ABU DHABI BANK (FAB)",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.021084210526315816,
+          "page": 1,
+          "width": 0.16055645161290322,
+          "x": 0.6545000000000001,
+          "y": 0.6224999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.06879999999999997,
+            "page": 1,
+            "width": 0.352,
+            "x": 0.06399999999999999,
+            "y": 0.6092
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.021084210526315816,
+            "page": 1,
+            "width": 0.16055645161290322,
+            "x": 0.6545000000000001,
+            "y": 0.6224999999999999
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-081A5D03",
+      "CASE-0A9DF515",
+      "CASE-1A1C20EE",
+      "CASE-1FD06F9D",
+      "CASE-240E7414",
+      "CASE-25321E95",
+      "CASE-2A52737A",
+      "CASE-2CD1AE60",
+      "CASE-3121FEE1",
+      "CASE-4831DD54",
+      "CASE-4F6F8BFE",
+      "CASE-74E159DB",
+      "CASE-ACC0FDB8",
+      "CASE-ADFCD2C5",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-D7C8DCCA",
+      "CASE-E3AB20DE"
+    ],
+    "company": "testcompany",
+    "file": "evidence.pdf",
+    "representative_case": "CASE-081A5D03",
+    "sha256": "8aa9dee3b9844921c05b7aea12d85f5d56b7bf716f59bb6fd847c217af8561e6"
+  },
+  "rules": {
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'evidence.pdf': Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 15.0,
+    "score": 15
+  }
+}

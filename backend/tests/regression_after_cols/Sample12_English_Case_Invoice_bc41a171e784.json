@@ -1,0 +1,383 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0453,
+            "page": 1,
+            "width": 0.6156,
+            "x": 0.0955,
+            "y": 0.752
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 69 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.0338,
+            "page": 1,
+            "width": 0.6208,
+            "x": 0.0769,
+            "y": 0.7841
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 41 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample12_English_Case_Invoice.pdf\" in case CASE-5F2D3700 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0607,
+            "page": 1,
+            "width": 0.0895,
+            "x": 0.8138,
+            "y": 0.876
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not after the file's creation (2026-08-25)."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'INV-ENEC-2026-1049' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 100294819200003."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 9,000.00 is 5% of the subtotal 180,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 180000.00 + tax 9000.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01506,
+            "page": 1,
+            "width": 0.03794,
+            "x": 0.38778,
+            "y": 0.12572
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '+971' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01406,
+            "page": 1,
+            "width": 0.01424,
+            "x": 0.57088,
+            "y": 0.33662
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '4' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01396,
+            "page": 1,
+            "width": 0.01344,
+            "x": 0.57828,
+            "y": 0.45642
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01496,
+            "page": 1,
+            "width": 0.08254,
+            "x": 0.83778,
+            "y": 0.45602
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '14,000.00' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01526,
+            "page": 1,
+            "width": 0.09074,
+            "x": 0.83028,
+            "y": 0.51192
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '180,000.00' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01376,
+            "page": 1,
+            "width": 0.01274,
+            "x": 0.91868,
+            "y": 0.97292
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01356,
+            "page": 1,
+            "width": 0.01114,
+            "x": 0.89048,
+            "y": 0.97322
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "AL-SUWAIDI NUCLEAR & PRECISION INSTRUMENTATION LLC",
+        "match_score": 100.0,
+        "matched_registry_name": "Al-Suwaidi Nuclear & Precision Instrumentation LLC",
+        "matched_via": "fuzzy",
+        "threshold": 85.0
+      },
+      "result": "pass"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.13,
+          "page": 1,
+          "width": 0.33999999999999997,
+          "x": 0.58,
+          "y": 0.6
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.13,
+            "page": 1,
+            "width": 0.34,
+            "x": 0.08,
+            "y": 0.59
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.13,
+            "page": 1,
+            "width": 0.33999999999999997,
+            "x": 0.58,
+            "y": 0.6
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0319E379",
+      "CASE-0C6F41F9",
+      "CASE-1BD2A11D",
+      "CASE-1CAEC35B",
+      "CASE-1D925E31",
+      "CASE-3249B03F",
+      "CASE-4C085E81",
+      "CASE-5F2D3700",
+      "CASE-6A2EA2ED",
+      "CASE-6C73A607",
+      "CASE-6FCE2F6C",
+      "CASE-70DA1113",
+      "CASE-7EA12803",
+      "CASE-B4034CC7"
+    ],
+    "company": "Default Company",
+    "file": "Sample12_English_Case_Invoice.pdf",
+    "representative_case": "CASE-1D925E31",
+    "sha256": "bc41a171e7849d2f9bc2212c7576da298fe31db2c54019706d4bfb32a53e04fe"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample12_English_Case_Invoice.pdf': 2 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample12_English_Case_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample12_English_Case_Invoice.pdf\" in case CASE-5F2D3700 — a possible duplicate or near-duplicate resubmission.",
+      "version": 2
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample12_English_Case_Invoice.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample12_English_Case_Invoice.pdf': Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample12_English_Case_Invoice.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample12_English_Case_Invoice.pdf' was modified after it was created. The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 155.0,
+    "score": 100
+  }
+}

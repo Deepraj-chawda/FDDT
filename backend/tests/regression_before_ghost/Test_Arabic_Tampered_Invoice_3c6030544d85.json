@@ -1,0 +1,167 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.2273,
+            "page": 1,
+            "width": 0.7535,
+            "x": 0.1051,
+            "y": 0.7297
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 62 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0485,
+            "page": 1,
+            "width": 0.1862,
+            "x": 0.0762,
+            "y": 0.7625
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        },
+        {
+          "bbox": {
+            "height": 0.0835,
+            "page": 1,
+            "width": 0.185,
+            "x": 0.69,
+            "y": 0.8765
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-09-16 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'TMP-0001' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "skipped",
+          "text": "PDF producer information not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "رابتخا ةروتاف",
+        "match_score": 41.54,
+        "matched_registry_name": "فندق وأجنحة قصر الواحة الفاخر",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "metadata_entirely_stripped",
+          "page": null,
+          "severity": "high",
+          "text": "Both the Info dictionary and the XMP metadata stream are completely empty/absent — a fully-scrubbed file is itself a red flag, not just an absence of data."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-78B37E39"
+    ],
+    "company": "Default Company",
+    "file": "Test_Arabic_Tampered_Invoice.pdf",
+    "representative_case": "CASE-78B37E39",
+    "sha256": "3c6030544d8519dcba4ded06c86cd732587cd0b583fd1b6bca2a004182aa533a"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Test_Arabic_Tampered_Invoice.pdf': 1 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Test_Arabic_Tampered_Invoice.pdf': 2 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'رابتخا ةروتاف' on 'Test_Arabic_Tampered_Invoice.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    },
+    "metadata.stripped": {
+      "points": 12,
+      "reason": "'Test_Arabic_Tampered_Invoice.pdf' carries no metadata at all — it may have been scrubbed to hide its origin.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 87.0,
+    "score": 87
+  }
+}

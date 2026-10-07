@@ -1,0 +1,261 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0453,
+            "page": 1,
+            "width": 0.6156,
+            "x": 0.0955,
+            "y": 0.752
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 69 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.0338,
+            "page": 1,
+            "width": 0.6208,
+            "x": 0.0769,
+            "y": 0.7841
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 41 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample13_Arabic_cp_ela_Invoice.pdf\" in case CASE-91206BB0 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0616,
+            "page": 1,
+            "width": 0.0889,
+            "x": 0.8138,
+            "y": 0.8756
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-20 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-20 is not after the file's creation (2026-08-25)."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE4400100000001049182901: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 3 line item(s): quantity × unit price matches the line total."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2026-772-INV-DHAF' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the subtotal 130,000.00."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 6,500.00 is 5% of the subtotal 130,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 130000.00 + tax 6500.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01526,
+            "page": 1,
+            "width": 0.08304,
+            "x": 0.07898,
+            "y": 0.31322
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '90,000.00' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "شركة الظفرة للخدمات الهندسية والسلامة النووية والبيئية ذ.م.م",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.025660000000000016,
+          "page": 1,
+          "width": 0.18776632302405497,
+          "x": 0.10823367697594502,
+          "y": 0.5918
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.025660000000000016,
+            "page": 1,
+            "width": 0.18776632302405497,
+            "x": 0.10823367697594502,
+            "y": 0.5918
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.08099999999999996,
+            "page": 1,
+            "width": 0.18700000000000006,
+            "x": 0.391,
+            "y": 0.5777999999999999
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0861360C",
+      "CASE-370CE650",
+      "CASE-91206BB0",
+      "CASE-C76B35B8",
+      "CASE-E4B31A87"
+    ],
+    "company": "testcompany",
+    "file": "Sample13_Arabic_cp_ela_Invoice.pdf",
+    "representative_case": "CASE-C76B35B8",
+    "sha256": "d440edcb8b6c9c308f1f90340ad4385b2786e07f6e81be977d92f857496fa04a"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf': 2 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample13_Arabic_cp_ela_Invoice.pdf\" in case CASE-91206BB0 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf': Invalid payment identifier(s): IBAN AE4400100000001049182901: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf': editing software was found in its metadata. info./Producer mentions 'gimp' ('GIMP 2.10 (X11)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample13_Arabic_cp_ela_Invoice.pdf' was modified after it was created. The file was modified after it was created: ModDate is 2 days, 0:00:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 155.0,
+    "score": 100
+  }
+}

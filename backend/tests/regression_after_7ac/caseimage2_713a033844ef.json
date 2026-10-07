@@ -1,0 +1,371 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2025-02-26 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '539885' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "The stamp ('AL TAYER MOTORS LLC\n10') and the issuer ('الطاير للسيارات') share no writing system to compare."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "flag",
+          "text": "Line items = 126,007.87, stated subtotal 120,007.50, difference 6,000.37 (summed: 138,495.00 + -10,387.13 + -2,100.00)."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 6,000.37 is 5% of the subtotal 120,007.50."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 120007.50 + tax 6000.37."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01536,
+            "page": 1,
+            "width": 0.05104,
+            "x": 0.72428,
+            "y": 0.28642
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'Center' looks like a different font (monospace) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01546,
+            "page": 1,
+            "width": 0.03644,
+            "x": 0.81328,
+            "y": 0.28632
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '1301' looks like a different font (monospace) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01536,
+            "page": 1,
+            "width": 0.03774,
+            "x": 0.51418,
+            "y": 0.30172
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '2025' looks like a different font (monospace) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 3 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01666,
+            "page": 1,
+            "width": 0.03554,
+            "x": 0.02948,
+            "y": 0.46622
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Ford' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01376,
+            "page": 1,
+            "width": 0.05114,
+            "x": 0.68948,
+            "y": 0.50092
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Amount' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.03894,
+            "x": 0.27138,
+            "y": 0.50252
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Date:' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01536,
+            "page": 1,
+            "width": 0.04744,
+            "x": 0.06478,
+            "y": 0.50262
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Deposit' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01536,
+            "page": 1,
+            "width": 0.02114,
+            "x": 0.72618,
+            "y": 0.65232
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'on' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01336,
+            "page": 1,
+            "width": 0.02984,
+            "x": 0.72478,
+            "y": 0.73072
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Bank' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01316,
+            "page": 1,
+            "width": 0.01524,
+            "x": 0.57748,
+            "y": 0.73122
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'or' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01336,
+            "page": 1,
+            "width": 0.04634,
+            "x": 0.49778,
+            "y": 0.73142
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'deposit,' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01496,
+            "page": 1,
+            "width": 0.04114,
+            "x": 0.03018,
+            "y": 0.82832
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'Sales' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01476,
+            "page": 1,
+            "width": 0.04744,
+            "x": 0.06528,
+            "y": 0.94572
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'conditions' looks like a different font (serif) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "الطاير للسيارات",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.029714285714285693,
+          "page": 1,
+          "width": 0.025655172413793115,
+          "x": 0.42734482758620684,
+          "y": 0.755
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05740000000000001,
+            "page": 1,
+            "width": 0.17349999999999996,
+            "x": 0.07949999999999999,
+            "y": 0.7556
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.029714285714285693,
+            "page": 1,
+            "width": 0.025655172413793115,
+            "x": 0.42734482758620684,
+            "y": 0.755
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-9EAF4471"
+    ],
+    "company": "testcompany",
+    "file": "caseimage2.pdf",
+    "representative_case": "CASE-9EAF4471",
+    "sha256": "713a033844efdb18928dda96b86dae3d6532c1ed3c46747938bac096bd10529d"
+  },
+  "rules": {
+    "field.subtotal_line_item_mismatch": {
+      "points": 15,
+      "reason": "'caseimage2.pdf': Line items = 126,007.87, stated subtotal 120,007.50, difference 6,000.37 (summed: 138,495.00 + -10,387.13 + -2,100.00).",
+      "version": 3
+    },
+    "font.inconsistency_scanned": {
+      "points": 25,
+      "reason": "'caseimage2.pdf': on the scanned page, 10 word(s) look like a different font from the text around them (OCR font recognition — an estimate). Page 1 (scanned): 'Ford' looks like a different font (serif) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned.",
+      "version": 2
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'caseimage2.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 50.0,
+    "score": 50
+  }
+}

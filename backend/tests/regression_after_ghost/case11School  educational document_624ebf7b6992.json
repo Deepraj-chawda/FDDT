@@ -1,0 +1,196 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        },
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 2,
+          "severity": "high",
+          "text": "Page 2 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        },
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 3,
+          "severity": "high",
+          "text": "Page 3 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2022-11-15 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 4 line item(s): quantity × unit price matches the line total."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'MLC15112287877' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "Phone-scanner watermark ('Scanned with CamScanner'), but no office scanner in the PDF metadata."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('PINK & BLUE NURSERY AL AIN - UAE ★ VERIFIED ★') names the issuer 'حضانة الوردي والأزرق PINK & BLUE NURSERY Al Ain - UAE'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 4 line item(s) add up to the subtotal 10,300.00."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax applies to {Registration} = 0.00: 5% of it is 0.00 (the other line items are not taxed)."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 10300.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "حضانة الوردي والأزرق PINK & BLUE NURSERY Al Ain - UAE",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "orphaned_objects",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 3 object(s) present in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.05806461538461538,
+          "page": 1,
+          "width": 0.07899999999999996,
+          "x": 0.8275,
+          "y": 0.6488
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05806461538461538,
+            "page": 1,
+            "width": 0.07899999999999996,
+            "x": 0.8275,
+            "y": 0.6488
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.05908715596330272,
+            "page": 2,
+            "width": 0.10350000000000004,
+            "x": 0.8345,
+            "y": 0.6478
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.05806461538461538,
+            "page": 3,
+            "width": 0.07899999999999996,
+            "x": 0.8275,
+            "y": 0.6488
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-7AC9B30F"
+    ],
+    "company": "testcompany",
+    "file": "case11School  educational document.pdf",
+    "representative_case": "CASE-7AC9B30F",
+    "sha256": "624ebf7b699285dd3f499693075b4f4ac5f600fe671da3faaeb2b3c80baaf537"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case11School  educational document.pdf': 3 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"caseimage1.pdf\" in case CASE-1630D946, submitted by testreviewer L! — a possible duplicate or near-duplicate resubmission. The files themselves differ (different SHA-256): only the page images are perceptually similar.",
+      "version": 1
+    },
+    "metadata.orphaned_objects": {
+      "points": 8,
+      "reason": "'case11School  educational document.pdf' contains orphaned internal objects left behind by editing.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 48.0,
+    "score": 48
+  }
+}

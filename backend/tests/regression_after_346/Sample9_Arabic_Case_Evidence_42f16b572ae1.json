@@ -1,0 +1,183 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-30 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-30 is not after the file's creation (2026-09-12)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'NTS-2026-5518' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "البنك السعودي للاستثمار",
+        "match_score": 37.25,
+        "matched_registry_name": "مؤسسة النخبة للأنظمة التقنية",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.1100000000000001,
+          "page": 1,
+          "width": 0.24000000000000005,
+          "x": 0.08,
+          "y": 0.59
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.1100000000000001,
+            "page": 1,
+            "width": 0.24000000000000005,
+            "x": 0.08,
+            "y": 0.59
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.16000000000000003,
+            "page": 1,
+            "width": 0.2400000000000001,
+            "x": 0.63,
+            "y": 0.59
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "ai_generation_assessment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: the model reports possible signs of AI-generated/synthetic content — The document contains a footer note stating 'SAMPLE / SYNTHETIC TEST DATA — NOT A REAL DOCUMENT,' indicating it is artificially generated for testing purposes. The layout, fonts, and text alignment are very clean and uniform, typical of synthetic documents. This is an experimental, probabilistic signal only; real-world accuracy on scanned business documents (as opposed to the photos/art these detectors are usually tuned for) is unproven."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1FD06F9D",
+      "CASE-46C19894",
+      "CASE-60AD8C23",
+      "CASE-6BBA52DE",
+      "CASE-74E159DB",
+      "CASE-7C39E3E0",
+      "CASE-9053DEF2",
+      "CASE-A4E8ACD1",
+      "CASE-ACC0FDB8",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-DD6D8831",
+      "CASE-E96FC740"
+    ],
+    "company": "Default Company",
+    "file": "Sample9_Arabic_Case_Evidence.pdf",
+    "representative_case": "CASE-A4E8ACD1",
+    "sha256": "42f16b572ae148a3e9cac5d3cb413de3e30f15aed9eb52bdd15ac5c208a27845"
+  },
+  "rules": {
+    "ai.generated_content_suspected": {
+      "points": 6,
+      "reason": "'Sample9_Arabic_Case_Evidence.pdf': the vision-model review reports possible signs of AI-generated content (experimental, probabilistic signal).",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'البنك السعودي للاستثمار' on 'Sample9_Arabic_Case_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 21.0,
+    "score": 21
+  }
+}

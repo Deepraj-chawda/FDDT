@@ -1,0 +1,248 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-28 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "The file was created 49 days before its printed date 2026-08-28 but not modified on or after it — consistent with a document generated in advance."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'MER-WIRE-20260828-881920' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "MERIDIAN COMMERCIAL BANK",
+        "match_score": 50.0,
+        "matched_registry_name": "Meridian Industrial Supplies LLC",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "orphaned_objects",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 1 content object(s) (streams, fonts, images, pages or annotations) present in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
+        },
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('PDF-XChange Editor v9.4' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_creation_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /CreationDate (2026-07-10T08:00:00+00:00) disagrees with XMP xmp:CreateDate (2026-09-18T14:22:10+00:00) — tools that scrub or edit one often forget to update the other."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_mod_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /ModDate (2026-07-10T08:00:00+00:00) disagrees with XMP xmp:ModifyDate (2026-09-19T22:45:33+00:00)."
+        },
+        {
+          "bbox": null,
+          "finding": "incremental_updates_present",
+          "page": null,
+          "severity": "high",
+          "text": "Found 3 incremental update(s) beyond the baseline expected for this file's structure."
+        },
+        {
+          "bbox": null,
+          "finding": "history_absent_despite_revisions",
+          "page": null,
+          "severity": "medium",
+          "text": "The file shows 3 incremental update(s) but has no xmpMM:History revision chain at all."
+        },
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.1200000000000001,
+          "page": 1,
+          "width": 0.15999999999999998,
+          "x": 0.08,
+          "y": 0.44999999999999996
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.1200000000000001,
+            "page": 1,
+            "width": 0.15999999999999998,
+            "x": 0.08,
+            "y": 0.44999999999999996
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.18000000000000005,
+            "page": 1,
+            "width": 0.19000000000000006,
+            "x": 0.66,
+            "y": 0.4
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-D63AC666"
+    ],
+    "company": "Default Company",
+    "file": "Sample16_English_Case_Evidence.pdf",
+    "representative_case": "CASE-D63AC666",
+    "sha256": "33795008c45be86dddf3f21dd92c06e29c06ca56f304734c6791ae7415777a17"
+  },
+  "rules": {
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample16_English_Case_Evidence.pdf': Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'MERIDIAN COMMERCIAL BANK' on 'Sample16_English_Case_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    },
+    "metadata.creation_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample16_English_Case_Evidence.pdf': the creation dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.history_absent_despite_revisions": {
+      "points": 8,
+      "reason": "'Sample16_English_Case_Evidence.pdf' has multiple revisions but no edit history — the history may have been removed.",
+      "version": 1
+    },
+    "metadata.incremental_update_multiple": {
+      "points": 20,
+      "reason": "'Sample16_English_Case_Evidence.pdf' has multiple incremental saves after its original version — repeated post-creation edits.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'Sample16_English_Case_Evidence.pdf' embeds JavaScript or an action that runs code or reaches outside the document — unusual for a business document. This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document.",
+      "version": 2
+    },
+    "metadata.mod_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample16_English_Case_Evidence.pdf': the modification dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.orphaned_objects": {
+      "points": 8,
+      "reason": "'Sample16_English_Case_Evidence.pdf' contains orphaned internal objects left behind by editing.",
+      "version": 2
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'Sample16_English_Case_Evidence.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('PDF-XChange Editor v9.4' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 70.0,
+    "score": 70
+  }
+}

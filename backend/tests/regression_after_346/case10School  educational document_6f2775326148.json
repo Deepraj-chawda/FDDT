@@ -1,0 +1,455 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "limited"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "limited"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (51,475.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2023-06-12 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2023-06-12 is not after the file's creation (2023-06-12)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '2616/2023-2024' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('AJYAL INTERNATIONAL SCHOOL - AL FALAH\nAL FALAH CITY - AL FALAH') names the issuer 'ajyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 6 line item(s) add up to the total 51,475.00 less tax 0.00 (51,475.00)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.08262,
+            "x": 0.06159,
+            "y": 0.23545
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'AL REEM' is set in a second embedded copy of TimesNewRoman,Bold (subset MONKPZ; the page's main copy is ZEDDUK) — 'SALEH MOHAMED ALHARTHI' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.03719,
+            "x": 0.40924,
+            "y": 0.23545
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '2820' is set in a second embedded copy of TimesNewRoman,Bold (subset MONKPZ; the page's main copy is ZEDDUK) — 'SALEH MOHAMED ALHARTHI' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.09701,
+            "x": 0.50615,
+            "y": 0.23545
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'PRE-KG-NA' is set in a second embedded copy of TimesNewRoman,Bold (subset MONKPZ; the page's main copy is ZEDDUK) — 'SALEH MOHAMED ALHARTHI' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.07023,
+            "x": 0.69063,
+            "y": 0.36463
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '51,475.00' is set in a second embedded copy of TimesNewRoman,Bold (subset AKJOLD; the page's main copy is ZEDDUK) — '0' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.3773,
+            "x": 0.22786,
+            "y": 0.38601
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Fifty-One Thousand Four Hundred Seventy-Five Only' is set in a second embedded copy of TimesNewRoman,Bold (subset AKJOLD; the page's main copy is ZEDDUK) — 'Amount in words AED:' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.07023,
+            "x": 0.8725,
+            "y": 0.36463
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '51,475.00' is set in a second embedded copy of TimesNewRoman,Bold (subset AKJOLD; the page's main copy is ZEDDUK) — '0' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02001,
+            "page": 1,
+            "width": 0.07023,
+            "x": 0.8725,
+            "y": 0.38601
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '51,475.00' is set in a second embedded copy of TimesNewRoman,Bold (subset AKJOLD; the page's main copy is ZEDDUK) — 'Amount in words AED:' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06033,
+            "x": 0.70111,
+            "y": 0.25328
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '1,450.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Registration Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.07008,
+            "x": 0.69109,
+            "y": 0.27213
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '16,450.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; 'Term 1 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06033,
+            "x": 0.70153,
+            "y": 0.28921
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '2,300.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Books Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06961,
+            "x": 0.69277,
+            "y": 0.32558
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '13,350.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Term 2 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.07054,
+            "x": 0.69361,
+            "y": 0.34294
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '13,350.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Term 3 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06033,
+            "x": 0.88056,
+            "y": 0.25328
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '1,450.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Registration Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.07008,
+            "x": 0.87767,
+            "y": 0.2708
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '16,450.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Term 1 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06074,
+            "x": 0.88056,
+            "y": 0.28949
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '2,300.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Books Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.06961,
+            "x": 0.87974,
+            "y": 0.32631
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '13,350.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Term 2 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        },
+        {
+          "bbox": {
+            "height": 0.02037,
+            "page": 1,
+            "width": 0.07008,
+            "x": 0.87974,
+            "y": 0.34338
+          },
+          "finding": "font_subset_split",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '13,350.00' is set in a second embedded copy of TimesNewRoman (subset JIXQHL; the page's main copy is WFMPEQ) — this copy holds only the characters , . 0 1 2 3 4 5 6; the same column's '4,575.00' is set in the main copy; 'Term 3 Fees' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.00912,
+            "page": 1,
+            "width": 0.11935,
+            "x": 0.20927,
+            "y": 0.26062
+          },
+          "finding": "ghost_replaced_line",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: the faint trace of the original text in the scan runs on 90 pt past the live text 'Registration Fees' on its line (x 125–196 pt, y 219–227 pt from the top). That line was longer when the scan was converted to editable text, and has been shortened or rewritten since."
+        },
+        {
+          "bbox": {
+            "height": 0.1095,
+            "page": 1,
+            "width": 0.40323,
+            "x": 0.05121,
+            "y": 0.46136
+          },
+          "finding": "ghost_deleted_block",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: a block of 6 line(s) of faint text remains in the scanned background (x 30–270 pt, y 388–480 pt from the top) with no live text on top of it: content that was on the page when it was converted to editable text, and was deleted afterwards."
+        }
+      ],
+      "result": "flag"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "ajyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "producer_scrubbed",
+          "page": null,
+          "severity": "medium",
+          "text": "The XMP metadata was written by Adobe's own library (Adobe XMP Core 9.1-c001 79.2a0d8d9), yet Producer, Creator, CreatorTool and the edit history are all missing. Adobe software always records its name and saves there, so they were removed afterwards — hiding which tool last changed the file."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 8 days, 20:46:20 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "editable_text_over_scan",
+          "page": null,
+          "severity": "medium",
+          "text": "Page(s) 1: a page-sized scan image with visible, editable text drawn on top of it (in ordinary subset fonts, as Acrobat's own editor or a re-saved converted file leaves them) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's words and numbers be retyped or deleted."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.03400000000000003,
+          "page": 1,
+          "width": 0.07350000000000001,
+          "x": 0.8494,
+          "y": 0.857
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.09270697564849772,
+            "page": 1,
+            "width": 0.14382067773566776,
+            "x": 0.8121800720780069,
+            "y": 0.8221950744217417
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.03400000000000003,
+            "page": 1,
+            "width": 0.07350000000000001,
+            "x": 0.8494,
+            "y": 0.857
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-39CB18BF"
+    ],
+    "company": "testcompany",
+    "file": "case10School  educational document.pdf",
+    "representative_case": "CASE-39CB18BF",
+    "sha256": "6f2775326148bd2e58df7531be2d595b79a370310f56620aab8e560dc0333460"
+  },
+  "rules": {
+    "content.deleted_ghost_block": {
+      "points": 25,
+      "reason": "'case10School  educational document.pdf': 1 block(s) of text were deleted after the scan was converted to editable text — their faint traces remain in the scanned background. Page 1: a block of 6 line(s) of faint text remains in the scanned background (x 30–270 pt, y 388–480 pt from the top) with no live text on top of it: content that was on the page when it was converted to editable text, and was deleted afterwards.",
+      "version": 1
+    },
+    "content.replaced_ghost_line": {
+      "points": 10,
+      "reason": "'case10School  educational document.pdf': 1 line(s) were shortened or rewritten after the scan was converted to editable text — the trace of the original runs on past the text. Page 1: the faint trace of the original text in the scan runs on 90 pt past the live text 'Registration Fees' on its line (x 125–196 pt, y 219–227 pt from the top). That line was longer when the scan was converted to editable text, and has been shortened or rewritten since.",
+      "version": 1
+    },
+    "font.inconsistency": {
+      "points": 40,
+      "reason": "'case10School  educational document.pdf': 17 piece(s) of text are set in a different font, at a different size, or in a second copy of the same font, from the text around them — a sign they were typed in after the document was produced. Page 1: 'AL REEM' is set in a second embedded copy of TimesNewRoman,Bold (subset MONKPZ; the page's main copy is ZEDDUK) — 'SALEH MOHAMED ALHARTHI' on the same line is set in the main copy. A document exported in one pass embeds each font once; a further copy of the same font appears when text is typed in during a later edit.",
+      "version": 3
+    },
+    "metadata.editable_text_over_scan": {
+      "points": 10,
+      "reason": "'case10School  educational document.pdf' is a scan converted to editable text — its words and numbers can be retyped or deleted like a word-processor file. Page(s) 1: a page-sized scan image with visible, editable text drawn on top of it (in ordinary subset fonts, as Acrobat's own editor or a re-saved converted file leaves them) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's words and numbers be retyped or deleted.",
+      "version": 2
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'case10School  educational document.pdf' was modified after it was created. The file was modified after it was created: ModDate is 8 days, 20:46:20 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    },
+    "metadata.producer_scrubbed": {
+      "points": 10,
+      "reason": "'case10School  educational document.pdf': the names of the tools that wrote it were removed from its metadata. The XMP metadata was written by Adobe's own library (Adobe XMP Core 9.1-c001 79.2a0d8d9), yet Producer, Creator, CreatorTool and the edit history are all missing. Adobe software always records its name and saves there, so they were removed afterwards — hiding which tool last changed the file.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 110.0,
+    "score": 100
+  }
+}

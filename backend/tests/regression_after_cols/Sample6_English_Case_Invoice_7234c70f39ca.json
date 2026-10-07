@@ -1,0 +1,221 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"invoice.pdf\" in case CASE-538BCDC0 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-15 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'OAK-2026-4910' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the subtotal 14,250.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 14250.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "OAKRIDGE INTERNATIONAL ACADEMY",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "web_page_origin",
+          "page": null,
+          "severity": "medium",
+          "text": "The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#2563eb, #374151, #4b5563, #6b7280, #dc2626, #e2e8f0)."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.039000000000000035,
+          "page": 1,
+          "width": 0.266,
+          "x": 0.5670000000000001,
+          "y": 0.5326
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.06659999999999999,
+            "page": 1,
+            "width": 0.3410000000000001,
+            "x": 0.08199999999999999,
+            "y": 0.5302999999999999
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.039000000000000035,
+            "page": 1,
+            "width": 0.266,
+            "x": 0.5670000000000001,
+            "y": 0.5326
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1A2AFD37",
+      "CASE-1FD06F9D",
+      "CASE-411482CB",
+      "CASE-538BCDC0",
+      "CASE-574B5439",
+      "CASE-726AEDC4",
+      "CASE-74E159DB",
+      "CASE-77E916DC",
+      "CASE-8AAF3E05",
+      "CASE-8B6028CA",
+      "CASE-AC10D420",
+      "CASE-ACC0FDB8",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59",
+      "CASE-DD1EAD4F",
+      "CASE-F1B6653B",
+      "CASE-F4B6AB95",
+      "CASE-FD2E14E2"
+    ],
+    "company": "testcompany",
+    "file": "Sample6_English_Case_Invoice.pdf",
+    "representative_case": "CASE-8B6028CA",
+    "sha256": "7234c70f39cae7809535050d4d454a375cfef9e03cf965372676da23dfbb5a2e"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample6_English_Case_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"invoice.pdf\" in case CASE-538BCDC0 — a possible duplicate or near-duplicate resubmission.",
+      "version": 2
+    },
+    "metadata.web_page_origin": {
+      "points": 10,
+      "reason": "'Sample6_English_Case_Invoice.pdf' was built as a web page and printed to PDF. The PDF was made by 'WeasyPrint 69.0', a web browser's or HTML engine's PDF output: the document was built as a web page and printed, not produced by a billing or school-management system — no creation date and Tailwind stock colours (#2563eb, #374151, #4b5563, #6b7280, #dc2626, #e2e8f0).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 50.0,
+    "score": 50
+  }
+}

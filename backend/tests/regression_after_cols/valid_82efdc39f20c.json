@@ -1,0 +1,198 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"valid.pdf\" in case CASE-C38287CD — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "skipped",
+          "text": "No date extracted."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "No document date extracted."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'INV-2026-001' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "No stamp on this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "skipped",
+          "text": "Not titled a tax invoice."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "Upload test",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "metadata_entirely_stripped",
+          "page": null,
+          "severity": "high",
+          "text": "Both the Info dictionary and the XMP metadata stream are completely empty/absent — a fully-scrubbed file is itself a red flag, not just an absence of data."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": null,
+        "signature_expected": true
+      },
+      "detected": [],
+      "result": "flag"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "ai_generation_assessment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: the model reports possible signs of AI-generated/synthetic content — The page contains only a single line of text with no typical invoice formatting or structure, which is unusual for a real invoice document. This minimal content and lack of typical document features suggest it may be synthetically produced or AI-generated. This is an experimental, probabilistic signal only; real-world accuracy on scanned business documents (as opposed to the photos/art these detectors are usually tuned for) is unproven."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-0B726DE7",
+      "CASE-C38287CD",
+      "CASE-D7C8DCCA",
+      "CASE-DFFD48FF"
+    ],
+    "company": "testcompany",
+    "file": "valid.pdf",
+    "representative_case": "CASE-0B726DE7",
+    "sha256": "82efdc39f20c664dcf0b538192825d9cef9d477722414d0287cc6c166d2066d0"
+  },
+  "rules": {
+    "ai.generated_content_suspected": {
+      "points": 6,
+      "reason": "'valid.pdf': the vision-model review reports possible signs of AI-generated content (experimental, probabilistic signal).",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'valid.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"valid.pdf\" in case CASE-C38287CD — a possible duplicate or near-duplicate resubmission.",
+      "version": 2
+    },
+    "metadata.stripped": {
+      "points": 12,
+      "reason": "'valid.pdf' carries no metadata at all — it may have been scrubbed to hide its origin.",
+      "version": 1
+    },
+    "signature.expected_missing": {
+      "points": 10,
+      "reason": "No signature or stamp was located on 'valid.pdf', though this kind of document normally carries one.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 68.0,
+    "score": 68
+  }
+}

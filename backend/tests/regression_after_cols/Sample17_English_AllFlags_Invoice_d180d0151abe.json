@@ -1,0 +1,543 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.4271,
+            "page": 1,
+            "width": 0.1469,
+            "x": 0.348,
+            "y": 0.3164
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 58 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.4385,
+            "page": 1,
+            "width": 0.1343,
+            "x": 0.1272,
+            "y": 0.3164
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 44 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.4282,
+            "page": 1,
+            "width": 0.1458,
+            "x": 0.2424,
+            "y": 0.3164
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 36 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample17_English_AllFlags_Invoice.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0338,
+            "page": 1,
+            "width": 0.3688,
+            "x": 0.5526,
+            "y": 0.4951
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-25 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "flag",
+          "text": "The document is dated 2026-08-25, but its PDF file was created on 2026-08-01 — 24 days earlier — and last modified on 2026-09-02. A file cannot predate its own content: an older document appears to have been edited and re-dated."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails | TRN 991001928400003: does not start with 100, as UAE TRNs do | TRN 994012841900003: does not start with 100, as UAE TRNs do."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "pass",
+          "text": "All 3 line item(s): quantity × unit price matches the line total."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'INV-NGT-2026-1049' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 3 line item(s) add up to the subtotal 180,000.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 994012841900003."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 9,000.00 is 5% of the subtotal 180,000.00."
+        },
+        "total_tax_consistency": {
+          "status": "flag",
+          "text": "Total 197500.00 does not match subtotal 180000.00 + tax 9000.00 (expected 189000.00)."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.35902,
+            "x": 0.1175,
+            "y": 0.35596
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Hermetically Sealed Thermocouple Penetration' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.08512,
+            "x": 0.1175,
+            "y": 0.36754
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Assemblies' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01336,
+            "page": 1,
+            "width": 0.04987,
+            "x": 0.87534,
+            "y": 0.37214
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '46,000.00' is set in Helvetica, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.0126,
+            "x": 0.08238,
+            "y": 0.37333
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '2' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.07706,
+            "x": 0.70969,
+            "y": 0.37333
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '18,000.00' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01231,
+            "page": 1,
+            "width": 0.39926,
+            "x": 0.1175,
+            "y": 0.38011
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'High-temperature coolant loop thermal sensors calibrated' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01366,
+            "page": 1,
+            "width": 0.08512,
+            "x": 0.55668,
+            "y": 0.37912
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'Assemblies' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        },
+        {
+          "bbox": {
+            "height": 0.01231,
+            "page": 1,
+            "width": 0.14552,
+            "x": 0.1175,
+            "y": 0.39169
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: 'for Crestview Unit 3' is set in Liberation-Mono, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "NORTHGAITE ENGINEERING SOLUTONS LLC",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "orphaned_objects",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 19 content object(s) (streams, fonts, images, pages or annotations) present in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_creation_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /CreationDate (2026-08-01T09:00:00+00:00) disagrees with XMP xmp:CreateDate (2026-09-18T14:22:10+00:00) — tools that scrub or edit one often forget to update the other."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_mod_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /ModDate (2026-09-02T16:45:00+00:00) disagrees with XMP xmp:ModifyDate (2026-09-19T22:45:33+00:00)."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 32 days, 7:45:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "incremental_updates_present",
+          "page": null,
+          "severity": "high",
+          "text": "Found 5 incremental update(s) beyond the baseline expected for this file's structure."
+        },
+        {
+          "bbox": null,
+          "finding": "history_absent_despite_revisions",
+          "page": null,
+          "severity": "medium",
+          "text": "The file shows 5 incremental update(s) but has no xmpMM:History revision chain at all."
+        },
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.05546148698562192,
+          "page": 1,
+          "width": 0.18030746278591336,
+          "x": 0.6255939433624067,
+          "y": 0.5583144546323187
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.07234645016696972,
+            "page": 1,
+            "width": 0.09629369439848989,
+            "x": 0.21950311570958458,
+            "y": 0.5481026400653872
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.05546148698562192,
+            "page": 1,
+            "width": 0.18030746278591336,
+            "x": 0.6255939433624067,
+            "y": 0.5583144546323187
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.07,
+            "page": 1,
+            "width": 0.8,
+            "x": 0.1,
+            "y": 0.38
+          },
+          "finding": "visual_font_consistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Font consistency: The item descriptions in the table have inconsistent font styles and weights; for example, the second item description ('Hermetically Sealed Thermocouple Penetration Assemblies') is in a different color and font style compared to the others, located around the vertical range 0.38 to 0.45 of the page. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": {
+            "height": 0.07,
+            "page": 1,
+            "width": 0.8,
+            "x": 0.1,
+            "y": 0.38
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Text alignment: The text in the second item description cell is misaligned vertically compared to the first and third items, appearing slightly offset downward within the same table row area (around y=0.38 to 0.45). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": {
+            "height": 0.07,
+            "page": 1,
+            "width": 0.6,
+            "x": 0.1,
+            "y": 0.38
+          },
+          "finding": "visual_color_contrast_consistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Color / contrast consistency: The background behind the second item description cell has a faint pink highlight, differing from the white background of other table cells, located around the middle-left of the page (approx. x=0.1 to 0.7, y=0.38 to 0.45). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-70FDDB1B",
+      "CASE-A11F243F",
+      "CASE-CDB578EF",
+      "CASE-E83EE27E",
+      "CASE-F9AB6C21"
+    ],
+    "company": "testcompany",
+    "file": "Sample17_English_AllFlags_Invoice.pdf",
+    "representative_case": "CASE-70FDDB1B",
+    "sha256": "d180d0151abe1f48fa660e0c1972304aaab2d6cb341ec2fd8b7331427d4138ae"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': 3 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample17_English_AllFlags_Invoice.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission.",
+      "version": 2
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails | TRN 991001928400003: does not start with 100, as UAE TRNs do | TRN 994012841900003: does not start with 100, as UAE TRNs do.",
+      "version": 1
+    },
+    "field.total_tax_mismatch": {
+      "points": 20,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': Total 197500.00 does not match subtotal 180000.00 + tax 9000.00 (expected 189000.00).",
+      "version": 1
+    },
+    "font.inconsistency": {
+      "points": 40,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': 8 piece(s) of text are set in a different font, at a different size, or in a second copy of the same font, from the text around them — a sign they were typed in after the document was produced. Page 1: 'Hermetically Sealed Thermocouple Penetration' is set in Liberation-Mono-Bold, while the text around it uses the dejavusans font family — it may have been typed in after the document was produced.",
+      "version": 3
+    },
+    "metadata.creation_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': the creation dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.document_date_after_file_creation": {
+      "points": 25,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': The document is dated 2026-08-25, but its PDF file was created on 2026-08-01 — 24 days earlier — and last modified on 2026-09-02. A file cannot predate its own content: an older document appears to have been edited and re-dated.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.history_absent_despite_revisions": {
+      "points": 8,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf' has multiple revisions but no edit history — the history may have been removed.",
+      "version": 1
+    },
+    "metadata.incremental_update_multiple": {
+      "points": 20,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf' has multiple incremental saves after its original version — repeated post-creation edits.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf' embeds JavaScript or an action that runs code or reaches outside the document — unusual for a business document. This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document.",
+      "version": 2
+    },
+    "metadata.mod_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': the modification dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf' was modified after it was created. The file was modified after it was created: ModDate is 32 days, 7:45:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    },
+    "metadata.orphaned_objects": {
+      "points": 8,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf' contains orphaned internal objects left behind by editing.",
+      "version": 3
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The text in the second item description cell is misaligned vertically compared to the first and third items, appearing slightly offset downward within the same table row area (around y=0.38 to 0.45). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    },
+    "visual.color_contrast_inconsistency": {
+      "points": 12,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': the vision-model review reports a patch with a different background/contrast. Page 1 — Color / contrast consistency: The background behind the second item description cell has a faint pink highlight, differing from the white background of other table cells, located around the middle-left of the page (approx. x=0.1 to 0.7, y=0.38 to 0.45). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    },
+    "visual.font_inconsistency": {
+      "points": 12,
+      "reason": "'Sample17_English_AllFlags_Invoice.pdf': the vision-model review reports inconsistent fonts. Page 1 — Font consistency: The item descriptions in the table have inconsistent font styles and weights; for example, the second item description ('Hermetically Sealed Thermocouple Penetration Assemblies') is in a different color and font style compared to the others, located around the vertical range 0.38 to 0.45 of the page. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 249.0,
+    "score": 100
+  }
+}

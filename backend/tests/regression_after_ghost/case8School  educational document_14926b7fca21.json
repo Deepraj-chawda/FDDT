@@ -1,0 +1,202 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "limited"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "limited"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2024-05-01 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2024-05-01 is not after the file's creation (2024-05-02)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '4775' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('ILM ACADEMY') names the issuer 'ILM ACADEMY'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 5 line item(s) add up to the subtotal 38,750.00."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 38750.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "ILM ACADEMY",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 4 days, 23:24:59 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "history_scanned_document_edited",
+          "page": null,
+          "severity": "high",
+          "text": "xmpMM:History records 'editedScannedDoc' at 2024-05-07T09:55:56-04:00 — the scanned page was converted to editable text and edited (Acrobat's \"Edit scanned document\")."
+        },
+        {
+          "bbox": null,
+          "finding": "editable_text_over_scan",
+          "page": null,
+          "severity": "medium",
+          "text": "Page(s) 1: a page-sized scan image with visible, editable text drawn on top of it in converter-generated fonts (\"-NNNN\" subsets) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's words and numbers be retyped or deleted."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.1081213240283484,
+          "page": 1,
+          "width": 0.12423545268937655,
+          "x": 0.15239216284658394,
+          "y": 0.7268357487561581
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.09719999999999995,
+            "page": 1,
+            "width": 0.10000000000000005,
+            "x": 0.09100000000000001,
+            "y": 0.7258
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.1081213240283484,
+            "page": 1,
+            "width": 0.12423545268937655,
+            "x": 0.15239216284658394,
+            "y": 0.7268357487561581
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.15,
+            "page": 1,
+            "width": 0.7,
+            "x": 0.15,
+            "y": 0.15
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 — Text alignment: The text in the header table (Member Number, Parent Name, Invoice Date) is vertically centered within cells, while the main invoice table text is aligned to the top within cells, causing inconsistent baseline alignment between these sections. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-B70765EC"
+    ],
+    "company": "testcompany",
+    "file": "case8School  educational document.pdf",
+    "representative_case": "CASE-B70765EC",
+    "sha256": "14926b7fca21b3005f25818107493820c2700c03b68f365606c6ba6e65c3e9b3"
+  },
+  "rules": {
+    "metadata.editable_text_over_scan": {
+      "points": 10,
+      "reason": "'case8School  educational document.pdf' is a scan converted to editable text — its words and numbers can be retyped or deleted like a word-processor file. Page(s) 1: a page-sized scan image with visible, editable text drawn on top of it in converter-generated fonts (\"-NNNN\" subsets) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's words and numbers be retyped or deleted.",
+      "version": 2
+    },
+    "metadata.history_scanned_doc_edited": {
+      "points": 15,
+      "reason": "'case8School  educational document.pdf': its edit history records that the scanned page was converted to editable text and edited. xmpMM:History records 'editedScannedDoc' at 2024-05-07T09:55:56-04:00 — the scanned page was converted to editable text and edited (Acrobat's \"Edit scanned document\").",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'case8School  educational document.pdf' was modified after it was created. The file was modified after it was created: ModDate is 4 days, 23:24:59 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'case8School  educational document.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The text in the header table (Member Number, Parent Name, Invoice Date) is vertically centered within cells, while the main invoice table text is aligned to the top within cells, causing inconsistent baseline alignment between these sections. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 50.0,
+    "score": 50
+  }
+}

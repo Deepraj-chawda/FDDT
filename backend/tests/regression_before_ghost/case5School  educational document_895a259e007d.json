@@ -1,0 +1,284 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "limited"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 matches page 1 of \"case5School  educational document.pdf\" in case CASE-F6F5FE76, submitted by test1Reviewer L2, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "limited"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2024-09-02 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "flag",
+          "text": "The document is dated 2024-09-02, but its PDF file was created on 2023-10-24 — 314 days earlier — and last modified on 2024-09-04. A file cannot predate its own content: an older document appears to have been edited and re-dated."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '23577' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('BRITISH ORCHARD NURSERY Br.1 Abu Dhabi Tel. 8271901') names the issuer 'British Orchard Nursery'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 4 line item(s) add up to the total 36,000.00."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.02357,
+            "page": 1,
+            "width": 0.01668,
+            "x": 0.69493,
+            "y": 0.48442
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '6' is set in the full font Comic Sans MS-Bold (11.7 pt), while the rest of its line uses Comic Sans MS-Bold-6003 (12 pt) — a subset font generated when this scan was converted to editable text. Characters in a full font among the converter's subsets were typed in after the conversion. Comic Sans MS-Bold-6003 holds only the glyphs originally printed with it — digits: 1, 3, 5, 7, 9 — so the original value on this line contained no 6. The number '36,000' mixes character sizes (11.7 pt vs 12 pt)."
+        },
+        {
+          "bbox": {
+            "height": 0.02357,
+            "page": 1,
+            "width": 0.03997,
+            "x": 0.71431,
+            "y": 0.48442
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: '000' is set in the full font Comic Sans MS-Bold (11.7 pt), while the rest of its line uses Comic Sans MS-Bold-6003 (12 pt) — a subset font generated when this scan was converted to editable text. Characters in a full font among the converter's subsets were typed in after the conversion. Comic Sans MS-Bold-6003 holds only the glyphs originally printed with it — digits: 1, 3, 5, 7, 9 — so the original value on this line contained no 0. The number '36,000' mixes character sizes (11.7 pt vs 12 pt)."
+        }
+      ],
+      "result": "flag"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "British Orchard Nursery",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('iLovePDF' in info./Producer, xmp.pdf:Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 315 days, 21:18:57 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "history_scanned_document_edited",
+          "page": null,
+          "severity": "high",
+          "text": "xmpMM:History records 'editedScannedDoc' at 2023-10-24T14:27:53+04:00 — the scanned page was converted to editable text and edited (Acrobat's \"Edit scanned document\")."
+        },
+        {
+          "bbox": null,
+          "finding": "editable_text_over_scan",
+          "page": null,
+          "severity": "medium",
+          "text": "Page(s) 1: a page-sized scan image with its text re-created on top as visible, editable text in converter-generated fonts (\"-NNNN\" subsets) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's numbers be retyped."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.04239999999999999,
+          "page": 1,
+          "width": 0.05390769230769232,
+          "x": 0.18209230769230766,
+          "y": 0.5855999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.04239999999999999,
+            "page": 1,
+            "width": 0.05390769230769232,
+            "x": 0.18209230769230766,
+            "y": 0.5855999999999999
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.13601342360375934,
+            "page": 1,
+            "width": 0.18923666038803527,
+            "x": 0.4324999711970619,
+            "y": 0.5819997050633379
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.15,
+            "page": 1,
+            "width": 0.6,
+            "x": 0.2,
+            "y": 0.4
+          },
+          "finding": "visual_text_alignment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Text alignment: The text in the 'Fees description' column and corresponding amounts in the 'Amount' column are slightly misaligned vertically, especially around the terms and amounts (approx. bounding box x:0.2,y:0.4,width:0.6,height:0.15). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        },
+        {
+          "bbox": {
+            "height": 0.15,
+            "page": 1,
+            "width": 0.3,
+            "x": 0.05,
+            "y": 0.7
+          },
+          "finding": "visual_resolution_sharpness_consistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Resolution / sharpness consistency: The signature and the blue stamp near the bottom right are noticeably softer and less sharp compared to the printed text, which is expected for pen and stamp but distinct from the rest of the document. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1CEDFDBF",
+      "CASE-1F849C4D",
+      "CASE-54D5A2C6",
+      "CASE-5B2FDA1E",
+      "CASE-91A3A945",
+      "CASE-D8CFFC09",
+      "CASE-F6F5FE76"
+    ],
+    "company": "testcompany",
+    "file": "case5School  educational document.pdf",
+    "representative_case": "CASE-5B2FDA1E",
+    "sha256": "895a259e007d6e8063ca37d1c118406462b5bd26e2fe49629f2a7df2b3787ae7"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'case5School  educational document.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 matches page 1 of \"case5School  educational document.pdf\" in case CASE-F6F5FE76, submitted by test1Reviewer L2, and the two files are byte-for-byte identical (same SHA-256) — the exact same file re-uploaded.",
+      "version": 1
+    },
+    "font.inconsistency": {
+      "points": 40,
+      "reason": "'case5School  educational document.pdf': 2 piece(s) of text are set in a different font, or at a different size, from the text around them — a sign they were typed in after the document was produced. Page 1: '6' is set in the full font Comic Sans MS-Bold (11.7 pt), while the rest of its line uses Comic Sans MS-Bold-6003 (12 pt) — a subset font generated when this scan was converted to editable text. Characters in a full font among the converter's subsets were typed in after the conversion. Comic Sans MS-Bold-6003 holds only the glyphs originally printed with it — digits: 1, 3, 5, 7, 9 — so the original value on this line contained no 6. The number '36,000' mixes character sizes (11.7 pt vs 12 pt).",
+      "version": 2
+    },
+    "metadata.document_date_after_file_creation": {
+      "points": 25,
+      "reason": "'case5School  educational document.pdf': The document is dated 2024-09-02, but its PDF file was created on 2023-10-24 — 314 days earlier — and last modified on 2024-09-04. A file cannot predate its own content: an older document appears to have been edited and re-dated.",
+      "version": 1
+    },
+    "metadata.editable_text_over_scan": {
+      "points": 10,
+      "reason": "'case5School  educational document.pdf' is a scan converted to editable text — its numbers can be retyped like a word-processor file. Page(s) 1: a page-sized scan image with its text re-created on top as visible, editable text in converter-generated fonts (\"-NNNN\" subsets) — a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this structure is what lets a scan's numbers be retyped.",
+      "version": 1
+    },
+    "metadata.history_scanned_doc_edited": {
+      "points": 15,
+      "reason": "'case5School  educational document.pdf': its edit history records that the scanned page was converted to editable text and edited. xmpMM:History records 'editedScannedDoc' at 2023-10-24T14:27:53+04:00 — the scanned page was converted to editable text and edited (Acrobat's \"Edit scanned document\").",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'case5School  educational document.pdf' was modified after it was created. The file was modified after it was created: ModDate is 315 days, 21:18:57 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'case5School  educational document.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('iLovePDF' in info./Producer, xmp.pdf:Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    },
+    "visual.alignment_inconsistency": {
+      "points": 10,
+      "reason": "'case5School  educational document.pdf': the vision-model review reports misaligned text. Page 1 — Text alignment: The text in the 'Fees description' column and corresponding amounts in the 'Amount' column are slightly misaligned vertically, especially around the terms and amounts (approx. bounding box x:0.2,y:0.4,width:0.6,height:0.15). This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    },
+    "visual.sharpness_inconsistency": {
+      "points": 10,
+      "reason": "'case5School  educational document.pdf': the vision-model review reports a region with different sharpness. Page 1 — Resolution / sharpness consistency: The signature and the blue stamp near the bottom right are noticeably softer and less sharp compared to the printed text, which is expected for pen and stamp but distinct from the rest of the document. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 140.0,
+    "score": 100
+  }
+}

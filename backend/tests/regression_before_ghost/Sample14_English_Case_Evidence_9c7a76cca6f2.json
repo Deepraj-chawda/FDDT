@@ -1,0 +1,167 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample14_English_Case_Evidence.pdf\" in case CASE-3C9A9933 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-28 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'FAB-WIRE-20260828-881920' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "FIRST ABU DHABI BANK (FAB)",
+        "match_score": 34.55,
+        "matched_registry_name": "Al Nukhba Technical Systems Est.",
+        "matched_via": null,
+        "threshold": 85.0
+      },
+      "result": "flag"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.18000000000000005,
+          "page": 1,
+          "width": 0.33999999999999997,
+          "x": 0.5599999999999999,
+          "y": 0.51
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.19000000000000006,
+            "page": 1,
+            "width": 0.26,
+            "x": 0.08,
+            "y": 0.5
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.18000000000000005,
+            "page": 1,
+            "width": 0.33999999999999997,
+            "x": 0.5599999999999999,
+            "y": 0.51
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-1D925E31",
+      "CASE-3C9A9933",
+      "CASE-900B2CF6",
+      "CASE-B5C72B6D"
+    ],
+    "company": "Default Company",
+    "file": "Sample14_English_Case_Evidence.pdf",
+    "representative_case": "CASE-B5C72B6D",
+    "sha256": "9c7a76cca6f2083d830c53ea89b4425967ca3b57abdb98b549079d8faf7c684f"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample14_English_Case_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample14_English_Case_Evidence.pdf\" in case CASE-3C9A9933 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample14_English_Case_Evidence.pdf': Invalid payment identifier(s): IBAN AE2900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "issuer.not_in_registry": {
+      "points": 15,
+      "reason": "Issuer 'FIRST ABU DHABI BANK (FAB)' on 'Sample14_English_Case_Evidence.pdf' did not match any known issuer in the registry.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 70.0,
+    "score": 70
+  }
+}

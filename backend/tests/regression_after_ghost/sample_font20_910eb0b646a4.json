@@ -1,0 +1,324 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample_font20.pdf\" in case CASE-37B33CBB — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "flag",
+          "text": "The amount in words, 'TWENTY THOUSAND FIVE HUNDRED AED ONLY', is 20,500.00 (read from the words), but the total in figures is 55,500.00."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2022-09-06 is not in the future."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2022-09-06 is not after the file's creation (2022-09-06)."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "IBAN AE450030010364749020001: checksum (mod 97) valid, bank code 003 = ADCB, matching the printed bank name, contains the printed account number 10364749020001."
+        },
+        "line_item_arithmetic": {
+          "status": "flag",
+          "text": "1 line item(s) do not add up: line 4 (FEE FOR TERM 3 (April-May-June) DUE): 3 × 6,000.00 = 18,000.00, but the line total printed is 16,600.00."
+        },
+        "period_quantity_consistency": {
+          "status": "flag",
+          "text": "line 2 (FEE FOR TERM 1 (September) PAID (Octobe…): 3 months listed as due (October, November, December; September marked paid), × 4 charged."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '10139/ 20220906' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "flag",
+          "text": "Printed and re-scanned: the page carries a phone-scanner watermark ('Scanned with CamScanner') but the PDF was produced by an office scanner (Develop ineo+ 759 / PPS - SFO2-A-MFP01). Digital edits made before printing would not be visible to error level analysis."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "flag",
+          "text": "Line items = 55,100.00, stated total 55,500.00, difference 400.00 (summed: 22,000.00 + 16,500.00 + 16,600.00). Not summed: line 1 (REGISTRATION FEES): 500.00 (marked paid)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01637,
+            "page": 1,
+            "width": 0.05014,
+            "x": 0.43028,
+            "y": 0.43102
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '22,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01597,
+            "page": 1,
+            "width": 0.05174,
+            "x": 0.36588,
+            "y": 0.43152
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): 'MONTH' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01577,
+            "page": 1,
+            "width": 0.01294,
+            "x": 0.35358,
+            "y": 0.43182
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '4' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01567,
+            "page": 1,
+            "width": 0.04214,
+            "x": 0.21858,
+            "y": 0.43252
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '5,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01767,
+            "page": 1,
+            "width": 0.04544,
+            "x": 0.43428,
+            "y": 0.51312
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '16,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01667,
+            "page": 1,
+            "width": 0.04104,
+            "x": 0.21318,
+            "y": 0.51512
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '5,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01637,
+            "page": 1,
+            "width": 0.03164,
+            "x": 0.39288,
+            "y": 0.54162
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'DUE' looks like a different font (monospace) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01607,
+            "page": 1,
+            "width": 0.04884,
+            "x": 0.43288,
+            "y": 0.59642
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '16,600' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        },
+        {
+          "bbox": {
+            "height": 0.01597,
+            "page": 1,
+            "width": 0.04124,
+            "x": 0.21128,
+            "y": 0.59782
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '6,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Found on a second look at this page's numbers: OCR lists grotesque sans among the likely fonts for it (Segoe UI, Arial, Helvetica, sans-serif), as for the other amounts flagged here."
+        },
+        {
+          "bbox": {
+            "height": 0.01687,
+            "page": 1,
+            "width": 0.06564,
+            "x": 0.17518,
+            "y": 0.64652
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 (scanned): '55,500' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned."
+        }
+      ],
+      "result": "flag"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "HEADSTART NURSERY",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.072216641484806,
+          "page": 1,
+          "width": 0.1499088920645616,
+          "x": 0.3661220550464318,
+          "y": 0.8313341318463883
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05138645632060046,
+            "page": 1,
+            "width": 0.054117661195642874,
+            "x": 0.4921680774849002,
+            "y": 0.8107871291152645
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.072216641484806,
+            "page": 1,
+            "width": 0.1499088920645616,
+            "x": 0.3661220550464318,
+            "y": 0.8313341318463883
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-37B33CBB",
+      "CASE-6CB8F7E1",
+      "CASE-6CE43E0C",
+      "CASE-942C8493",
+      "CASE-DB43653A"
+    ],
+    "company": "testcompany",
+    "file": "sample_font20.pdf",
+    "representative_case": "CASE-6CE43E0C",
+    "sha256": "910eb0b646a448aa87ae22b0a1a4865f35c7a7b4956f971df204467f32f12af9"
+  },
+  "rules": {
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'sample_font20.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"sample_font20.pdf\" in case CASE-37B33CBB — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "field.amount_in_words_mismatch": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': The amount in words, 'TWENTY THOUSAND FIVE HUNDRED AED ONLY', is 20,500.00 (read from the words), but the total in figures is 55,500.00.",
+      "version": 1
+    },
+    "field.line_item_arithmetic_mismatch": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': 1 line item(s) do not add up: line 4 (FEE FOR TERM 3 (April-May-June) DUE): 3 × 6,000.00 = 18,000.00, but the line total printed is 16,600.00.",
+      "version": 1
+    },
+    "field.period_quantity_mismatch": {
+      "points": 10,
+      "reason": "'sample_font20.pdf': line 2 (FEE FOR TERM 1 (September) PAID (Octobe…): 3 months listed as due (October, November, December; September marked paid), × 4 charged.",
+      "version": 1
+    },
+    "field.subtotal_line_item_mismatch": {
+      "points": 15,
+      "reason": "'sample_font20.pdf': Line items = 55,100.00, stated total 55,500.00, difference 400.00 (summed: 22,000.00 + 16,500.00 + 16,600.00). Not summed: line 1 (REGISTRATION FEES): 500.00 (marked paid).",
+      "version": 2
+    },
+    "font.inconsistency_scanned": {
+      "points": 25,
+      "reason": "'sample_font20.pdf': on the scanned page, 9 word(s) look like a different font from the text around them (OCR font recognition — an estimate). Page 1 (scanned): '22,000' looks like a different font (grotesque sans) from the text around it (humanist sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned.",
+      "version": 2
+    },
+    "metadata.rescan_conflict": {
+      "points": 10,
+      "reason": "'sample_font20.pdf': Printed and re-scanned: the page carries a phone-scanner watermark ('Scanned with CamScanner') but the PDF was produced by an office scanner (Develop ineo+ 759 / PPS - SFO2-A-MFP01). Digital edits made before printing would not be visible to error level analysis.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 150.0,
+    "score": 100
+  }
+}

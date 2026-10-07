@@ -1,0 +1,268 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (70,360.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2024-07-11 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "skipped",
+          "text": "PDF creation date not recorded for this document."
+        },
+        "fake_scan_watermark": {
+          "status": "skipped",
+          "text": "No scanner-app watermark on the page."
+        },
+        "iban_trn_validation": {
+          "status": "pass",
+          "text": "TRN 100570428100017: 15 digits, starts with 100."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "multiple_invoices": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "per_invoice_checks": {
+          "status": "skipped",
+          "text": "One invoice in the file."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'BCAA054-24-25' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_authenticity": {
+          "status": "skipped",
+          "text": "The stamp's material was not recorded for this document."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('Brighton College - Al Ain\nBCAA\nFINANCE\nBloom Academy') names the issuer 'Bloom Academy LLC'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "pass",
+          "text": "The 7 line item(s) add up to the subtotal 70,360.00."
+        },
+        "synthetic_stamp_unsigned": {
+          "status": "skipped",
+          "text": "Signature/stamp detection has not finished for this document."
+        },
+        "tax_invoice_trn": {
+          "status": "pass",
+          "text": "Tax invoice with TRN 100570428100017."
+        },
+        "tax_rate_consistency": {
+          "status": "flag",
+          "text": "The tax rate says 5% tax, but the tax is 0.00 on the subtotal 70,360.00 (5% would be 3,518.00). A zero-rated fee would not be labelled 5%."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 70360.00 + tax 0.00."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01266,
+            "page": 1,
+            "width": 0.07784,
+            "x": 0.33388,
+            "y": 0.30992
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '@hotmail.com' looks like a different font (grotesque sans) from the text around it (serif), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01186,
+            "page": 1,
+            "width": 0.01294,
+            "x": 0.16858,
+            "y": 0.40642
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '5' looks like a different font (humanist sans) from the text around it (serif), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01336,
+            "page": 1,
+            "width": 0.01114,
+            "x": 0.26168,
+            "y": 0.41792
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '2' looks like a different font (monospace) from the text around it (serif), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 1 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01416,
+            "page": 1,
+            "width": 0.22424,
+            "x": 0.38988,
+            "y": 0.78372
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'emokhtar@brightoncollegealain.ae' looks like a different font (grotesque sans) from the text around it (serif), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 2 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "Bloom Academy LLC",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "pdf_editor_detected",
+          "page": null,
+          "severity": "medium",
+          "text": "The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.02749999999999997,
+          "page": 1,
+          "width": 0.04342857142857143,
+          "x": 0.4645714285714286,
+          "y": 0.6564000000000001
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.06640000000000001,
+            "page": 1,
+            "width": 0.08440000000000003,
+            "x": 0.5638000000000001,
+            "y": 0.6028
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.02749999999999997,
+            "page": 1,
+            "width": 0.04342857142857143,
+            "x": 0.4645714285714286,
+            "y": 0.6564000000000001
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.05,
+            "page": 1,
+            "width": 0.9,
+            "x": 0.05,
+            "y": 0.12
+          },
+          "finding": "visual_font_consistency",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1 — Font consistency: The invoice number and invoice date fields use a bold font in a blue background, which differs from the plain text font used in the rest of the document, such as the item descriptions and amounts. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-3CCC350B"
+    ],
+    "company": "testcompany",
+    "file": "case12School  educational document.pdf",
+    "representative_case": "CASE-3CCC350B",
+    "sha256": "5ba396aed871b103409779eab1a736d2802421f23fc1ee6d9175b5c54e4e15ea"
+  },
+  "rules": {
+    "field.tax_rate_mismatch": {
+      "points": 15,
+      "reason": "'case12School  educational document.pdf': The tax rate says 5% tax, but the tax is 0.00 on the subtotal 70,360.00 (5% would be 3,518.00). A zero-rated fee would not be labelled 5%.",
+      "version": 3
+    },
+    "metadata.pdf_editor_producer": {
+      "points": 10,
+      "reason": "'case12School  educational document.pdf' was last saved by a PDF editor, not a scanner or billing system. The file was last written by a PDF editor ('iLovePDF' in info./Producer), not by a scanner or the issuer's billing system — the tool can change the text and numbers of an existing PDF.",
+      "version": 1
+    },
+    "visual.font_inconsistency": {
+      "points": 12,
+      "reason": "'case12School  educational document.pdf': the vision-model review reports inconsistent fonts. Page 1 — Font consistency: The invoice number and invoice date fields use a bold font in a blue background, which differs from the plain text font used in the rest of the document, such as the item descriptions and amounts. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 37.0,
+    "score": 37
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "field_validation": {
+      "result": "pass",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-22 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2026-08-22 is not after the file's creation (2026-09-12)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'TS-INV-88431' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "pass",
+          "text": "Tax 1,081.50 is 7% of the subtotal 15,450.00."
+        },
+        "total_tax_consistency": {
+          "status": "pass",
+          "text": "Total matches subtotal 15450.00 + tax 1081.50."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "TECHSOURCE SOLUTIONS INC. Enterprise IT Procurement & Corporate Accounts",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for vendor issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.018000000000000016,
+          "page": 1,
+          "width": 0.14299999999999996,
+          "x": 0.06349999999999999,
+          "y": 0.472
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.018000000000000016,
+            "page": 1,
+            "width": 0.14299999999999996,
+            "x": 0.06349999999999999,
+            "y": 0.472
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.060223853211009204,
+            "page": 1,
+            "width": 0.09999999999999998,
+            "x": 0.675,
+            "y": 0.47519999999999996
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "ai_generation_assessment",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: the model reports possible signs of AI-generated/synthetic content — The document contains a footer note stating 'SAMPLE / SYNTHETIC TEST DATA — NOT A REAL DOCUMENT,' indicating it is artificially generated test data rather than a real scanned or digitally-authored business document. The overall layout and text clarity also suggest digital creation rather than a scan or photo. This is an experimental, probabilistic signal only; real-world accuracy on scanned business documents (as opposed to the photos/art these detectors are usually tuned for) is unproven."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-135A6D81",
+      "CASE-1963B797",
+      "CASE-1FD06F9D",
+      "CASE-242525DA",
+      "CASE-7209C19A",
+      "CASE-74E159DB",
+      "CASE-8A645E93",
+      "CASE-9D294094",
+      "CASE-A3AD8556",
+      "CASE-A5719CE2",
+      "CASE-ACC0FDB8",
+      "CASE-C3083696",
+      "CASE-D1F1BE94",
+      "CASE-D24FEB59"
+    ],
+    "company": "QA Alpha Trading",
+    "file": "Sample8_English_Case_Invoice.pdf",
+    "representative_case": "CASE-8A645E93",
+    "sha256": "98675fec0dfd4955ab9705777f4e80b24d458a24468d3c4aab5e599e5cba69cd"
+  },
+  "rules": {
+    "ai.generated_content_suspected": {
+      "points": 6,
+      "reason": "'Sample8_English_Case_Invoice.pdf': the vision-model review reports possible signs of AI-generated content (experimental, probabilistic signal).",
+      "version": 1
+    }
+  },
+  "score": {
+    "raw": 6.0,
+    "score": 6
+  }
+}

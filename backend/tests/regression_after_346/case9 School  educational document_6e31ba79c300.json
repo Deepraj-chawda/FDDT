@@ -1,0 +1,231 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "duplicate_detection": {
+      "findings": [],
+      "result": "pass"
+    },
+    "error_level_analysis": {
+      "findings": [],
+      "result": "pass"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "skipped",
+          "text": "No amount written in words."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2023-08-17 is not in the future."
+        },
+        "date_sequence": {
+          "status": "pass",
+          "text": "dated 17 Aug 2023 → printed 18 Aug 2023 → PDF created 21 Aug 2023: in order."
+        },
+        "document_date_vs_file_creation": {
+          "status": "pass",
+          "text": "Document date 2023-08-17 is not after the file's creation (2023-08-21)."
+        },
+        "iban_trn_validation": {
+          "status": "skipped",
+          "text": "No IBAN or UAE TRN on the document."
+        },
+        "installment_consistency": {
+          "status": "pass",
+          "text": "Term I 13,480.00 + Term Il 10,266.00 + Term III 10,266.00 = 34,012.00, the Tuition Fees line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number '0400' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "pass",
+          "text": "The stamp ('Abu Dhabi International (Pvt.) Sr\nMohamed Bin Zayed City\nP.O.Box: 13411 Abu Dhabi, U.A.E') names the issuer 'ABU DHABI INTERNATIONAL SCHOOL MBZ CITY CAMPUS'."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "flag",
+          "text": "Line items = 38,834.00, stated total 34,012.00, difference 4,822.00 (summed: 34,012.00 + 115.00 + 80.00 + 1,052.00 + 3,970.00 + -395.00). Not summed: line 7 (Term I): 13,480.00 (an installment of Tuition Fees); line 8 (Term Il): 10,266.00 (an installment of Tuition Fees); line 9 (Term III): 10,266.00 (an installment of Tuition Fees)."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.01676,
+            "page": 1,
+            "width": 0.05264,
+            "x": 0.12488,
+            "y": 0.07592
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'ABU' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01466,
+            "page": 1,
+            "width": 0.04834,
+            "x": 0.12828,
+            "y": 0.30422
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'Picture' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01466,
+            "page": 1,
+            "width": 0.06364,
+            "x": 0.17508,
+            "y": 0.30422
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): '(Optional)' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        },
+        {
+          "bbox": {
+            "height": 0.01416,
+            "page": 1,
+            "width": 0.01844,
+            "x": 0.92818,
+            "y": 0.46752
+          },
+          "finding": "font_inconsistency",
+          "page": 1,
+          "severity": "low",
+          "text": "Page 1 (scanned): 'By' looks like a different font (humanist sans) from the text around it (grotesque sans), per OCR font recognition — it may have been typed in or pasted before the page was printed or scanned. Only 4 word(s) on this page look like this font, so it is shown for review but not scored: OCR font recognition alone is not reliable on a word or two."
+        }
+      ],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "ABU DHABI INTERNATIONAL SCHOOL MBZ CITY CAMPUS",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for school issuers, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [],
+      "result": "pass"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.07899999999999996,
+          "page": 1,
+          "width": 0.09699999999999998,
+          "x": 0.6435,
+          "y": 0.5155
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.07899999999999996,
+            "page": 1,
+            "width": 0.09699999999999998,
+            "x": 0.6435,
+            "y": 0.5155
+          },
+          "kind": "signature"
+        },
+        {
+          "bbox": {
+            "height": 0.06279999999999997,
+            "page": 1,
+            "width": 0.14900000000000002,
+            "x": 0.6399999999999999,
+            "y": 0.5048
+          },
+          "kind": "stamp"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.15,
+            "page": 1,
+            "width": 0.3,
+            "x": 0.6,
+            "y": 0.7
+          },
+          "finding": "visual_resolution_sharpness_consistency",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 — Resolution / sharpness consistency: The blue stamp and signature area at approximately (0.6,0.7,0.3,0.15) is noticeably softer and less sharp compared to the rest of the printed text, consistent with ink stamps and pen signatures. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+        }
+      ],
+      "result": "flag"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-346FA23E"
+    ],
+    "company": "testcompany",
+    "file": "case9 School  educational document.pdf",
+    "representative_case": "CASE-346FA23E",
+    "sha256": "6e31ba79c300b32e575d251dd400cf36545c75336e36ff41e78933482378da20"
+  },
+  "rules": {
+    "field.subtotal_line_item_mismatch": {
+      "points": 15,
+      "reason": "'case9 School  educational document.pdf': Line items = 38,834.00, stated total 34,012.00, difference 4,822.00 (summed: 34,012.00 + 115.00 + 80.00 + 1,052.00 + 3,970.00 + -395.00). Not summed: line 7 (Term I): 13,480.00 (an installment of Tuition Fees); line 8 (Term Il): 10,266.00 (an installment of Tuition Fees); line 9 (Term III): 10,266.00 (an installment of Tuition Fees).",
+      "version": 3
+    },
+    "visual.sharpness_inconsistency": {
+      "points": 10,
+      "reason": "'case9 School  educational document.pdf': the vision-model review reports a region with different sharpness. Page 1 — Resolution / sharpness consistency: The blue stamp and signature area at approximately (0.6,0.7,0.3,0.15) is noticeably softer and less sharp compared to the rest of the printed text, consistent with ink stamps and pen signatures. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 25.0,
+    "score": 25
+  }
+}

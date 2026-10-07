@@ -1,0 +1,336 @@
+{
+  "checks": {
+    "copy_move_detection": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.5569,
+            "page": 1,
+            "width": 0.1307,
+            "x": 0.0818,
+            "y": 0.2439
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 101 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        },
+        {
+          "bbox": {
+            "height": 0.5416,
+            "page": 1,
+            "width": 0.143,
+            "x": 0.3432,
+            "y": 0.2586
+          },
+          "finding": "copy_move_cluster",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1: found a cluster of 45 matching feature pairs, consistent with one region of this page having been copied and pasted elsewhere on the same page."
+        }
+      ],
+      "result": "flag"
+    },
+    "duplicate_detection": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "near_duplicate_page",
+          "page": 1,
+          "severity": "high",
+          "text": "Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample17_English_AllFlags_Evidence.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission."
+        }
+      ],
+      "result": "flag"
+    },
+    "error_level_analysis": {
+      "findings": [
+        {
+          "bbox": {
+            "height": 0.0381,
+            "page": 1,
+            "width": 0.3035,
+            "x": 0.0834,
+            "y": 0.1539
+          },
+          "finding": "recompression_error_region",
+          "page": 1,
+          "severity": "medium",
+          "text": "Page 1: a localized area shows a higher JPEG recompression error than the rest of the page — a possible sign this area was edited after the page was last saved. This is a probabilistic signal, not a definitive finding; ordinary scan/print artifacts can also trigger it."
+        }
+      ],
+      "result": "flag"
+    },
+    "field_validation": {
+      "result": "flag",
+      "sub_checks": {
+        "amount_in_words_consistency": {
+          "status": "pass",
+          "text": "The amount in words (189,000.00) matches the total."
+        },
+        "date_in_future": {
+          "status": "pass",
+          "text": "Document date 2026-08-28 is not in the future."
+        },
+        "date_sequence": {
+          "status": "skipped",
+          "text": "No print date on the page (no browser print header)."
+        },
+        "document_date_vs_file_creation": {
+          "status": "flag",
+          "text": "The document is dated 2026-08-28, but its PDF file was created on 2026-08-01 — 27 days earlier — and last modified on 2026-09-02. A file cannot predate its own content: an older document appears to have been edited and re-dated."
+        },
+        "iban_trn_validation": {
+          "status": "flag",
+          "text": "Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails."
+        },
+        "installment_consistency": {
+          "status": "skipped",
+          "text": "No installment rows splitting another line."
+        },
+        "line_item_arithmetic": {
+          "status": "skipped",
+          "text": "No line items with a quantity, unit price and total to check."
+        },
+        "period_quantity_consistency": {
+          "status": "skipped",
+          "text": "No line lists its billing months and a month multiplier."
+        },
+        "reference_number_format": {
+          "status": "pass",
+          "text": "Reference number 'MER-WIRE-20260828-881920' matches the expected format."
+        },
+        "rescan_conflict": {
+          "status": "pass",
+          "text": "No phone-scanner watermark on the page."
+        },
+        "stamp_issuer_consistency": {
+          "status": "skipped",
+          "text": "No stamp text was read on this document."
+        },
+        "subtotal_line_item_consistency": {
+          "status": "skipped",
+          "text": "No subtotal and/or line-item amount fields to compare."
+        },
+        "tax_rate_consistency": {
+          "status": "skipped",
+          "text": "No tax rate and/or tax amount to compare."
+        },
+        "total_tax_consistency": {
+          "status": "skipped",
+          "text": "No total and/or subtotal to compare."
+        }
+      }
+    },
+    "font_consistency": {
+      "findings": [],
+      "result": "pass"
+    },
+    "ghost_content": {
+      "findings": [],
+      "result": "not_applicable"
+    },
+    "issuer_verification": {
+      "details": {
+        "issuer_name": "MERIDIAN COMMERCIAL BANK",
+        "match_score": null,
+        "matched_registry_name": null,
+        "matched_via": null,
+        "reason": "Not checked: the issuer registry has no active entries for in AE, so there was nothing to compare this issuer against.",
+        "threshold": 85.0
+      },
+      "result": "not_checked"
+    },
+    "metadata_forensics": {
+      "findings": [
+        {
+          "bbox": null,
+          "finding": "orphaned_objects",
+          "page": null,
+          "severity": "medium",
+          "text": "Found 3 content object(s) (streams, fonts, images, pages or annotations) present in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "editing_software_detected",
+          "page": null,
+          "severity": "high",
+          "text": "info./Creator mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_creation_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /CreationDate (2026-08-01T09:00:00+00:00) disagrees with XMP xmp:CreateDate (2026-09-18T14:22:10+00:00) — tools that scrub or edit one often forget to update the other."
+        },
+        {
+          "bbox": null,
+          "finding": "info_xmp_mod_date_mismatch",
+          "page": null,
+          "severity": "high",
+          "text": "Info /ModDate (2026-09-02T16:45:00+00:00) disagrees with XMP xmp:ModifyDate (2026-09-19T22:45:33+00:00)."
+        },
+        {
+          "bbox": null,
+          "finding": "mod_date_after_creation_date",
+          "page": null,
+          "severity": "high",
+          "text": "The file was modified after it was created: ModDate is 32 days, 7:45:00 after CreationDate (more than the 1-second timestamp tolerance)."
+        },
+        {
+          "bbox": null,
+          "finding": "incremental_updates_present",
+          "page": null,
+          "severity": "high",
+          "text": "Found 5 incremental update(s) beyond the baseline expected for this file's structure."
+        },
+        {
+          "bbox": null,
+          "finding": "history_absent_despite_revisions",
+          "page": null,
+          "severity": "medium",
+          "text": "The file shows 5 incremental update(s) but has no xmpMM:History revision chain at all."
+        },
+        {
+          "bbox": null,
+          "finding": "javascript_or_openaction",
+          "page": null,
+          "severity": "medium",
+          "text": "This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document."
+        }
+      ],
+      "result": "flag"
+    },
+    "signature_stamp_detection": {
+      "details": {
+        "bounding_box": {
+          "height": 0.13,
+          "page": 1,
+          "width": 0.3400000000000001,
+          "x": 0.53,
+          "y": 0.5499999999999999
+        },
+        "signature_expected": true
+      },
+      "detected": [
+        {
+          "bbox": {
+            "height": 0.05007407407407405,
+            "page": 1,
+            "width": 0.2370207612456747,
+            "x": 0.16509688581314877,
+            "y": 0.5039259259259259
+          },
+          "kind": "stamp"
+        },
+        {
+          "bbox": {
+            "height": 0.13,
+            "page": 1,
+            "width": 0.3400000000000001,
+            "x": 0.53,
+            "y": 0.5499999999999999
+          },
+          "kind": "signature"
+        }
+      ],
+      "result": "pass"
+    },
+    "visual_inconsistency_review": {
+      "findings": [],
+      "result": "pass"
+    }
+  },
+  "document": {
+    "cases": [
+      "CASE-70FDDB1B",
+      "CASE-A11F243F",
+      "CASE-CDB578EF",
+      "CASE-E83EE27E",
+      "CASE-F9AB6C21"
+    ],
+    "company": "testcompany",
+    "file": "Sample17_English_AllFlags_Evidence.pdf",
+    "representative_case": "CASE-70FDDB1B",
+    "sha256": "c1092110a51399d7a3a827c0d41c92078db6e7ad4bf6eec4d6e0f92e7960f7c3"
+  },
+  "rules": {
+    "copy_move.cluster_detected": {
+      "points": 35,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': 2 region(s) were copied and pasted within the same page (copy-move detection), first on page 1.",
+      "version": 1
+    },
+    "duplicate.cross_case_match": {
+      "points": 40,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': 1 page(s) are near-identical to previously submitted documents. Page 1 is a near-identical match (perceptual hash Hamming distance 0) to page 1 of \"Sample17_English_AllFlags_Evidence.pdf\" in case CASE-F9AB6C21 — a possible duplicate or near-duplicate resubmission.",
+      "version": 1
+    },
+    "ela.tamper_region_detected": {
+      "points": 25,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': 1 localized area(s) show higher recompression error than the rest of the page (error level analysis) — a possible sign of editing. First on page 1.",
+      "version": 1
+    },
+    "field.iban_trn_validation": {
+      "points": 15,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': Invalid payment identifier(s): IBAN AE9900300000010482910482: 24 characters, but AE IBANs have 23; checksum (mod 97) fails.",
+      "version": 1
+    },
+    "metadata.creation_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': the creation dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.document_date_after_file_creation": {
+      "points": 25,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': The document is dated 2026-08-28, but its PDF file was created on 2026-08-01 — 27 days earlier — and last modified on 2026-09-02. A file cannot predate its own content: an older document appears to have been edited and re-dated.",
+      "version": 1
+    },
+    "metadata.editing_software_detected": {
+      "points": 30,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': editing software was found in its metadata. info./Producer mentions 'photoshop' ('Adobe Photoshop 2024 (Windows)') — unusual authorship for a business document.",
+      "version": 1
+    },
+    "metadata.history_absent_despite_revisions": {
+      "points": 8,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf' has multiple revisions but no edit history — the history may have been removed.",
+      "version": 1
+    },
+    "metadata.incremental_update_multiple": {
+      "points": 20,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf' has multiple incremental saves after its original version — repeated post-creation edits.",
+      "version": 1
+    },
+    "metadata.javascript_or_openaction": {
+      "points": 10,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf' embeds JavaScript or an action that runs code or reaches outside the document — unusual for a business document. This PDF contains executable or outward-reaching content — a document-level JavaScript name tree (1 script(s)); JavaScript action in /OpenAction — unusual for a business document.",
+      "version": 2
+    },
+    "metadata.mod_date_mismatch": {
+      "points": 18,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf': the modification dates recorded in its two metadata blocks disagree.",
+      "version": 1
+    },
+    "metadata.modified_after_creation": {
+      "points": 15,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf' was modified after it was created. The file was modified after it was created: ModDate is 32 days, 7:45:00 after CreationDate (more than the 1-second timestamp tolerance).",
+      "version": 1
+    },
+    "metadata.orphaned_objects": {
+      "points": 8,
+      "reason": "'Sample17_English_AllFlags_Evidence.pdf' contains orphaned internal objects left behind by editing.",
+      "version": 2
+    }
+  },
+  "score": {
+    "raw": 155.0,
+    "score": 100
+  }
+}
