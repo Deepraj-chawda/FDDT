@@ -3,6 +3,7 @@ import {
   BuildingIcon,
   ClockIcon,
   FileTextIcon,
+  KeyRoundIcon,
   LayoutGridIcon,
   LogOutIcon,
   MenuIcon,
@@ -11,8 +12,10 @@ import {
   UploadCloudIcon,
   XIcon,
 } from "lucide-react"
+import { createPortal } from "react-dom"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
+import { ChangePasswordModal } from "@/components/ChangePasswordModal"
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { APP_FULL_NAME, APP_NAME } from "@/lib/appInfo"
@@ -68,6 +71,7 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
   const location = useLocation()
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [changingPassword, setChangingPassword] = React.useState(false)
   const displayName = user?.full_name || user?.email || ""
 
   // Close mobile drawer when route changes
@@ -156,6 +160,19 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
             </div>
           )}
 
+          {/* Change your own password (every role) */}
+          {user && (
+            <button
+              type="button"
+              aria-label="Change password"
+              title="Change password"
+              onClick={() => setChangingPassword(true)}
+              className="hidden sm:flex size-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <KeyRoundIcon className="size-3.5" />
+            </button>
+          )}
+
           {/* Desktop Sign Out */}
           <button
             type="button"
@@ -195,14 +212,24 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
                   {user.is_platform_admin ? "Platform Admin" : `${user.company_name} · ${user.role_label}`}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={logout}
-                className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 transition"
-              >
-                <LogOutIcon className="size-3" />
-                Sign out
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setChangingPassword(true)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-blue-700 px-2 py-1 rounded-md hover:bg-blue-50 transition"
+                >
+                  <KeyRoundIcon className="size-3" />
+                  Change password
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 transition"
+                >
+                  <LogOutIcon className="size-3" />
+                  Sign out
+                </button>
+              </div>
             </div>
           )}
 
@@ -231,6 +258,9 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
           </nav>
         </div>
       )}
+      {/* Portalled: the header's backdrop blur would otherwise clip a fixed overlay to the header. */}
+      {changingPassword &&
+        createPortal(<ChangePasswordModal onClose={() => setChangingPassword(false)} />, document.body)}
     </header>
   )
 }

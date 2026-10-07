@@ -34,6 +34,14 @@ Go to the application URL and sign in with the email and password a platform adm
 operator). The top bar shows your company and role. Sessions are a plain bearer token (8 hours) with no
 server-side logout. If your company is suspended, sign-in stops working for everyone in it.
 
+### Changing your password
+
+Every user can change their own password: click the **key icon** in the top bar (on a small screen, open
+the menu and choose **Change password**), enter your current password, then the new one twice (8–128
+characters, different from the current one). The change is recorded in the audit log (never the password).
+It needs your current password — if you have forgotten it, a platform admin resets it for you (Settings →
+Users → Reset password). Sessions already signed in stay valid until they expire.
+
 > The sign-in screen also shows a "Trust this device" checkbox and a "Sign in with SAML / Okta SSO"
 > button. Neither does anything: the checkbox isn't wired to the login form (authentication doesn't have
 > a device-trust concept to back it), and the SSO button is disabled. Treat the screen as plain

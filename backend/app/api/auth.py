@@ -29,12 +29,19 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, decode_access_token, verify_password
+from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.db import tenancy
 from app.db.session import get_db, get_system_db
 from app.models.company import Company
 from app.models.user import User, UserRole, has_rank, role_label
-from app.schemas.auth import CurrentUserResponse, LoginRequest, TokenResponse, UploadLimitsResponse
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    CurrentUserResponse,
+    LoginRequest,
+    TokenResponse,
+    UploadLimitsResponse,
+)
+from app.services.audit_service import record_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -278,3 +285,46 @@ def read_upload_limits(
         max_file_size_bytes=limits.max_file_bytes,
         max_zip_size_bytes=limits.max_zip_bytes,
     )
+
+
+@router.post(
+    "/me/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Change my password",
+    description=(
+        "Any signed-in user (every role) changes their own password by giving the current one. "
+        "The new password (8-128 characters, different from the current one) is stored hashed and "
+        "the change is recorded in the audit log (never the password). A forgotten password cannot "
+        "be reset here: a platform admin resets it (`POST /settings/users/{id}/reset-password`). "
+        "Tokens already issued stay valid until they expire."
+    ),
+    responses={
+        400: {"description": "The current password is wrong, or the new one equals it."},
+        401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
+        422: {"description": "The new password is shorter than 8 or longer than 128 characters."},
+    },
+)
+def change_my_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    system_db: Session = Depends(get_system_db),
+) -> None:
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect.")
+    if verify_password(payload.new_password, current_user.hashed_password):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "The new password must differ from the current one.")
+    state = tenancy.snapshot(system_db)
+    tenancy.bind_platform(system_db)
+    try:
+        user = system_db.get(User, current_user.id)
+        user.hashed_password = hash_password(payload.new_password)
+        record_event(
+            system_db,
+            "user_password_changed",
+            actor_user_id=user.id,
+            company_id=user.company_id,
+            event_data={"user_id": str(user.id), "email": user.email},  # never the password
+        )
+        system_db.commit()
+    finally:
+        tenancy.restore(system_db, state)

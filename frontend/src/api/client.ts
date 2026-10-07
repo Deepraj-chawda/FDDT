@@ -74,7 +74,7 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, detail, code)
   }
 
-  // /auth/login and /auth/me both always return a JSON body, so this is
-  // safe for the endpoints this client currently calls.
+  // 204 No Content (e.g. changing your password) has no body to parse.
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }

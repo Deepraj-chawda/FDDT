@@ -172,7 +172,7 @@ The user table lists all accounts across the platform:
 
 ### Platform Admin Password Reset System
 
-Only Platform Administrators have the authority to reset account passwords.
+Only Platform Administrators have the authority to reset account passwords. Users who still know their password change it themselves (key icon in the top bar → current password + new password, `POST /auth/me/password`, audited as `user_password_changed`); a reset is only needed when a password is forgotten.
 
 ![Platform Admin Password Reset Modal](images/platform-admin-manual/03-platform-users-reset-modal.png)
 
@@ -272,6 +272,7 @@ When a Platform Administrator inspects a tenant company's cases or documents for
 | Event Type | Category | Description |
 | :--- | :--- | :--- |
 | `user_password_reset` | Security & Admin | Platform admin executed a credential reset for a user account. |
+| `user_password_changed` | Security & Admin | A user changed their own password (with their current password). |
 | `user_created` / `user_updated` | User Admin | New user account created or role/status modified. |
 | `company_created` / `company_updated` | Tenant Admin | New company provisioned or limits adjusted. |
 | `case_created` / `case_submitted` | Case Lifecycle | Submitter uploaded a new case and supporting documents. |

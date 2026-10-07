@@ -68,6 +68,8 @@ Access the platform URL provided by your organization using your business email 
 
 > *Note: If you have forgotten your password or require a new user account, please email your administrator for this.*
 
+**Changing your password.** Once signed in, click the **key icon** in the top navigation bar (or **Change password** in the mobile menu), enter your current password and the new one twice (at least 8 characters). Your current password is required — a forgotten password can only be reset by your administrator.
+
 ---
 
 ## 4. User (Submitter) Guide

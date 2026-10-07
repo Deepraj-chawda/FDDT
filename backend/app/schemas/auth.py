@@ -37,3 +37,14 @@ class UploadLimitsResponse(BaseModel):
     max_zip_size_mb: int = Field(description="Largest bulk-upload zip, in MB.")
     max_file_size_bytes: int
     max_zip_size_bytes: int
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change your own password. The current password is required; a
+    forgotten password is reset by a platform admin instead (there is no
+    self-service reset)."""
+
+    current_password: str = Field(description="Your current password.")
+    new_password: str = Field(
+        ..., min_length=8, max_length=128, description="New password (8-128 chars); stored hashed."
+    )

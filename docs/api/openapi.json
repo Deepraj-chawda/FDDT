@@ -114,6 +114,45 @@
         ]
       }
     },
+    "/auth/me/password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change my password",
+        "description": "Any signed-in user (every role) changes their own password by giving the current one. The new password (8-128 characters, different from the current one) is stored hashed and the change is recorded in the audit log (never the password). A forgotten password cannot be reset here: a platform admin resets it (`POST /settings/users/{id}/reset-password`). Tokens already issued stay valid until they expire.",
+        "operationId": "change_my_password_auth_me_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The current password is wrong, or the new one equals it."
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "422": {
+            "description": "The new password is shorter than 8 or longer than 128 characters."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/cases": {
       "post": {
         "tags": [
@@ -4446,6 +4485,29 @@
         ],
         "title": "CaseType",
         "description": "Case-level category, selected at submission time (System Specification section\n3.6's document-type coverage list). This is separate from a document's\nown `document_type`, which is filled in later by the classification\nstep — a case can hold documents of more than one type (e.g. an\ninvoice plus its approval voucher)."
+      },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password",
+            "description": "Your current password."
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password",
+            "description": "New password (8-128 chars); stored hashed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest",
+        "description": "Change your own password. The current password is required; a\nforgotten password is reset by a platform admin instead (there is no\nself-service reset)."
       },
       "CompanyCreate": {
         "properties": {
