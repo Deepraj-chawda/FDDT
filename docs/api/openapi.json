@@ -4835,6 +4835,18 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "type": "object",
@@ -5312,6 +5324,17 @@
             },
             "type": "object",
             "title": "Thresholds"
+          },
+          "group_caps": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Group Caps",
+            "default": {}
           }
         },
         "type": "object",
@@ -5378,6 +5401,16 @@
               }
             ],
             "title": "Document Filename"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "short": {
+            "type": "string",
+            "title": "Short",
+            "default": ""
           }
         },
         "type": "object",
@@ -5713,6 +5746,20 @@
             "minimum": 2.0,
             "title": "High Threshold",
             "description": "Score at or above which a case is `high` risk. Must exceed the medium threshold."
+          },
+          "metadata_score_cap": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Score Cap",
+            "description": "Most points the metadata rules (`metadata.*`) may add together — one edit leaves several metadata traces. 100 = no cap. Omitted: unchanged."
           }
         },
         "type": "object",
@@ -5738,6 +5785,10 @@
             "title": "High Threshold",
             "description": "Score at or above which a case is `high` risk. Must exceed the medium threshold."
           },
+          "metadata_score_cap": {
+            "type": "integer",
+            "title": "Metadata Score Cap"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -5759,6 +5810,7 @@
         "required": [
           "medium_threshold",
           "high_threshold",
+          "metadata_score_cap",
           "updated_at",
           "updated_by_name"
         ],

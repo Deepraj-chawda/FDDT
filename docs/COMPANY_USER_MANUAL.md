@@ -36,7 +36,7 @@ The **Fraud Document Detection Tool (FDDT)** is an enterprise document verificat
 
 1. **Intake Validation**: Checks file format (PDF), verifies integrity, ensures the file is not password-protected, and validates file size limits.
 2. **Text Extraction & Normalization**: Automatically reads all printed text (including multi-lingual content such as Arabic and English) and structures key fields (dates, amounts, invoice numbers, vendor names).
-3. **Forensic Analysis**: Scans for copy-move cloning, digital alteration artifacts (Error Level Analysis), suspicious PDF metadata histories, and visual inconsistencies.
+3. **Forensic Analysis**: Scans for copy-move cloning, digital alteration artifacts (Error Level Analysis), text deleted or rewritten in converted scans (ghost text), retyped text in a different font or a second copy of the font, suspicious PDF metadata histories (including documents built as web pages), and visual inconsistencies.
 4. **Consistency & Verification**: Validates calculations, compares cross-document values within the case, checks the vendor against your company's known **Issuer Registry**, and performs signature/stamp detection.
 5. **Explainable Risk Scoring**: Aggregates findings into a transparent risk score (0–100) mapped to risk tiers (**Low**, **Medium**, **High**) with clear explanations.
 
@@ -225,6 +225,8 @@ To visually inspect anomalies:
   - **Red Box**: Tampering or Error Level Analysis anomaly.
   - **Orange Box**: Copy-move duplication source and target.
   - **Purple Box**: Arithmetic or field validation mismatch.
+  - **Fuchsia Box**: Text set in a different font (or a second copy of the font) — likely typed in later.
+  - **Teal Box**: Deleted or shortened text — the faint trace of erased text in a converted scan.
   - **Blue Box**: Detected signature or official stamp.
 
 ---

@@ -114,10 +114,11 @@ through child components, the decision endpoints and report endpoints.
 - *Middle:* `PdfOverlayViewer` showing the selected PDF with live overlays from that document's checks
   and cross-document findings; the document's **core** extracted fields (issuer — the only one with an
   "(uncertain)" marker — reference number, date, amounts; `additional_fields` are not listed here);
-  `DocumentChecksPanel` (one expandable card per check, plus a cross-document card and the signature
+  `DocumentChecksPanel` (one expandable card per check — its one-line headline always visible, the
+  short problem lines with **Why?** when expanded — plus a cross-document card and the signature
   comparison card).
 - *Right:* score/tier and the explainable findings (`SeverityFinding` per triggered reason, from
-  `assessment.triggered_reasons`), `CaseDecisionPanel`, and `CaseReportExport` (reviewers only).
+  `assessment.triggered_reasons`: its short `title` and `short` line, the stored reason behind **Why?**), `CaseDecisionPanel`, and `CaseReportExport` (reviewers only).
 - *Bottom:* `ActivityTimeline` (the case's audit trail, newest first).
 **Roles:** everyone can open a case they may see (a foreign case is a 404 → "Case not found"). A `user`
 receives no assessment, no tier and only approve/reject actions; decision and report controls are

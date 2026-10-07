@@ -39,6 +39,31 @@ a database transaction across an Azure call ([processing-queues.md](../processin
    (a total that also appears in a summary line) are disambiguated by nearby keywords ("total",
    "subtotal", "VAT", "date"); a field that cannot be found simply has no box. **A failure here never
    fails extraction.**
+   Then the deterministic post-processing (`line_item_parsing.enrich_extracted_fields`, which is
+   idempotent): line items read from the OCR layout, `pdf_info` (Producer, Creator, CreationDate,
+   ModDate, and `image_count` — raster images the pages draw), and the clean-up in
+   `services/extraction_postprocess.py`:
+   - **Multi-column tables** (`parse_multi_column_tables`). A table with separate amount columns
+     (Price / Discount / Net / VAT / Total) is read column by column: each row keeps its value per
+     column in `columns` (OCR's "D.DD" read as 0.00, "131,900,00" as 131,900.00), `line_total` is the
+     Net (else Total) column, and the column total rows ("Total Net Price", "VAT", "Total Price") go
+     to `column_totals`. These rows replace the model's lines for the same rows — the model mixes
+     columns. Field validation sums each column on its own ([03](03-field-validation.md)).
+   - **Form template date.** A "Date of issue" that sits beside document-control markers (Rev. No,
+     Issue No, Document/Form No — at least two) is the date the blank *form* was issued, not the
+     document's date. It is labelled `form_template_date` (ISO `value`, `raw_text`, a `note`; the
+     model's own name kept as `field_name_as_extracted`). A plain "Date of issue" (a certificate's) is
+     left alone.
+   - **Signature ink read as a name.** OCR reads a signature as a word ("Prepared by: Princess" + the
+     scribble read as "Dalab"). In person-role fields (prepared/signed/approved by, principal, …), words
+     that OCR marked handwritten **and** set ≥ 1.8× the page's median word height, or that lie inside a
+     detected signature region (when detection has already finished), are removed. The original stays
+     in `value_as_read`.
+   - **Several invoices in one file** (`services/multi_invoice.py`). A page whose invoice number
+     differs from the previous page's starts a new invoice. With two or more, each invoice's pages —
+     the PDF's own text layer, else OCR (a free-tier OCR reads only the first two pages) — are sent to
+     the extraction model separately and kept in `extracted_fields.invoices` (`page`, `pages`,
+     `invoice_number`, `core_fields`, `line_items`). The document-level fields stay the first invoice's.
 5. **Persist.** `document_type`, `ocr_text`, `extracted_fields`; `processing_status = complete`;
    audit `document_processing_completed` `{document_type, document_type_confidence, fields_located}`;
    then `run_document_checks.delay(document_id, company_id)` (on `vision_queue`).

@@ -34,7 +34,13 @@ Every pipeline task ends with `request_case_scoring(case_id)`, which enqueues `s
    included but never fired).
 4. **Fingerprint** = SHA-256 of the sorted document ids + the sorted `(rule_id, document_id, count)`
    of fired rules. If it equals the latest assessment's `evidence_fingerprint`, **stop** — no new row.
-5. **Score:** `raw_score = Σ weight` of fired rules; `score = clamp(round(raw_score), 0, 100)`;
+5. **Score:** `raw_score = Σ weight` of fired rules, except that the **metadata rules (`metadata.*`)
+   together add at most the company's metadata cap** (`risk_settings.metadata_score_cap`, default
+   **40**, editable next to the thresholds; 100 = no cap) — one edit leaves several metadata traces
+   (modified after created, the edit history, a date after the file's creation, the editor's name), which
+   must not max the score on their own. A cap that applied is recorded in the snapshot as
+   `group_caps: {"metadata": {"cap", "points"}}` and shown on the case and in the report.
+   `score = clamp(round(raw_score), 0, 100)`;
    `tier` from the company's thresholds (`score ≥ high → high`, `≥ medium → medium`, else `low`;
    defaults **30 / 60**).
 6. **INSERT** a `case_risk_assessments` row (one per (case, fingerprint) — a unique constraint, so a
@@ -81,13 +87,14 @@ A rule fires **once per hit, regardless of how many findings a document has** �
 `{field}`, plus any key in a finding's `data`. A placeholder with no value renders as an **empty string**
 (never an error). The **rendered** text is what is stored and shown.
 
-### The default rules (38)
+### The default rules (63)
 
 These are the rules in the platform template, i.e. what a new company starts with. Full tables of
-`rule_id`, condition and default weight are in each stage's doc:
-[03](03-field-validation.md) (4), [04](04-cross-document-consistency.md) (3),
-[05](05-issuer-verification.md) (1), [06](06-metadata-forensics.md) (15), [07](07-ela-copy-move.md) (3),
-[08](08-visual-review-ai-generation.md) (6), [09](09-signature-verification.md) (5),
+`rule_id`, condition and default weight are in each stage's doc: field (`field.*`, 15) in
+[03](03-field-validation.md), [04](04-cross-document-consistency.md) (3),
+[05](05-issuer-verification.md) (1), [06](06-metadata-forensics.md) (`metadata.*`, 22),
+[06a](06a-font-consistency.md) (2), [07](07-ela-copy-move.md) (3), [07a](07a-ghost-content.md)
+(`content.*`, 2), [08](08-visual-review-ai-generation.md) (6), [09](09-signature-verification.md) (8),
 [10](10-duplicate-detection.md) (1). Heaviest single rules: `duplicate.cross_case_match` (40),
 `copy_move.cluster_detected` / `cross_doc.amount_mismatch` / `signature.reused_different_signer` (35).
 Because weights sum, a case with an amount mismatch (35) plus a duplicate page (40) reaches 75 → **high**.

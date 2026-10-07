@@ -3,15 +3,15 @@
 ## Design
 
 - **One task per document per step.** An upload enqueues six independent tasks for that document
-  (extraction, metadata forensics, ELA + copy-move, duplicate hashing, visual review, signature
-  detection), each carrying the document's company. No task ever processes a whole case or batch.
+  (extraction, metadata forensics, ELA + copy-move + ghost text, duplicate hashing, visual review,
+  signature detection), each carrying the document's company. No task ever processes a whole case or batch.
 - **Three shared queues, one per external dependency**, each with its own worker pool:
 
   | Queue | Tasks | Limited by | Pool |
   |---|---|---|---|
   | `extraction_queue` | `process_document` (Document Intelligence layout **+ the Azure OpenAI classification call**) | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` (10; Azure allows 15) — and, for the classification call, the Azure OpenAI caps | threads |
   | `vision_queue` | visual review, signature detection/comparison, field validation + issuer check | `AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE`, `AZURE_OPENAI_MAX_TOKENS_PER_MINUTE` | threads |
-  | `forensics_queue` (+ legacy `celery`) | metadata forensics, ELA/copy-move, duplicate hashing, cross-document check, risk scoring, housekeeping | **nothing** — local CPU | **prefork**, one process per CPU of the container |
+  | `forensics_queue` (+ legacy `celery`) | metadata forensics, ELA/copy-move/ghost text, duplicate hashing, cross-document check, risk scoring, housekeeping | **nothing** — local CPU (exception: when the ghost-content check finds a deleted text block — rare — it makes a few Document Intelligence Read and Azure OpenAI calls for the reviewer's hint, through the same global rate limiters) | **prefork**, one process per CPU of the container |
 
 - **Fair-share per company** (`app/tasks/fairshare.py`). Each task is published with a priority computed
   from how much work *its company* already has outstanding (queued + running) on that queue:

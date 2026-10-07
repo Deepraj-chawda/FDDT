@@ -1,6 +1,6 @@
 # Entity-relationship diagram
 
-<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head e8b4c2d9f6a1).
+<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head f3b7d1e8a4c5).
      Only key columns are drawn to stay readable; the full column list is in schema.md. -->
 
 Every tenant-owned table also references `companies` through `company_id`. Those edges are left out of

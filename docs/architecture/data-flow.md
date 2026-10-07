@@ -41,7 +41,7 @@ sequenceDiagram
         Note over Q,DB: when every document in the case is terminal → run_cross_document_checks<br/>[forensics_queue] → cross_document_findings
     and PDF forensics [forensics_queue] (independent of extraction)
         Q->>DB: run_metadata_forensics → document_checks
-        Q->>DB: run_tampering_checks → ELA + copy_move rows
+        Q->>DB: run_tampering_checks → ELA + copy_move + ghost_content rows
         Q->>DB: run_duplicate_check_task → document_page_hashes + row
         Q->>AI: run_visual_inconsistency_review_task [vision_queue] (2 runs/page)
     and Signatures [vision_queue]
@@ -119,11 +119,15 @@ least two completed documents. See [04](../pipeline/04-cross-document-consistenc
 
 ### 5. Forensics (in parallel)
 Independently of extraction, four tasks read only the file: `run_metadata_forensics`,
-`run_tampering_checks` (renders once, runs ELA and copy-move) and `run_duplicate_check_task` on the
+`run_tampering_checks` (renders once, runs ELA and copy-move, plus the ghost-content check on scans
+converted to editable text) and `run_duplicate_check_task` on the
 CPU-bound `forensics_queue`, and `run_visual_inconsistency_review_task` on `vision_queue`; plus
 `run_signature_detection` (`vision_queue`). Uploads are PDF-only, so every document gets all of them
 (documents stored before that rule may be images; the forensic tasks skip those silently).
+Duplicate page matches are judged on the extracted fields once both documents have them
+(resubmission vs. same template — `refine_duplicate_check`, run by document checks after extraction).
 See [06](../pipeline/06-metadata-forensics.md), [07](../pipeline/07-ela-copy-move.md),
+[07a](../pipeline/07a-ghost-content.md),
 [08](../pipeline/08-visual-review-ai-generation.md), [09](../pipeline/09-signature-verification.md),
 [10](../pipeline/10-duplicate-detection.md).
 

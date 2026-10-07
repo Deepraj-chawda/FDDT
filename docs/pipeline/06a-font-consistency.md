@@ -89,11 +89,47 @@ a solid fuchsia **Font mismatch** box, and so does the exported case report.
   cover those). A forger who retypes values in the document's own font, or a design that deliberately
   mixes families in a small area, defeats it.
 
+## Scans converted to editable text
+
+Acrobat "Edit scanned document" (and similar converters) re-create every word of a scan as live text in
+subset fonts they generate per guessed style, named `<Family>-NNNN` (`Comic Sans MS-Bold-6003`,
+`Arial-Bold-6000`). The `-NNNN` number is not part of the family. On a page with at least 60 % of its
+characters in such subsets, the family comparison is **not** used — the converter's guesses differ word to
+word on small print, so two subsets side by side (`03` in `Comic Sans MS-BoldItalic-6002` beside `14` in
+`Arial-Bold-6000`) are not evidence. Instead, a run in a **full** font (no `-NNNN`) on a row of the
+converter's subsets of similar size is flagged `high`: it was typed in after the conversion. The finding
+lists the digits the neighbouring subset holds (read from its ToUnicode map) — a subset only contains the
+glyphs originally printed with it, so `digits_not_in_original` hints at what the value was.
+
+## Size changes inside a number
+
+On every text-layer page, a number whose characters are set ≥ 0.2 pt apart (`36,000` with `6` and `000` at
+11.7 pt inside a 12 pt figure) is noted on the font finding covering it (`data.size_change`), or reported
+on its own as `font_size_inconsistency` (`high`). Ordinals like `1st` are not numbers.
+
+## A font embedded more than once
+
+A document exported in one pass embeds each font and style once, as one subset tagged `ABCDEF+`. An edit
+session that types text in adds **another subset of the same font** (PyMuPDF reports the tags only when
+asked: `TOOLS.set_subset_fontnames(True)`, set for the read and restored). Fonts are grouped by family and
+style ignoring the tag; the subset holding the most text is the main copy. Text in an extra copy is flagged
+`font_subset_split` (`high`) when:
+
+- it is on the **same line** as text in the main copy ("AL REEM" beside "SALEH MOHAMED ALHARTHI"), or
+- it is an **amount in a column** whose other amounts are in the main copy ("1,450.00" above "4,575.00"), or
+- it is an **amount in a copy holding only digits and punctuation** (`, . 0 1 2 3 4 5 6`).
+
+An extra copy by itself is not enough: Word puts a stray en-dash, or a second bold-italic heading on another
+line, in a subset of its own. `data` carries `subset`, `main_subset`, `subset_glyphs`,
+`digits_only_subset`, `same_row_as`, `same_column_as`. CASE-39CB18BF: 17 spans — the amounts of both
+columns in a digits-only Times New Roman copy, the totals and amount in words in a third bold copy, the
+student's first name, ID and class in a second bold copy.
+
 ## Risk rules fed
 
 | `rule_id` | Finding | Fires on | Weight | Severity |
 |---|---|---|---:|---|
-| `font.inconsistency` | `font_inconsistency` | high (text layer) | 40 | high |
+| `font.inconsistency` (v3) | `font_inconsistency`, `font_size_inconsistency`, `font_subset_split` | high (text layer) | 40 | high |
 | `font.inconsistency_scanned` | `font_inconsistency` | medium (OCR, scans, 5+ words) | 25 | medium |
 
 `low` findings (a scan's odd font on fewer than 5 words) are not scored by any rule.

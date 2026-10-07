@@ -59,11 +59,12 @@ limitations and the risk rules it feeds.
 4. [Cross-document consistency](pipeline/04-cross-document-consistency.md)
 5. [Issuer verification](pipeline/05-issuer-verification.md)
 6. [Metadata forensics](pipeline/06-metadata-forensics.md) · [6a. Font consistency](pipeline/06a-font-consistency.md)
-7. [ELA & copy-move](pipeline/07-ela-copy-move.md)
+7. [ELA & copy-move](pipeline/07-ela-copy-move.md) · [7a. Deleted / replaced content (ghost text)](pipeline/07a-ghost-content.md)
 8. [Visual review & AI-generation](pipeline/08-visual-review-ai-generation.md)
 9. [Signature verification](pipeline/09-signature-verification.md)
 10. [Duplicate detection](pipeline/10-duplicate-detection.md)
 11. [Risk scoring engine](pipeline/11-risk-scoring-engine.md)
+12. [Short check summaries (what the case page and report show first)](pipeline/12-check-summaries.md)
 
 ### Reference
 - [API](api/README.md) + [`openapi.json`](api/openapi.json) (generated from the code)

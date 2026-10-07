@@ -40,7 +40,15 @@ These are different mechanisms, on purpose. The live UI draws boxes **on top of*
 the browser and stores nothing. The report **burns** findings into *its own* rendered page images. That
 does not violate the immutable-original rule: the original blob is only read, and the annotated
 renders exist only inside the new report. Both use the same colour convention (red = ELA, orange =
-copy-move, dashed blue = model judgment, purple = rule-based field exception).
+copy-move, dashed blue = model judgment, purple = rule-based field exception, fuchsia = font mismatch,
+teal = ghost text — deleted or shortened content).
+
+### Short line first
+Every finding is written twice ([12](../pipeline/12-check-summaries.md)): a **short line** with the values
+("Amounts retyped — 1,450.00 · 16,450.00 … in a second copy of Times New Roman") and the check's full
+explanation. Sections 3, 4 and 5 show the short line first, in bold, with the full explanation under it in
+grey. Findings with one cause are grouped (17 font findings → 3 exception rows, each linking all its
+highlights).
 
 ## The nine sections
 
@@ -48,13 +56,13 @@ copy-move, dashed blue = model judgment, purple = rule-based field exception).
 |---|---|---|---|
 | 1 | **Case Details** | Case number, type, status, submitter, submission time, document list and types, who generated the report and when (with their role label), the recorded decision / escalation, each "by Name (Reviewer L1/L2)" from `case_actions.actor_role` | `case_*` scalars, `documents`, `decision: DecisionInfo`, `escalation: EscalationInfo` ← `cases`, `case_actions`, `users` |
 | 2 | **Executive Summary** | Short: tier and score, the decision, how many documents/exceptions, pointers to Sections 3, 4, 5 and 9. Notes when the case had not finished analysis (`pipeline_pending`) | `risk: RiskSummary`, `pipeline_pending`, `exceptions` ← `case_risk_assessments`, `pipeline_status` |
-| 3 | **Explainable Findings** | Each triggered risk reason: severity, weight, check, document, page, the frozen reason text, and region IDs (R1, R2 …) | `findings: list[FindingRow]` ← `case_risk_assessments.triggered_reasons` |
-| 4 | **All Checks** | The complete checklist: every check on every document with its result and a one-line summary, the cross-document table, and the signature comparison | `documents[].check_rows: CheckRow`, `cross_document: list[CrossRow]` (None if < 2 documents) ← `document_checks`, `cross_document_findings`, `signature_matches` |
-| 5 | **Exceptions** | Everything that did **not** pass, written as concrete items ("Total amount 197,500 does not match subtotal + tax"), each linked to the highlighted region that shows it | `exceptions: list[ExceptionItem]` derived from Section 4's data (failed sub-checks, flagged findings, cross-document mismatches, missing required fields, signature results other than *consistent*) |
-| 6 | **Limitations and Assumptions** | What the report is and is not (system-assisted analysis to support human review, not a certified forensic opinion); which checks are deterministic vs. model judgment; **which checks actually ran on this case (coverage)**; the rule versions and thresholds behind the score; assumptions specific to this case | `coverage: list[CoverageRow]`, `assumptions`, `risk.rule_versions`, `risk.thresholds` |
+| 3 | **Explainable Findings** | Each triggered risk reason: severity, weight, check, document, page, its short title and line ("Fonts: text retyped — …"), the frozen reason text under it, and region IDs (R1, R2 …) | `findings: list[FindingRow]` ← `case_risk_assessments.triggered_reasons` |
+| 4 | **All Checks** | The complete checklist: every check on every document with its result (Pass / Flag / Review — shown but not scored / Limited / N/A …), its headline and one bullet per problem or note, the cross-document table, and the signature comparison | `documents[].check_rows: CheckRow`, `cross_document: list[CrossRow]` (None if < 2 documents) ← `document_checks`, `cross_document_findings`, `signature_matches` |
+| 5 | **Exceptions** | Everything that did **not** pass, written as concrete short items ("Total ≠ subtotal + tax — total 197,500 ≠ subtotal 180,000 + tax 9,000") with the full explanation under each, each linked to the highlighted region(s) that show it | `exceptions: list[ExceptionItem]` derived from Section 4's data (failed sub-checks, flagged findings, cross-document mismatches, missing required fields, signature results other than *consistent*) |
+| 6 | **Limitations and Assumptions** | What the report is and is not (system-assisted analysis to support human review, not a certified forensic opinion); which checks are deterministic vs. model judgment; **which checks actually ran on this case (coverage)** — Ran / Did not run / Not applicable, with the reason a check stored ("Not applicable: no text layer (a plain scan)", "born-digital, no images"); the rule versions and thresholds behind the score; assumptions specific to this case | `coverage: list[CoverageRow]`, `assumptions`, `risk.rule_versions`, `risk.thresholds` |
 | 7 | **Audit Trail** | Chronological events for the case, **oldest first, capped at the first 150**; any later events are counted ("N later event(s) omitted"). Human actors are shown as "Name (Reviewer L1)" etc., using the role recorded in the event at the time (falling back to the user's current role for older events). Platform-admin access rows are never included (they are platform-only) | `audit: list[AuditRow]`, `audit_truncated` ← `audit_log` |
 | 8 | **Appendix** | **8.1** extracted fields per document with confidence and whether the field was located; **8.2** SHA-256 of each original with a live **verification** status (`match` / `mismatch` / `unverified` — the original could not be fetched); **8.3** technical parameters of each check | `documents[].fields`, `documents[].hash: HashVerification`, `technical: list[TechnicalBlock]` |
-| 9 | **PDF Highlighted Regions** | One consolidated page per flagged document page: the original page render with every highlight burned in, a legend, and the list of findings on it | `documents[].annotations: list[PageAnnotation]` + a re-render of the original page |
+| 9 | **PDF Highlighted Regions** | One consolidated page per flagged document page: the original page render with every highlight burned in, a legend, and the list of findings on it; when ghost-text highlights carry an image of the erased trace (contrast-stretched), an extra page of those images follows | `documents[].annotations: list[PageAnnotation]` + a re-render of the original page |
 
 ### Region IDs
 Every highlight gets a report-wide ID **R1, R2, …** (assigned in document order, then page order by

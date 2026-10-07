@@ -54,6 +54,20 @@ matched case.
 `document_page_hashes`: `id`, `company_id`, `document_id` (FK), `page_number` (1-based), `phash`
 (`varchar(32)`, indexed), timestamps; unique on (`document_id`, `page_number`).
 
+## Field-aware: resubmission or the same template
+
+A page hash sees layout, so different invoices printed on one template all match. Once both documents'
+fields are extracted (the check runs in parallel with extraction, so this happens after field validation,
+or straight away when the fields are already there — `refine_duplicate_check`), each page match that is not
+the very same file is compared on the invoice on that page (`extracted_fields.invoices` for a multi-invoice
+file): invoice number, date, amount and student / customer.
+
+- all compared fields equal (at least two) → stays `near_duplicate_page`, high: the same document submitted
+  again (`data.verdict` = "resubmission");
+- any of them different → `same_template_page`, **low** (shown, not scored): the same template with other
+  values, listed with the differences (`data.field_comparison`);
+- fields not available yet → left as it is.
+
 ## Known limitations
 
 - **It matches against everything the company ever stored**, including your own test uploads.
@@ -77,7 +91,7 @@ matched case.
 
 | `rule_id` | Finding | Weight | Severity |
 |---|---|---:|---|
-| `duplicate.cross_case_match` | `near_duplicate_page` | 40 | high |
+| `duplicate.cross_case_match` (v2: resubmissions only) | `near_duplicate_page` | 40 | high |
 
 This is the heaviest single seeded rule: with the default thresholds (medium ≥ 30, high ≥ 60) one
 duplicate page alone makes a case **medium** risk; with any other signal it approaches **high**.

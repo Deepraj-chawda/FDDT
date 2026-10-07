@@ -75,7 +75,10 @@ visualization image is generated; the frontend draws boxes live.
 ## Output shape (real)
 
 Both checks return `{"result": "pass"|"flag", "details": [Finding, …]}`; ELA can also return
-`"not_applicable"`.
+`"not_applicable"`. When a page's text is **vector text drawn over an image** (a scan converted to
+editable text — `services/forensics/page_structure.py`), a clean result is reported as **`"limited"`**
+instead of `"pass"`, with an info finding `pixel_analysis_limited`: pixel checks cannot see an edit to
+that text, so "pass" would give false comfort. A flag stays a flag.
 
 ```jsonc
 // error_level_analysis
@@ -111,6 +114,9 @@ in the report's Section 9. Nothing annotated is ever stored by the live UI.
 - Copy-move silently produces nothing on very dense pages (the 4000-keypoint / 4000-match caps above).
 - Findings on documents with no raster content will never come from ELA (`not_applicable`); a
   pure-text forged PDF is caught, if at all, by metadata, copy-move, visual review and field checks.
+
+On such a page the background itself is searched for traces of text deleted or shortened after the
+conversion — the ghost-content check, [07a](07a-ghost-content.md), run by the same task.
 
 ## Risk rules fed
 

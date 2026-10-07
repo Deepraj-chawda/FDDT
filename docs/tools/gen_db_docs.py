@@ -37,7 +37,7 @@ PURPOSE = {
     "issuer_registry": "A company's known vendors/schools/etc. that extracted issuer names are fuzzy-matched against. Rows are deactivated, never deleted. A new company starts empty.",
     "risk_rules": "A company's configurable scoring rules. Rows are immutable and versioned: an edit inserts `version + 1`; the current rule is the highest version. Seeded from `risk_rule_templates` when the company is created.",
     "risk_rule_templates": "PLATFORM-LEVEL (no `company_id`): the default rule set copied into every NEW company's `risk_rules`. Edited by platform admins; edits never change existing companies. Only `fddt_platform` can access it.",
-    "risk_settings": "One row per company holding its `medium` / `high` score thresholds.",
+    "risk_settings": "One row per company holding its `medium` / `high` score thresholds and the metadata score cap (`metadata_score_cap`, default 40: the most points all `metadata.*` rules add together).",
     "case_risk_assessments": "One row per scoring run of a case (insert-only history; unique per (case, evidence fingerprint)): score, tier, frozen reason text and a snapshot of the exact rule versions and thresholds used.",
     "risk_scores": "LEGACY. Created by the initial migration before the versioned engine existed; nothing in the application reads or writes it. `case_risk_assessments` replaced it.",
     "case_actions": "Reviewer-facing history of human actions on a case (approve / reject / escalate …) with the actor's role at the time. Complements, and is also mirrored into, `audit_log`.",

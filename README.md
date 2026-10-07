@@ -18,8 +18,9 @@ A Celery pipeline OCRs each document (Azure Document Intelligence), then
 classifies it and extracts its fields (Azure OpenAI, behind the `LLMService`
 abstraction — see `app/services/llm_service.py`). It then runs field
 validation, issuer verification, cross-document consistency checks, and PDF
-forensics (metadata, Error Level Analysis, copy-move, duplicate detection,
-visual-inconsistency review, signature/stamp detection). A transparent,
+forensics (metadata, Error Level Analysis, copy-move, ghost text on converted
+scans, font consistency, duplicate detection, visual-inconsistency review,
+signature/stamp detection). A transparent,
 weighted rules engine turns the results into an explainable risk score,
 and the case goes to a Reviewer L1 who approves, rejects or escalates it; an
 escalated case moves to the Reviewer L2 tier, which resolves it.
@@ -176,7 +177,9 @@ Highlight colours (live overlays and the report use the same convention):
 solid red = ELA, solid orange = copy-move, dashed blue = model judgment
 (visual review, signature — "approximate"), solid purple = rule-based field
 exception (a failed field-validation sub-check, or a cross-document mismatch,
-shown on **both** documents).
+shown on **both** documents), solid fuchsia = font mismatch, solid teal =
+deleted / shortened text (ghost text). Every check and finding is shown short
+first (one line with the values), the full explanation behind it.
 
 ### Field locations
 

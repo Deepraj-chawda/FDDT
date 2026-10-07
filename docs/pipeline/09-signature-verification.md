@@ -68,7 +68,16 @@ instead of the signature itself.
 
 `bounding_box` is the primary region: highest confidence, signature preferred on a tie. `detected`
 keeps every region with its `kind`; results stored before that field existed have only `bounding_box`.
-Presence alone is a **pass**.
+Presence alone is a **pass**. A stamp also carries its legible `text` as the model reads it
+(organisation, branch, P.O. box, city) — compared with the issuer by field validation's
+`stamp_issuer_consistency` ([03](03-field-validation.md)). Each region also records its **`material`**
+(`services/forensics/pdf_facts.py`): `image` (an embedded picture of it), `scan` (part of a scanned
+page), or `text` / `vector` / `text_and_vector` — a stamp typed into a born-digital file, flagged by
+field validation's `stamp_authenticity` (and `synthetic_stamp_unsigned` when there is no signature
+either). Those stamp sub-checks are shown with this check on the case page and in the report.
+Detection runs in parallel with extraction; whichever finishes second makes field validation run with
+the stamps and signatures (`revalidate_fields`), and sets aside ghost-text traces inside a signature or
+stamp (`refilter_ghost_content`).
 
 ## 2. Reference creation
 
@@ -179,6 +188,9 @@ There is **no numeric score** on the model verdicts, by design.
 | `rule_id` | Condition | Weight | Severity |
 |---|---|---:|---|
 | `signature.expected_missing` | detection `flag` (expected but none located) | 10 | low |
+| `signature.stamp_issuer_mismatch` (v2: names normalised) | field validation `stamp_issuer_consistency` flag | 15 | medium |
+| `signature.synthetic_stamp` | field validation `stamp_authenticity` flag (stamp is text / vector lines) | 25 | high |
+| `signature.synthetic_stamp_unsigned` | field validation `synthetic_stamp_unsigned` flag | 5 | low |
 | `signature.inconsistent_with_reference` | verdict `inconsistent` | 25 | medium |
 | `signature.possibly_consistent_only` | verdict `possibly_consistent` | 5 | low |
 | `signature.identical_reuse` | verdict `identical_reuse` | 15 | medium |

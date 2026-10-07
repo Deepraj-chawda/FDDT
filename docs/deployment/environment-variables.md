@@ -61,6 +61,7 @@ not call Azure.
 | `ISSUER_FUZZY_MATCH_THRESHOLD` | `85.0` | rapidfuzz WRatio score (0–100) an extracted issuer must reach to match the registry ([05](../pipeline/05-issuer-verification.md)) |
 | `METADATA_FORENSICS_MOD_DATE_THRESHOLD_SECONDS` | `1.0` | Jitter tolerance before "modified after created" flags ([06](../pipeline/06-metadata-forensics.md)) |
 | `METADATA_FORENSICS_EDITING_SOFTWARE_NAMES` | `photoshop,gimp,illustrator,affinity,coreldraw,paint.net,pixlr,canva,inkscape` | Comma-separated, case-insensitive substrings that mark a Producer/Creator as an editing tool |
+| `METADATA_FORENSICS_PDF_EDITOR_NAMES` | `ilovepdf,smallpdf,sejda,pdfescape,pdf-xchange editor,phantompdf,foxit pdf editor,nitro pro,nitro pdf pro,pdfelement,soda pdf,sodapdf,pdffiller,dochub,pdfcandy,pdf candy` | Same, for PDF editors (online and desktop); weighted lower than image editors |
 | `DUPLICATE_HASH_HAMMING_THRESHOLD` | `5` | Max pHash Hamming distance (0–64) for a near-duplicate ([10](../pipeline/10-duplicate-detection.md)) |
 
 Risk **weights, severities and tier thresholds are not environment variables** — they live in the

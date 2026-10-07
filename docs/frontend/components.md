@@ -24,7 +24,7 @@ type OverlayColor = "destructive" | "warning" | "ai" | "field"
 // BoundingBox = { page (1-based), x, y, width, height }  — 0-1 page fractions, origin top-left
 ```
 
-The four colours are **fixed per source**, so a reviewer learns the legend once:
+The colours are **fixed per source**, so a reviewer learns the legend once:
 
 | Colour | Style | Source |
 |---|---|---|
@@ -32,6 +32,8 @@ The four colours are **fixed per source**, so a reviewer learns the legend once:
 | `warning` | solid orange | Copy-move cluster |
 | `ai` | **dashed** blue, "approximate" | Vision-model judgment (visual review, signature comparison) — styled to look less precise |
 | `field` | solid purple | Rule-based field exception (failed field validation, cross-document mismatch) |
+| `font` | solid fuchsia | Text set in an out-of-place font, or in a second embedded copy of a font (font consistency) |
+| `ghost` | solid teal | Deleted / shortened content: the faint trace of erased text in a converted scan (ghost content) — only `ghost_deleted_block` / `ghost_replaced_line`, not its info notes |
 
 Because boxes are page fractions, they are resolution-independent and land correctly regardless of the
 rendered size. **Used in:** `CaseDetailPage` (middle column).
@@ -39,7 +41,7 @@ rendered size. **Used in:** `CaseDetailPage` (middle column).
 ### `getCheckOverlays(checks, crossDocumentFindings?, documentId?) → OverlayBox[]` — `DocumentChecksPanel.tsx`
 The **single function that turns stored check rows into boxes**, shared by the viewer and the findings
 list so the highlighted regions and the listed findings can never disagree (both read the same
-`document_checks` rows). It reads ELA/copy-move findings' `bounding_box`, flagged field-validation
+`document_checks` rows). It reads ELA/copy-move/font/ghost-content findings' `bounding_box`, flagged field-validation
 sub-checks' `regions`, visual-review boxes, and cross-document regions (only those belonging to
 `documentId`, so each document shows its own side of a mismatch).
 
@@ -47,7 +49,7 @@ sub-checks' `regions`, visual-review boxes, and cross-document regions (only tho
 
 | Component | Props | Purpose / where used |
 |---|---|---|
-| `DocumentChecksPanel` | `checks: DocumentCheck[]`, `crossDocumentFindings: CrossDocumentFinding[]`, `hasEnoughDocumentsForCrossCheck: boolean`, `signatureMatches?: SignatureMatch[]` | One expandable card per check with its findings, a synthetic cross-document card, and the signature-comparison card (badge colours: consistent green, possibly-consistent/identical-reuse amber, inconsistent/different-signer red, cannot-determine grey). Handles the differing `details` shapes (list of findings vs. dict of sub-checks vs. flat issuer dict). Duplicate findings link to the matched case. *CaseDetailPage.* |
+| `DocumentChecksPanel` | `checks: DocumentCheck[]`, `crossDocumentFindings: CrossDocumentFinding[]`, `hasEnoughDocumentsForCrossCheck: boolean`, `signatureMatches?: SignatureMatch[]` | One expandable card per check with its findings, a synthetic cross-document card, and the signature-comparison card (badge colours: consistent green, possibly-consistent/identical-reuse amber, inconsistent/different-signer red, cannot-determine grey). Each card shows the check's **headline** under its title (`check.summary.headline`, from the API — [12](../pipeline/12-check-summaries.md)); expanded, one line per problem (`SummaryItem`: title — values, a **Why?** toggle for the full explanation, the ghost-text trace image and the vision guess), short notes, and the raw findings under **Technical details** (which handle the differing `details` shapes: list of findings vs. dict of sub-checks vs. flat issuer dict). The stamp sub-checks of field validation (stamp names the issuer, stamp typed into the file, no signature) are shown with signature / stamp detection, which turns Flagged when one flags. Duplicate findings link to the matched case. *CaseDetailPage.* |
 | `CaseDecisionPanel` | `caseDetail: CaseDetail`, `role: UserRole \| undefined`, `token: string` | Approve / reject / escalate with confirmation dialogs. Approve is disabled until `pipeline.complete` and an assessment exists; above low risk it requires a ≥ 10-character justification. **These are conveniences — every rule is enforced by the API.** Invalidates the `case`, `caseAuditLog` and `cases` queries on success. Escalate requires a reason and moves the case to L2. Non-reviewers get a read-only "Review status" card with the decision history instead; a Reviewer L1 on an L2 case (`caseDetail.can_act` false) gets a read-only "Escalated · L2" card. The decision history shows each actor's role label (`actor_role`). *CaseDetailPage.* |
 | `CaseReportExport` | `caseId: string`, `token: string` | "Export report" button (`POST /cases/{id}/reports`; opens the new PDF in a tab, with an "Open PDF" link as a popup-blocker fallback) and a collapsible history of previous reports. Reviewers only (hidden in a platform admin's support view). *CaseDetailPage.* |
 | `ActivityTimeline` | `entries: AuditLogEntry[]`, `isLoading: boolean` | The case's audit trail, **newest first** (the API returns oldest first). Sentences come from `lib/audit.ts` `describeAuditEvent`. *CaseDetailPage.* |
@@ -81,7 +83,7 @@ sub-checks' `regions`, visual-review boxes, and cross-document regions (only tho
 Small presentational pieces reused across pages: `Nav` (top navigation; props `active: NavItemId`,
 `onNewUploadClick?`; items filtered by `NAV_VISIBLE` — rank via `hasRank` for company users, explicit
 `is_platform_admin` checks for the Platform area; shows the company name next to the user), `PageHeader`, `StatCard` (KPI tile), `InfoChip`,
-`SeverityFinding` (`title`, `description`, `pointDelta`, `tone` — one triggered risk reason with its
+`SeverityFinding` (`title`, `description`, `detail?` (behind a **Why?** toggle), `pointDelta`, `tone` — one triggered risk reason with its
 weight), `AuditRow`. The static HTML mockups these were built against are in
 `stitch_docauth_document_review_platform/`.
 
