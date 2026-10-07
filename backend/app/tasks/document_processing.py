@@ -24,10 +24,11 @@ from sqlalchemy import select
 from app.db import tenancy
 from app.db.session import SessionLocal
 from app.models.document import Document, DocumentProcessingStatus
-from app.models.document_check import DocumentCheckStatus, DocumentCheckType
+from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
 from app.services.audit_service import record_event
 from app.services.check_store import save_check
 from app.services.extraction_service import classify_and_extract
+from app.services.multi_invoice import extract_invoices
 from app.services.field_locator_service import attach_field_locations
 from app.services.forensics.font_consistency import analyze_font_consistency
 from app.services.line_item_parsing import enrich_extracted_fields
@@ -48,6 +49,21 @@ _ERROR_MESSAGE_MAX_LENGTH = 4000
 
 def _is_pdf(document: Document) -> bool:
     return document.content_type == "application/pdf" or document.original_filename.lower().endswith(".pdf")
+
+
+def _detected_signature_regions(db, document: Document) -> list[dict]:
+    """Signature/stamp regions, if detection (which runs in parallel, on the
+    vision queue) has already finished for this document; else none — OCR's
+    own handwriting marks are used regardless."""
+    check = db.execute(
+        select(DocumentCheck).where(
+            DocumentCheck.document_id == document.id,
+            DocumentCheck.check_type == DocumentCheckType.signature_stamp_detection,
+            DocumentCheck.status == DocumentCheckStatus.completed,
+        )
+    ).scalars().first()
+    details = (check.result or {}).get("details") if check is not None else None
+    return list((details or {}).get("detected") or []) if isinstance(details, dict) else []
 
 
 def _run_font_consistency(db, document: Document, pdf_bytes: bytes | None, ocr_pages: list[OCRPage]) -> None:
@@ -153,14 +169,29 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
             # effort: the model's extraction is kept as is if this fails.
             try:
                 extracted_fields = enrich_extracted_fields(
-                    extracted_fields, ocr_text=ocr_result.text, ocr_tables=ocr_result.tables, pdf_bytes=pdf_bytes
+                    extracted_fields,
+                    ocr_text=ocr_result.text,
+                    ocr_tables=ocr_result.tables,
+                    pdf_bytes=pdf_bytes,
+                    ocr_pages=ocr_result.pages,
+                    signature_regions=_detected_signature_regions(db, document),
                 )
+            except Exception:  # noqa: BLE001
+                pass
+            # A file holding several invoices: each one extracted from its own
+            # pages (app/services/multi_invoice.py). Best effort.
+            try:
+                invoices = extract_invoices(get_llm_service(), ocr_result.pages, pdf_bytes)
+                if invoices:
+                    extracted_fields["invoices"] = invoices
             except Exception:  # noqa: BLE001
                 pass
             # Before the document is marked complete, so the case is never
             # scored without it.
             _run_font_consistency(db, document, pdf_bytes, ocr_result.pages)
-            document.extracted_fields = extracted_fields
+            from app.services.check_store import sanitize_null_bytes
+
+            document.extracted_fields = sanitize_null_bytes(extracted_fields)
             document.processing_status = DocumentProcessingStatus.complete
             document.processing_error = None
 
@@ -181,22 +212,29 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
         except Exception as exc:  # noqa: BLE001 - any failure here must still
             # land as a clean "failed" status + audit row, not an unhandled
             # worker crash the frontend has no way to learn about.
-            document.processing_status = DocumentProcessingStatus.failed
-            document.processing_error = str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]
-            record_event(
-                db,
-                "document_processing_failed",
-                case_id=document.case_id,
-                document_id=document.id,
-                event_data={"error": str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]},
-            )
-            db.commit()
+            db.rollback()
+            doc_to_fail = db.execute(
+                select(Document).where(
+                    Document.id == uuid.UUID(document_id), Document.company_id == company_uuid
+                )
+            ).scalar_one_or_none()
+            if doc_to_fail:
+                doc_to_fail.processing_status = DocumentProcessingStatus.failed
+                doc_to_fail.processing_error = str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]
+                record_event(
+                    db,
+                    "document_processing_failed",
+                    case_id=doc_to_fail.case_id,
+                    document_id=doc_to_fail.id,
+                    event_data={"error": str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]},
+                )
+                db.commit()
 
-            # A failed document still counts toward "every document in the
-            # case has reached a terminal status" (see app/tasks/document_
-            # checks.py) — without this, one failed extraction would
-            # silently block the case's cross-document check forever.
-            _maybe_enqueue_cross_document_check(db, document.company_id, document.case_id)
-            request_case_scoring(document.case_id, document.company_id)
+                # A failed document still counts toward "every document in the
+                # case has reached a terminal status" (see app/tasks/document_
+                # checks.py) — without this, one failed extraction would
+                # silently block the case's cross-document check forever.
+                _maybe_enqueue_cross_document_check(db, doc_to_fail.company_id, doc_to_fail.case_id)
+                request_case_scoring(doc_to_fail.case_id, doc_to_fail.company_id)
     finally:
         db.close()

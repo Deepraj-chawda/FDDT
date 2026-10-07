@@ -228,6 +228,7 @@ export type DocumentCheckType =
   | "ai_content_detection"
   | "visual_inconsistency_review"
   | "font_consistency"
+  | "ghost_content"
   // Not a real backend/app/models/document_check.py row — synthesized in
   // frontend/src/components/case/DocumentChecksPanel.tsx from the case's
   // cross_document_findings (case-level, not per-document) so it reads
@@ -263,6 +264,7 @@ export const DOCUMENT_CHECK_TYPE_LABELS: Record<DocumentCheckType, string> = {
   // they even expand the check.
   visual_inconsistency_review: "Visual inconsistency review (experimental)",
   font_consistency: "Font consistency",
+  ghost_content: "Deleted / replaced content (ghost text)",
   cross_document_consistency: "Cross-document consistency",
 }
 
@@ -300,7 +302,7 @@ export interface DocumentCheck {
   id: string
   check_type: DocumentCheckType
   status: "pending" | "running" | "completed" | "failed"
-  // Every check_type shares {result: "pass"|"flag"|"not_applicable",
+  // Every check_type shares {result: "pass"|"flag"|"not_applicable"|"not_checked"|"limited",
   // details: ...}, but `details` itself varies: a list of Finding dicts
   // for the forensic checks (metadata_forensics/error_level_analysis/
   // copy_move_detection), a dict of named {status, reason} sub-checks for
@@ -309,6 +311,9 @@ export interface DocumentCheck {
   // renders all three generically rather than assuming one shape.
   result: Record<string, unknown> | null
   error_message: string | null
+  // Short, readable form of `result` (backend/app/services/check_summaries.py):
+  // what the card shows first. Absent on the synthesized cross-document entry.
+  summary?: CheckSummary | null
   created_at: string
 }
 
@@ -368,6 +373,25 @@ export interface ForensicFinding {
 
 // One fired risk rule, frozen at scoring time (backend/app/schemas/case.py
 // RiskReasonSchema): rendered text + the weight/version that produced it.
+export interface CheckSummaryItem {
+  severity: "info" | "low" | "medium" | "high" | string
+  title: string
+  // One line with the actual values ("1,450.00 · 16,450.00 … in a second copy of …").
+  text: string
+  // The check's full explanation, behind "Why?".
+  detail: string
+  page: number | null
+  findings: string[]
+  image_png_base64?: string | null
+  hint?: { kind?: string; heading?: string; legible_words?: string[]; confidence?: string; answers_agree?: boolean } | null
+}
+
+export interface CheckSummary {
+  headline: string
+  items: CheckSummaryItem[]
+  notes: string[]
+}
+
 export interface RiskReason {
   rule_id: string
   rule_version: number
@@ -378,6 +402,9 @@ export interface RiskReason {
   reason: string
   document_id: string | null
   document_filename: string | null
+  // Short form: a few-word title and one line with the values.
+  title?: string
+  short?: string
 }
 
 export interface RiskAssessment {
@@ -388,6 +415,8 @@ export interface RiskAssessment {
   computed_at: string
   triggered_reasons: RiskReason[]
   thresholds: { medium?: number; high?: number }
+  // Rule families whose points were capped together when scored.
+  group_caps?: Record<string, { cap: number; points: number }>
 }
 
 // Whether every automated check has finished; `pending` says what hasn't.

@@ -22,6 +22,11 @@ from app.models.company import TenantScopedMixin
 
 DEFAULT_MEDIUM_THRESHOLD = 30
 DEFAULT_HIGH_THRESHOLD = 60
+# Most points the metadata rules (rule_id "metadata.*") may add together. One
+# edit leaves several metadata traces (modified after created, the edit
+# history, a date after the file's creation, the editor's name); without a
+# cap they alone can max the score. 100 = no cap.
+DEFAULT_METADATA_SCORE_CAP = 40
 
 
 class RiskSetting(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -34,6 +39,9 @@ class RiskSetting(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     high_threshold: Mapped[int] = mapped_column(
         Integer, nullable=False, default=DEFAULT_HIGH_THRESHOLD
+    )
+    metadata_score_cap: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=DEFAULT_METADATA_SCORE_CAP, server_default=str(DEFAULT_METADATA_SCORE_CAP)
     )
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True

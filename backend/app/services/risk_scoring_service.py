@@ -55,6 +55,7 @@ from app.models.document_check import DocumentCheck, DocumentCheckStatus, Docume
 from app.models.risk_rule import RiskRule
 from app.models.risk_setting import (
     DEFAULT_HIGH_THRESHOLD,
+    DEFAULT_METADATA_SCORE_CAP,
     DEFAULT_MEDIUM_THRESHOLD,
     RiskSetting,
 )
@@ -131,10 +132,27 @@ def get_risk_settings(db: Session, company_id: uuid.UUID) -> RiskSetting:
             company_id=company_id,
             medium_threshold=DEFAULT_MEDIUM_THRESHOLD,
             high_threshold=DEFAULT_HIGH_THRESHOLD,
+            metadata_score_cap=DEFAULT_METADATA_SCORE_CAP,
         )
         db.add(row)
         db.flush()
     return row
+
+
+# Rule families whose points are capped together (risk_settings), by rule_id
+# prefix: several rules there can fire from one underlying edit.
+METADATA_RULE_PREFIX = "metadata."
+
+
+def capped_raw_score(fired: list["FiredRule"], metadata_cap: float) -> tuple[float, dict[str, Any]]:
+    """Sum of the fired rules' weights, with the metadata rules together
+    counting at most `metadata_cap`. Returns (raw score, the caps applied as
+    {"metadata": {"cap", "points"}} — empty when no cap bit)."""
+    metadata = sum(f.rule.weight for f in fired if f.rule.rule_id.startswith(METADATA_RULE_PREFIX))
+    other = sum(f.rule.weight for f in fired if not f.rule.rule_id.startswith(METADATA_RULE_PREFIX))
+    if metadata <= metadata_cap:
+        return float(metadata + other), {}
+    return float(metadata_cap + other), {"metadata": {"cap": metadata_cap, "points": metadata}}
 
 
 def tier_for_score(score: int, medium_threshold: int, high_threshold: int) -> RiskTier:
@@ -510,7 +528,7 @@ def score_case(db: Session, company_id: uuid.UUID, case_id: uuid.UUID) -> CaseRi
 
     settings = get_risk_settings(db, company_id)
     fired.sort(key=lambda f: (-f.rule.weight, f.rule.rule_id))
-    raw_score = float(sum(f.rule.weight for f in fired))
+    raw_score, group_caps = capped_raw_score(fired, settings.metadata_score_cap)
     score = max(0, min(100, round(raw_score)))
     tier = tier_for_score(score, settings.medium_threshold, settings.high_threshold)
 
@@ -540,6 +558,8 @@ def score_case(db: Session, company_id: uuid.UUID, case_id: uuid.UUID) -> CaseRi
             for f in fired
         ],
         "thresholds": {"medium": settings.medium_threshold, "high": settings.high_threshold},
+        "metadata_score_cap": settings.metadata_score_cap,
+        "group_caps": group_caps,
     }
 
     assessment = CaseRiskAssessment(

@@ -217,6 +217,31 @@ class OCRService:
         )
 
 
+    def read_image(self, image_bytes: bytes) -> tuple[str, float]:
+        """Plain text read (Document Intelligence's Read model) of a small
+        image, e.g. a crop: (text, mean word confidence 0-1). Used for
+        best-effort readings — the faint traces of deleted text
+        (app/services/forensics/ghost_content.py) — so it raises
+        OCROperationError on failure for the caller to treat as no reading."""
+        from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+        from azure.core.exceptions import AzureError
+
+        rate_limiter.acquire(
+            rate_limiter.AZURE_DOCUMENT_INTELLIGENCE,
+            settings.azure_document_intelligence_max_calls_per_second,
+            1.0,
+        )
+        try:
+            result = self._client.begin_analyze_document(
+                "prebuilt-read", body=AnalyzeDocumentRequest(bytes_source=image_bytes)
+            ).result()
+        except AzureError as exc:
+            raise OCROperationError(f"Azure Document Intelligence request failed: {exc}") from exc
+        words = [w for page in result.pages or [] for w in page.words or []]
+        confidence = sum(w.confidence or 0.0 for w in words) / len(words) if words else 0.0
+        return (result.content or "").strip(), confidence
+
+
 @lru_cache
 def _build_ocr_service() -> OCRService:
     return OCRService(

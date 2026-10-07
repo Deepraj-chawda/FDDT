@@ -507,6 +507,7 @@ def get_risk_thresholds(
     return RiskThresholdsResponse(
         medium_threshold=row.medium_threshold,
         high_threshold=row.high_threshold,
+        metadata_score_cap=row.metadata_score_cap,
         updated_at=row.updated_at,
         updated_by_name=_actor(db, row.updated_by),
     )
@@ -529,11 +530,16 @@ def update_risk_thresholds(
     """Safe for history: each assessment embeds the thresholds it used."""
     db = scope.db
     row = get_risk_settings(db, scope.company_id)
-    old = {"medium": row.medium_threshold, "high": row.high_threshold}
-    new = {"medium": payload.medium_threshold, "high": payload.high_threshold}
+    old = {"medium": row.medium_threshold, "high": row.high_threshold, "metadata_cap": row.metadata_score_cap}
+    new = {
+        "medium": payload.medium_threshold,
+        "high": payload.high_threshold,
+        "metadata_cap": payload.metadata_score_cap or row.metadata_score_cap,
+    }
     if old != new:
         row.medium_threshold = payload.medium_threshold
         row.high_threshold = payload.high_threshold
+        row.metadata_score_cap = new["metadata_cap"]
         row.updated_by = admin.id
         record_event(
             db,
@@ -546,6 +552,7 @@ def update_risk_thresholds(
     return RiskThresholdsResponse(
         medium_threshold=row.medium_threshold,
         high_threshold=row.high_threshold,
+        metadata_score_cap=row.metadata_score_cap,
         updated_at=row.updated_at,
         updated_by_name=_actor(db, row.updated_by),
     )

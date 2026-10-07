@@ -1,0 +1,527 @@
+{
+ "case_number": "CASE-F6F5FE76",
+ "pdf": "sample-documents/tampered_test_samples/case5.pdf",
+ "sha256": "895a259e007d6e8063ca37d1c118406462b5bd26e2fe49629f2a7df2b3787ae7",
+ "document_type": "school_document",
+ "ocr_text": "British Orchard NUSSENY\nFees Invoice\nBritish Orchard NURSERY\nBritish Orchard Nursery Al Bateen Abu Dhabi Tel: 02 6222903\nDate: 02/09/2024 INVOICE#:23577\nStudent Name:Rakan Amara\nParents Name: Mohamed Faouz Amara\nRegistration No: ALB 473\nFULLYEAR PAYMENT (ACADEMIC YEAR 2024-2025)\nClass: Foundation Class Days: 5 Days\nFees description\nAmount\n15 TERM\n12,000 9,000 9,000 6,000\n2ND TERM\n3rd TERM\nSUMMER CAMPS\nTotal Amount\nAED 36,000\nTotal Term fees are payable by card or cheque to the British Orchard Nursery.\nPrepared by: Princess\nDalab\nMs.Rahab Awad Al Asbahi BON Principal\nDhabi\nAny Hard copy of this document will be considered as 'UNCONTROLLED COPY' unless otherwise mentioned.\nPage 1 of 1\nDOCUMENT F-BON- No- 180\nREV. No. -\n04\nISSUE No .- 71\nDATE OF ISSUE -\n14.03.2022\n0",
+ "extracted_fields": {
+  "line_items": [
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.9,
+    "line_total": 12000.0,
+    "unit_price": null,
+    "description": "15 TERM",
+    "bounding_box": {
+     "x": 0.6776,
+     "y": 0.3749,
+     "page": 1,
+     "width": 0.0549,
+     "height": 0.0125
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "12,000"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.9,
+    "line_total": 9000.0,
+    "unit_price": null,
+    "description": "2ND TERM",
+    "bounding_box": {
+     "x": 0.6777,
+     "y": 0.3899,
+     "page": 1,
+     "width": 0.0487,
+     "height": 0.0131
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "9,000"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.9,
+    "line_total": 9000.0,
+    "unit_price": null,
+    "description": "3rd TERM",
+    "bounding_box": {
+     "x": 0.678,
+     "y": 0.4053,
+     "page": 1,
+     "width": 0.049,
+     "height": 0.0129
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "9,000"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.9,
+    "line_total": 6000.0,
+    "unit_price": null,
+    "description": "SUMMER CAMPS",
+    "bounding_box": {
+     "x": 0.6782,
+     "y": 0.421,
+     "page": 1,
+     "width": 0.0488,
+     "height": 0.0131
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "6,000"
+   }
+  ],
+  "core_fields": {
+   "date": {
+    "value": "2024-09-02",
+    "raw_text": "02/09/2024",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.7302,
+     "y": 0.1426,
+     "page": 1,
+     "width": 0.0949,
+     "height": 0.0133
+    }
+   },
+   "amount": {
+    "value": 36000.0,
+    "currency": "AED",
+    "raw_text": "AED 36,000",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.6371,
+     "y": 0.4881,
+     "page": 1,
+     "width": 0.1155,
+     "height": 0.0163
+    }
+   },
+   "issuer": {
+    "value": "British Orchard Nursery Al Bateen Abu Dhabi",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.1609,
+     "y": 0.1472,
+     "page": 1,
+     "width": 0.1916,
+     "height": 0.0437
+    }
+   },
+   "subtotal": {
+    "value": null,
+    "currency": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_rate": {
+    "value": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_amount": {
+    "value": null,
+    "currency": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "reference_number": {
+    "value": "23577",
+    "uncertain": false,
+    "confidence": 0.9
+   }
+  },
+  "amount_in_words": {
+   "text": null,
+   "value": null,
+   "confidence": 0.0
+  },
+  "additional_fields": [
+   {
+    "value": "Rakan Amara",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "student_name"
+   },
+   {
+    "value": "Mohamed Faouz Amara",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "parents_name",
+    "bounding_box": {
+     "x": 0.6416,
+     "y": 0.2337,
+     "page": 1,
+     "width": 0.1781,
+     "height": 0.0134
+    }
+   },
+   {
+    "value": "ALB 473",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "registration_number",
+    "bounding_box": {
+     "x": 0.3055,
+     "y": 0.2594,
+     "page": 1,
+     "width": 0.0677,
+     "height": 0.0136
+    }
+   },
+   {
+    "value": "Foundation Class",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "class",
+    "bounding_box": {
+     "x": 0.6579,
+     "y": 0.2771,
+     "page": 1,
+     "width": 0.1265,
+     "height": 0.0134
+    }
+   },
+   {
+    "value": "5 Days",
+    "uncertain": false,
+    "confidence": 0.9,
+    "field_name": "days",
+    "bounding_box": {
+     "x": 0.6931,
+     "y": 0.2932,
+     "page": 1,
+     "width": 0.0539,
+     "height": 0.014
+    }
+   },
+   {
+    "value": "Princess Dalab",
+    "uncertain": false,
+    "confidence": 0.85,
+    "field_name": "prepared_by",
+    "bounding_box": {
+     "x": 0.1845,
+     "y": 0.5583,
+     "page": 1,
+     "width": 0.1424,
+     "height": 0.0609
+    }
+   },
+   {
+    "value": "Ms.Rahab Awad Al Asbahi BON Principal",
+    "uncertain": false,
+    "confidence": 0.85,
+    "field_name": "principal",
+    "bounding_box": {
+     "x": 0.1632,
+     "y": 0.6205,
+     "page": 1,
+     "width": 0.2052,
+     "height": 0.0302
+    }
+   },
+   {
+    "value": "DOCUMENT F-BON- No- 180",
+    "uncertain": false,
+    "confidence": 0.8,
+    "field_name": "document_code",
+    "bounding_box": {
+     "x": 0.2422,
+     "y": 0.8685,
+     "page": 1,
+     "width": 0.1213,
+     "height": 0.0193
+    }
+   },
+   {
+    "value": "04",
+    "uncertain": false,
+    "confidence": 0.8,
+    "field_name": "revision_number",
+    "bounding_box": {
+     "x": 0.4812,
+     "y": 0.874,
+     "page": 1,
+     "width": 0.0163,
+     "height": 0.0078
+    }
+   },
+   {
+    "value": "71",
+    "uncertain": false,
+    "confidence": 0.8,
+    "field_name": "issue_number",
+    "bounding_box": {
+     "x": 0.6062,
+     "y": 0.8737,
+     "page": 1,
+     "width": 0.0144,
+     "height": 0.0091
+    }
+   },
+   {
+    "value": "14.03.2022",
+    "uncertain": true,
+    "confidence": 0.8,
+    "field_name": "date_of_issue",
+    "bounding_box": {
+     "x": 0.7392,
+     "y": 0.8733,
+     "page": 1,
+     "width": 0.0659,
+     "height": 0.009
+    }
+   }
+  ],
+  "document_type_confidence": 0.95
+ },
+ "visual_inconsistency_review": {
+  "result": "pass",
+  "details": [
+   {
+    "finding": "experimental_signal_notice",
+    "severity": "info",
+    "description": "This check uses a vision-capable language model's visual judgment, run twice independently per page — not deterministic pixel-level analysis like error level analysis or copy-move detection. Every category below is reported regardless of outcome, including a clean 'no issue' result — a finding only counts as confirmed (and affects this check's pass/flag result) if it appeared in both runs or was reported with high confidence in at least one; anything else is shown but marked as not corroborated. Treat this as one probabilistic, experimental signal among several, not a standalone verdict."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "font_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_font_consistency",
+    "severity": "info",
+    "description": "Page 1 — Font consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The text in the 'Fees description' column is left-aligned but the amounts in the 'Amount' column are right-aligned, causing misalignment between columns. Also, the 'Prepared by: Princess' line and signature are slightly offset compared to surrounding text.",
+      "bounding_box": {
+       "x": 0.05,
+       "y": 0.6,
+       "width": 0.9,
+       "height": 0.15
+      }
+     },
+     "run_2": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The text in the table cells is mostly well aligned, but the 'Prepared by: Princess' line and the signature below it are slightly misaligned vertically relative to the main text block, around the lower left quadrant (approx. bounding box x:0.05, y:0.65, width:0.4, height:0.15).",
+      "bounding_box": {
+       "x": 0.05,
+       "y": 0.65,
+       "width": 0.4,
+       "height": 0.15
+      }
+     },
+     "category": "text_alignment",
+     "region_filter": {
+      "reason": "it is about the detected signature (covers 100% of it) — handwritten signatures and stamps never follow the typed text's baseline",
+      "original_severity": "high",
+      "original_description": "Page 1 — Text alignment: The text in the 'Fees description' column is left-aligned but the amounts in the 'Amount' column are right-aligned, causing misalignment between columns. Also, the 'Prepared by: Princess' line and signature are slightly offset compared to surrounding text. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+     },
+     "run_agreement": "2-of-2 runs"
+    },
+    "page": 1,
+    "finding": "visual_text_alignment",
+    "severity": "info",
+    "description": "Page 1 — Text alignment: The text in the 'Fees description' column is left-aligned but the amounts in the 'Amount' column are right-aligned, causing misalignment between columns. Also, the 'Prepared by: Princess' line and signature are slightly offset compared to surrounding text. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding. Not counted: it is about the detected signature (covers 100% of it) — handwritten signatures and stamps never follow the typed text's baseline.",
+    "bounding_box": {
+     "x": 0.05,
+     "y": 0.6,
+     "page": 1,
+     "width": 0.9,
+     "height": 0.15
+    }
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "color_contrast_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_color_contrast_consistency",
+    "severity": "info",
+    "description": "Page 1 — Color / contrast consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The blue circular stamp and handwritten signature are noticeably softer and less sharp than the printed text, which is expected for stamps and signatures.",
+      "bounding_box": {
+       "x": 0.4,
+       "y": 0.65,
+       "width": 0.2,
+       "height": 0.15
+      }
+     },
+     "run_2": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The blue circular stamp near the lower center right is slightly blurrier and softer compared to the rest of the printed text, consistent with a real ink stamp (approx. bounding box x:0.55, y:0.7, width:0.2, height:0.15).",
+      "bounding_box": {
+       "x": 0.55,
+       "y": 0.7,
+       "width": 0.2,
+       "height": 0.15
+      }
+     },
+     "category": "resolution_sharpness_consistency",
+     "region_filter": {
+      "reason": "it is about the detected stamp (covers 100% of it) — pen strokes and rubber-stamp ink are naturally softer than printed text",
+      "original_severity": "high",
+      "original_description": "Page 1 — Resolution / sharpness consistency: The blue circular stamp and handwritten signature are noticeably softer and less sharp than the printed text, which is expected for stamps and signatures. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+     },
+     "run_agreement": "2-of-2 runs"
+    },
+    "page": 1,
+    "finding": "visual_resolution_sharpness_consistency",
+    "severity": "info",
+    "description": "Page 1 — Resolution / sharpness consistency: The blue circular stamp and handwritten signature are noticeably softer and less sharp than the printed text, which is expected for stamps and signatures. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding. Not counted: it is about the detected stamp (covers 100% of it) — pen strokes and rubber-stamp ink are naturally softer than printed text.",
+    "bounding_box": {
+     "x": 0.4,
+     "y": 0.65,
+     "page": 1,
+     "width": 0.2,
+     "height": 0.15
+    }
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "shadow_lighting_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_shadow_lighting_consistency",
+    "severity": "info",
+    "description": "Page 1 — Shadow / lighting consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "description": "The document shows natural imperfections such as slight ink smudges, variable print quality, and natural stamp and signature texture consistent with a real scanned document rather than AI-generated content.",
+      "likely_ai_generated": false
+     },
+     "run_2": {
+      "confidence": "high",
+      "description": "The document shows natural imperfections such as slight misalignment of handwritten signature and stamp softness consistent with real ink. The text and layout are consistent with a scanned or digitally authored business document without synthetic artifacts.",
+      "likely_ai_generated": false
+     },
+     "flagged": false,
+     "run_agreement": "not flagged"
+    },
+    "page": 1,
+    "finding": "ai_generation_assessment",
+    "severity": "info",
+    "description": "Page 1: no notable signs of AI-generated/synthetic content reported."
+   }
+  ]
+ },
+ "signature_stamp_detection": {
+  "result": "pass",
+  "details": {
+   "signature_expected": true,
+   "detected": [
+    {
+     "kind": "signature",
+     "description": "Handwritten signature above the printed name 'Ms. Rahab Awad Al Asbahi BON Principal'",
+     "confidence": "high",
+     "refinement": "second_look",
+     "bounding_box": {
+      "page": 1,
+      "x": 0.18194999999999997,
+      "y": 0.5824999999999999,
+      "width": 0.04075000000000001,
+      "height": 0.039000000000000035
+     }
+    },
+    {
+     "kind": "stamp",
+     "description": "Round blue company stamp with text around the ring and a logo in the center",
+     "text": "BRITISH ORCHARD NURSERY Br.1 Abu Dhabi Tel. 02 8217901",
+     "confidence": "high",
+     "refinement": "embedded_image",
+     "bounding_box": {
+      "page": 1,
+      "x": 0.4324999711970619,
+      "y": 0.5819997050633379,
+      "width": 0.18923666038803527,
+      "height": 0.13601342360375934
+     }
+    }
+   ],
+   "bounding_box": {
+    "page": 1,
+    "x": 0.18194999999999997,
+    "y": 0.5824999999999999,
+    "width": 0.04075000000000001,
+    "height": 0.039000000000000035
+   }
+  }
+ },
+ "duplicate_detection": {
+  "result": "pass",
+  "details": []
+ }
+}

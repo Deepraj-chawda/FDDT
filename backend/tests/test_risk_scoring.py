@@ -184,9 +184,24 @@ def test_score_is_capped_at_100_and_tiers_by_threshold(db_session, user, rules):
         T.error_level_analysis: _flag([finding("anti_forensic_signal")]),
     })
     a = score_case(db_session, db_session.info["test_company_id"], case.id)
-    assert a.raw_score == 30 + 12 + 35 + 40 + 30
+    # The two metadata rules (30 + 12) count at most the metadata cap, 40.
+    assert a.raw_score == 40 + 35 + 40 + 30
+    assert a.risk_rules_version_snapshot["group_caps"] == {"metadata": {"cap": 40, "points": 42}}
     assert a.score == 100 and a.tier == RiskTier.high
     assert case.risk_tier == RiskTier.high
+
+
+def test_metadata_cap_is_the_companys_setting(db_session, user, rules):
+    row = db_session.execute(select(RiskSetting)).scalars().one()
+    row.metadata_score_cap = 100  # no cap
+    db_session.commit()
+    case = make_case(db_session, user)
+    add_document(db_session, case, user, "a.pdf", checks={
+        T.metadata_forensics: _flag([finding("editing_software_detected"), finding("metadata_entirely_stripped")]),
+    })
+    a = score_case(db_session, db_session.info["test_company_id"], case.id)
+    assert a.raw_score == 42 and a.risk_rules_version_snapshot["group_caps"] == {}
+    assert a.risk_rules_version_snapshot["metadata_score_cap"] == 100
 
 
 @pytest.mark.parametrize("score,tier", [(0, "low"), (29, "low"), (30, "medium"), (59, "medium"), (60, "high"), (100, "high")])

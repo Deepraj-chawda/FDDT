@@ -97,7 +97,11 @@ def test_writes_both_check_rows_for_clean_pdf(task_session_factory, monkeypatch)
         c.check_type: c
         for c in session.query(DocumentCheck).filter_by(document_id=document_id).all()
     }
-    assert set(checks) == {DocumentCheckType.error_level_analysis, DocumentCheckType.copy_move_detection}
+    assert set(checks) == {
+        DocumentCheckType.error_level_analysis, DocumentCheckType.copy_move_detection, DocumentCheckType.ghost_content,
+    }
+    # No scan converted to editable text here: nothing for the ghost check to search.
+    assert checks[DocumentCheckType.ghost_content].result["result"] == "not_applicable"
     for check in checks.values():
         assert check.status == DocumentCheckStatus.completed
     # A blank page has no embedded raster image at all.
@@ -126,7 +130,7 @@ def test_pdf_detected_via_filename_when_content_type_missing(task_session_factor
     tampering_checks_task_module.run_tampering_checks(str(document_id))
 
     session = task_session_factory()
-    assert session.query(DocumentCheck).filter_by(document_id=document_id).count() == 2
+    assert session.query(DocumentCheck).filter_by(document_id=document_id).count() == 3
 
 
 def test_noop_for_unknown_document_id(task_session_factory):

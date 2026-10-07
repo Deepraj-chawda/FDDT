@@ -102,9 +102,12 @@ export interface RiskRuleUpdate {
 export interface RiskThresholds {
   medium_threshold: number
   high_threshold: number
+  // Most points the metadata rules (metadata.*) add together; 100 = no cap.
+  metadata_score_cap?: number
 }
 
 export interface RiskThresholdsResponse extends RiskThresholds {
+  metadata_score_cap: number
   updated_at: string
   updated_by_name: string | null
 }

@@ -77,6 +77,7 @@ def run_metadata_forensics(document_id: str, company_id: str | None = None) -> N
         except Exception as exc:  # noqa: BLE001 - a forensics failure must
             # still land as a clean "failed" document_checks row + audit
             # entry, not an unhandled worker crash.
+            db.rollback()
             save_check(
                 db,
                 document=document,

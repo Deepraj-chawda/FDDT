@@ -167,6 +167,13 @@ class RiskThresholds(BaseModel):
     high_threshold: int = Field(
         ..., ge=2, le=100, description="Score at or above which a case is `high` risk. Must exceed the medium threshold."
     )
+    metadata_score_cap: int | None = Field(
+        None, ge=1, le=100,
+        description=(
+            "Most points the metadata rules (`metadata.*`) may add together — one edit leaves several metadata "
+            "traces. 100 = no cap. Omitted: unchanged."
+        ),
+    )
 
     @model_validator(mode="after")
     def _ordered(self) -> "RiskThresholds":
@@ -176,6 +183,7 @@ class RiskThresholds(BaseModel):
 
 
 class RiskThresholdsResponse(RiskThresholds):
+    metadata_score_cap: int
     updated_at: datetime
     updated_by_name: str | None
 

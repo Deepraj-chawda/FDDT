@@ -32,11 +32,16 @@ FINDING_NAMES: dict[str, list[str]] = {
         "info_xmp_mod_date_mismatch", "info_xmp_producer_mismatch", "javascript_or_openaction",
         "optional_content_groups", "orphaned_objects", "pdf_unreadable", "digital_signature",
         "document_id_chain", "info_dictionary", "xmp_metadata", "xmp_history", "revision_count",
+        "pdf_editor_detected", "history_scanned_document_edited", "editable_text_over_scan", "producer_scrubbed", "web_page_origin",
     ],
-    "font_consistency": ["font_inconsistency", "font_family_inventory"],
-    "error_level_analysis": ["recompression_error_region", "anti_forensic_signal"],
-    "copy_move_detection": ["copy_move_cluster"],
-    "duplicate_detection": ["near_duplicate_page"],
+    "font_consistency": ["font_inconsistency", "font_size_inconsistency", "font_subset_split", "font_family_inventory"],
+    "ghost_content": [
+        "ghost_deleted_block", "ghost_replaced_line", "ghost_show_through", "ghost_near_signature",
+        "ghost_content_scope",
+    ],
+    "error_level_analysis": ["recompression_error_region", "anti_forensic_signal", "pixel_analysis_limited", "ela_scope"],
+    "copy_move_detection": ["copy_move_cluster", "pixel_analysis_limited"],
+    "duplicate_detection": ["near_duplicate_page", "same_template_page"],
     "visual_inconsistency_review": [
         "visual_font_consistency", "visual_text_alignment", "visual_color_contrast_consistency",
         "visual_resolution_sharpness_consistency", "visual_shadow_lighting_consistency",
@@ -52,6 +57,7 @@ CHECK_RESULT_TYPES = [
     DocumentCheckType.duplicate_detection.value,
     DocumentCheckType.visual_inconsistency_review.value,
     DocumentCheckType.font_consistency.value,
+    DocumentCheckType.ghost_content.value,
     DocumentCheckType.signature_stamp_detection.value,
     DocumentCheckType.field_validation.value,
     DocumentCheckType.issuer_verification.value,
@@ -60,7 +66,9 @@ CHECK_RESULT_TYPES = [
 SUB_CHECKS = [
     "date_in_future", "line_item_arithmetic", "subtotal_line_item_consistency", "total_tax_consistency",
     "tax_rate_consistency", "amount_in_words_consistency", "reference_number_format",
-    "iban_trn_validation", "rescan_conflict", "period_quantity_consistency",
+    "iban_trn_validation", "rescan_conflict", "period_quantity_consistency", "document_date_vs_file_creation",
+    "stamp_issuer_consistency", "installment_consistency", "date_sequence", "stamp_authenticity",
+    "synthetic_stamp_unsigned", "fake_scan_watermark", "tax_invoice_trn", "multiple_invoices", "per_invoice_checks",
 ]
 CROSS_FIELDS = ["amount", "date", "issuer"]
 # "consistent" is the good outcome; a rule that fires on it would be a mistake.

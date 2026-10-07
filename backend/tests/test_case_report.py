@@ -248,7 +248,7 @@ def test_exceptions_reference_the_highlight_regions_shown_in_section_9(db_sessio
     flat = " ".join(_all_text(pdf).split())
     exceptions = flat[flat.index("5. Exceptions"): flat.index("6. Limitations")]
     regions = flat[flat.index("9. PDF Highlighted Regions"):]
-    assert "ELA: possible tamper region" in exceptions and "Copy-move:" in exceptions
+    assert "Possible edited area —" in exceptions and "Copied region —" in exceptions
     for region_id in ("R1", "R2", "R3"):
         assert region_id in exceptions
         assert f"{region_id} ·" in regions or f"{region_id}." in regions  # drawn/listed in Section 9
@@ -460,7 +460,7 @@ def test_flagged_field_validation_is_drawn_on_the_offending_fields(db_session, f
     _, pdf = _generate(db_session, fake_storage, case, seeded_user)
     flat = " ".join(_all_text(pdf).split())
     exceptions = flat[flat.index("5. Exceptions"): flat.index("6. Limitations")]
-    assert "Total / tax miscalculation:" in exceptions and "R1" in exceptions and "R2" in exceptions
+    assert "Total ≠ subtotal + tax —" in exceptions and "R1" in exceptions and "R2" in exceptions
     page = _annotated_pages(pdf)[0].get_text()
     assert "Field exception: Total amount (4,520.00 USD vs expected 4,000.00)" in page
 

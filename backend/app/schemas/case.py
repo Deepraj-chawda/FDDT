@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.models.case import CaseStatus, CaseTier, CaseType, RiskTier
 from app.schemas.document import CaseDocumentSummary
 from app.services.case_flag_service import CaseFlag, CaseFlagType, ForensicFinding
+from app.services.check_summaries import risk_reason_short
 from app.services.field_exception_service import cross_document_regions
 
 
@@ -155,6 +156,9 @@ class RiskReasonSchema(BaseModel):
     reason: str
     document_id: uuid.UUID | None
     document_filename: str | None
+    # Short form (app/services/check_summaries.py), computed when read.
+    title: str = ""
+    short: str = ""
 
 
 class RiskAssessmentSchema(BaseModel):
@@ -165,18 +169,28 @@ class RiskAssessmentSchema(BaseModel):
     computed_at: datetime
     triggered_reasons: list[RiskReasonSchema]
     thresholds: dict[str, int]
+    # Rule families whose points were capped together: {"metadata": {"cap", "points"}}.
+    group_caps: dict[str, dict[str, float]] = {}
 
     @classmethod
-    def from_assessment(cls, a) -> "RiskAssessmentSchema":
+    def from_assessment(cls, a, summaries: dict[str, dict[str, Any]] | None = None) -> "RiskAssessmentSchema":
+        """`summaries`: {document_id: {check_type: check summary}} of the
+        case's documents, for each reason's short line."""
         snapshot = a.risk_rules_version_snapshot or {}
+
+        def reason(r: dict) -> RiskReasonSchema:
+            title, short = risk_reason_short(r, (summaries or {}).get(str(r.get("document_id"))))
+            return RiskReasonSchema(**{**r, "title": title, "short": short})
+
         return cls(
             id=a.id,
             score=a.score,
             raw_score=a.raw_score,
             tier=a.tier,
             computed_at=a.computed_at,
-            triggered_reasons=[RiskReasonSchema(**r) for r in (a.triggered_reasons or [])],
+            triggered_reasons=[reason(r) for r in (a.triggered_reasons or [])],
             thresholds=snapshot.get("thresholds", {}),
+            group_caps=snapshot.get("group_caps") or {},
         )
 
 

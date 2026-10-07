@@ -20,7 +20,13 @@ returned `details` dict:
     price (less any line discount) equals the line total printed.
   - subtotal_line_item_consistency: the line items that count toward the
     total add up to the subtotal — or, with no subtotal shown, to the
-    total (less tax when tax is shown). Uses the structured `line_items`
+    total (less tax when tax is shown). Rows that are themselves totals
+    ("Total Fees", "Grand total", "Subtotal") are left out, and so are
+    installment rows ("Term I/II/III", "Installment 1/2", "Payment 1")
+    that split another line into parts (their sum equals that line).
+  - installment_consistency: installment rows add up to the line they split
+    ("Term I 13,480 + Term II 10,266 + Term III 10,266 = Tuition Fees
+    34,012"); flagged when they come close to one line but do not add up. Uses the structured `line_items`
     extraction; documents extracted before it existed fall back to
     additional_fields whose name suggests a line-item total, against the
     subtotal only.
@@ -30,9 +36,17 @@ returned `details` dict:
     line should validate total == subtotal, not be flagged for
     "missing" tax). Skipped when there's no subtotal to check against.
   - tax_rate_consistency: the tax amount equals the taxable base x the
-    stated tax rate — the whole subtotal, or (mixed-rate invoices, where only
+    stated tax rate (the extracted rate, else the printed label "VAT (5%)").
+    A rate above 0 with no tax at all on a non-zero base is flagged: a
+    zero-rated fee would not be labelled 5%. Otherwise the tax is the rate
+    x — the whole subtotal, or (mixed-rate invoices, where only
     some charges are taxed) the sum of some subset of the payable line items;
     the matching subset is named. All subsets are tried up to 20 lines.
+  - (subtotal_line_item_consistency, multi-column tables) when the line items
+    were read from a table with separate amount columns (Price / Discount /
+    Net / VAT / Total), each column is summed on its own and compared with
+    its own total row — Net with "Total Net Price", VAT with "VAT", Total
+    with "Total Price" — never one row's Net with another's Total.
   - amount_in_words_consistency: the amount written out in words equals
     the total (or the subtotal). English words are read here
     (app/services/amount_words.py), not taken from the extraction model,
@@ -50,6 +64,38 @@ returned `details` dict:
     made before printing are invisible to pixel forensics.
   - period_quantity_consistency: a line listing the months it bills as
     due charges for that many months.
+  - document_date_vs_file_creation: the date printed on the document is
+    more than a day after the PDF file's own CreationDate, and the file was
+    modified on or after that printed date — an older file edited and
+    re-dated. A file generated in advance and never touched again (dated for
+    a term start, say) passes.
+  - date_sequence: the dates on and around the document are in order —
+    the document's date, then the date a browser printed the page (its
+    print header, "8/18/23, 12:54 PM"), then the PDF file's creation. A page
+    printed before its own date, or a PDF made before the page was printed,
+    is flagged. Without a print date there is nothing to add to
+    document_date_vs_file_creation, and it is skipped.
+  - fake_scan_watermark: a scanner app's line ("Scanned with CamScanner",
+    "Adobe Scan") on a file with no raster image at all — nothing was
+    scanned; the line was typed in to look authentic.
+  - stamp_authenticity: a detected stamp that is live text and/or vector
+    lines in the file (app/services/forensics/pdf_facts.py region_material),
+    not an image of an ink stamp — a stamp typed into the document.
+    synthetic_stamp_unsigned adds that no signature was found either.
+  - tax_invoice_trn: a document titled TAX INVOICE carries no UAE TRN (15
+    digits, starting 100) — a UAE tax invoice must show the supplier's TRN.
+  - multiple_invoices / per_invoice_checks: a file holding several
+    invoices (one per page, found and extracted page by page —
+    app/services/multi_invoice.py) — two of them for the same month is
+    flagged, and each invoice's own arithmetic is checked.
+  - stamp_issuer_consistency: the organisation named on the document's stamp
+    (its text as read by signature/stamp detection) is the issuer. Compared
+    per writing system, with addresses, P.O. boxes, branch numbers and UAE
+    place names left out, common abbreviations expanded (MBZ = Mohamed Bin
+    Zayed, Intl = International) and generic words dropped (School, Campus,
+    LLC, Branch, Private); token-set similarity of 80 or more is a match.
+    Skipped when no stamp text was read or the stamp and the issuer share no
+    script.
 
 Arithmetic is compared to the cent (one cent of rounding per term), not
 by a percentage: a 1% allowance on a 55,500 total would hide a 400
@@ -65,8 +111,10 @@ flags, else "pass".
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
+
+from rapidfuzz import fuzz
 
 from app.services.amount_words import parse_english_amount
 from app.services.field_regions import format_field_value, make_located_region, make_region
@@ -242,14 +290,95 @@ def _line_names(lines: list[tuple[int, dict[str, Any], float]]) -> list[str]:
     return [f"{_line_label(i, item)}: {_money(total)}" for i, item, total in lines]
 
 
+# A row that is itself a total, not a charge.
+_TOTAL_ROW_RE = re.compile(
+    r"^\W*(?:grand\s+|sub[\s-]?|net\s+)?total\b|\btotal\s+(?:fees?|amount|due|payable|charges?)\b"
+    r"|^\W*(?:amount|balance)\s+due\b|^\W*net\s+payable\b",
+    re.IGNORECASE,
+)
+# A row that is one part of a payment schedule.
+_INSTALLMENT_RE = re.compile(
+    r"\b(?:term|installment|instalment|payment|semester|quarter)\s*(?:no\.?\s*)?"
+    r"(?:[ivxl]{1,4}|\d{1,2}|one|two|three|four)\b"
+    r"|\b(?:1st|2nd|3rd|4th|first|second|third|fourth)\s+(?:term|installment|instalment|payment|semester)\b",
+    re.IGNORECASE,
+)
+# Installments within this share of a line (but not equal to it) are a
+# broken split of that line.
+_NEAR_PARENT_SHARE = 0.2
+
+Row = tuple[int, dict[str, Any], float]
+
+
+def _description(item: dict[str, Any]) -> str:
+    return str(item.get("description") or "")
+
+
+def _installment_split(rows: list[Row]) -> tuple[list[Row], Row | None, bool]:
+    """(installment rows, the line they split, whether they add up to it).
+    The installments are the rows labelled as parts of a payment schedule,
+    when there are two or more; the line they split is the other row their
+    sum equals — or, failing that, the largest other row within
+    _NEAR_PARENT_SHARE of it (a split that no longer adds up). No line:
+    the installments are charges in their own right."""
+    parts = [r for r in rows if _INSTALLMENT_RE.search(_description(r[1]))]
+    if len(parts) < 2:
+        return [], None, False
+    others = [r for r in rows if r not in parts]
+    total = sum(r[2] for r in parts)
+    exact = next((r for r in others if abs(r[2] - total) <= _rounding_allowance(len(parts))), None)
+    if exact is not None:
+        return parts, exact, True
+    largest = max(others, key=lambda r: r[2], default=None)
+    if (
+        largest is not None and largest[2] >= max(r[2] for r in parts)
+        and abs(largest[2] - total) <= _NEAR_PARENT_SHARE * largest[2]
+    ):
+        return parts, largest, False
+    return [], None, False
+
+
+def _payable_rows(line_items: list[dict[str, Any]]) -> tuple[list[Row], list[tuple[Row, str]]]:
+    """(priced rows that are charges, [(row, why it is left out)]): total
+    rows and the installments of another line are not charges."""
+    priced = [(i, item, _num(item.get("line_total"))) for i, item in enumerate(line_items, start=1)]
+    priced = [(i, item, total) for i, item, total in priced if total is not None]
+    totals = [r for r in priced if _TOTAL_ROW_RE.search(_description(r[1]))]
+    rest = [r for r in priced if r not in totals]
+    parts, parent, _ = _installment_split(rest)
+    left_out = [(r, "a total row") for r in totals]
+    if parent is not None:
+        name = _description(parent[1]) or f"line {parent[0]}"
+        left_out += [(r, f"an installment of {name}") for r in parts]
+    return [r for r in rest if not (parent is not None and r in parts)], left_out
+
+
+def _check_installment_consistency(line_items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Installment rows add up to the line they split (module docstring)."""
+    priced = [(i, item, _num(item.get("line_total"))) for i, item in enumerate(line_items, start=1)]
+    priced = [(i, item, total) for i, item, total in priced if total is not None]
+    rest = [r for r in priced if not _TOTAL_ROW_RE.search(_description(r[1]))]
+    parts, parent, adds_up = _installment_split(rest)
+    if parent is None:
+        return {"status": "skipped", "reason": "No installment rows splitting another line."}
+    terms = " + ".join(f"{_description(r[1]) or f'line {r[0]}'} {_money(r[2])}" for r in parts)
+    split = sum(r[2] for r in parts)
+    name = _description(parent[1]) or f"line {parent[0]}"
+    if adds_up:
+        return {"status": "pass", "reason": f"{terms} = {_money(split)}, the {name} line."}
+    return _flag(
+        f"The installments do not add up to the line they split: {terms} = {_money(split)}, but {name} is "
+        f"{_money(parent[2])} (difference {_money(abs(parent[2] - split))})."
+    )
+
+
 def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str, Any]]) -> dict[str, Any] | None:
     """The structured line-item version of subtotal_line_item_consistency;
     None when there are no structured line totals to use. Lines marked paid
     (status "paid", read from the document's own PAID marker — see
     app/services/line_item_parsing.py) are listed but never summed. The
     result names the lines that were summed and the ones left out."""
-    priced = [(i, item, _num(item.get("line_total"))) for i, item in enumerate(line_items, start=1)]
-    priced = [(i, item, total) for i, item, total in priced if total is not None]
+    priced, set_aside = _payable_rows(line_items)
     counted = [(i, item, total) for i, item, total in priced if item.get("counts_toward_total", True)]
     if not counted:
         return None
@@ -259,7 +388,12 @@ def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str
     field, expected, label = target
     counted_sum = sum(total for _, _, total in counted)
     excluded = [p for p in priced if p not in counted]
-    detail = {"summed_lines": _line_names(counted), "excluded_lines": _line_names(excluded)}
+    detail = {
+        "summed_lines": _line_names(counted),
+        "excluded_lines": _line_names(excluded) + [f"{name} ({why})" for name, (_, why) in zip(
+            _line_names([r for r, _ in set_aside]), set_aside
+        )],
+    }
     # Rounding only: one cent per summed line (a printed sum of rounded
     # amounts can only drift that far). A percentage would hide real edits —
     # 1% of 55,500 is 555.
@@ -276,16 +410,15 @@ def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str
             "status": "pass",
             "reason": f"The {len(unpaid)} line item(s) add up to the {label}.",
             "summed_lines": _line_names(unpaid),
-            "excluded_lines": _line_names([p for p in priced if p not in unpaid]),
+            "excluded_lines": _line_names([p for p in priced if p not in unpaid])
+            + [f"{name} ({why})" for name, (_, why) in zip(_line_names([r for r, _ in set_aside]), set_aside)],
         }
     terms = " + ".join(_money(total) for _, _, total in counted)
-    left_out = (
-        " Not summed: " + "; ".join(
-            f"{name}{' (marked paid)' if item.get('status') == 'paid' else ''}"
-            for name, (_, item, _) in zip(detail["excluded_lines"], excluded)
-        ) + "."
-        if excluded else ""
-    )
+    left_out_names = [
+        f"{name}{' (marked paid)' if item.get('status') == 'paid' else ''}"
+        for name, (_, item, _) in zip(_line_names(excluded), excluded)
+    ] + [f"{name} ({why})" for name, (_, why) in zip(_line_names([r for r, _ in set_aside]), set_aside)]
+    left_out = " Not summed: " + "; ".join(left_out_names) + "." if left_out_names else ""
     return {
         **_flag(
             f"Line items = {_money(counted_sum)}, stated {label}, difference "
@@ -300,10 +433,73 @@ def _check_line_items_sum(core_fields: dict[str, Any], line_items: list[dict[str
     }
 
 
+# Each amount column and the core field its total row is, when the document
+# has no labelled total row for it: net -> subtotal, VAT -> tax, total -> amount.
+_COLUMN_CORE = {"net": "subtotal", "vat": "tax_amount", "total": "amount"}
+_COLUMN_NAMES = {"net": "Net", "vat": "VAT", "total": "Total", "price": "Price", "discount": "Discount"}
+
+
+def _check_column_sums(
+    core_fields: dict[str, Any], line_items: list[dict[str, Any]], column_totals: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Multi-column line items (app/services/line_item_parsing.py
+    parse_multi_column_tables): each amount column summed on its own and
+    compared with its own total row — Net with "Total Net Price", VAT with
+    "VAT", Total with "Total Price". Never mixed. None when the line items
+    do not carry columns."""
+    counted = [i for i in line_items if i.get("counts_toward_total", True) and i.get("status") != "paid"]
+    if not counted or not all(isinstance(i.get("columns"), dict) for i in counted):
+        return None
+    headers = next((i.get("column_headers") for i in counted if i.get("column_headers")), {}) or {}
+    compared, wrong = [], []
+    anchored = False  # a net or total column was compared
+    for role, core_name in _COLUMN_CORE.items():
+        values = [i["columns"][role] for i in counted if role in i["columns"]]
+        if not values:
+            continue
+        target = (column_totals or {}).get(role)
+        expected = target["value"] if target else _num((core_fields.get(core_name) or {}).get("value"))
+        label = target["label"] if target else core_name.replace("_", " ")
+        has_total_column = any("total" in i["columns"] for i in counted)
+        if expected is None and role == "net" and not has_total_column:
+            # A "Net Amount" column with no total column beside it is what
+            # each row comes to: it adds up to the document's total.
+            expected, label = _num((core_fields.get("amount") or {}).get("value")), "total"
+        if expected is None:
+            continue
+        if role in ("net", "total"):
+            anchored = True
+        column = headers.get(role) or _COLUMN_NAMES[role]
+        total = sum(values)
+        line = f"{column} column {_money(total)} vs {label} {_money(expected)}"
+        if abs(total - expected) <= _rounding_allowance(len(values)):
+            compared.append(f"{column} column {_money(total)} = {label}")
+        else:
+            wrong.append((role, core_name, f"{line} (difference {_money(abs(total - expected))})"))
+    if not anchored:
+        return None  # only the VAT column could be compared: the plain check says more
+        return None
+    detail = {"summed_lines": _line_names([(n, i, i["line_total"]) for n, i in enumerate(counted, 1)]),
+              "excluded_lines": [], "columns_compared": compared + [w[2] for w in wrong]}
+    if not wrong:
+        return {"status": "pass", "reason": f"Each column adds up to its own total: {'; '.join(compared)}.", **detail}
+    return {
+        **_flag(
+            "A column does not add up to its own total: " + "; ".join(w[2] for w in wrong) + "."
+            + (f" Correct: {'; '.join(compared)}." if compared else ""),
+            *[make_region(core_fields, core_name, f"Field exception: {text}") for _, core_name, text in wrong],
+        ),
+        **detail,
+    }
+
+
 def _check_subtotal_line_item_consistency(
     core_fields: dict[str, Any], additional_fields: list[dict[str, Any]],
-    line_items: list[dict[str, Any]] | None = None,
+    line_items: list[dict[str, Any]] | None = None, column_totals: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    by_column = _check_column_sums(core_fields, line_items or [], column_totals)
+    if by_column is not None:
+        return by_column
     structured = _check_line_items_sum(core_fields, line_items or [])
     if structured is not None:
         return structured
@@ -400,10 +596,22 @@ def _taxed_subset(
     return None
 
 
+# A printed tax label with its rate: "VAT (5%)", "VAT 5 %", "Tax @ 5%".
+_TAX_LABEL_RE = re.compile(r"\b(?:VAT|TAX|GST)\b\s*[(@:]?\s*(\d{1,2}(?:\.\d+)?)\s*%", re.IGNORECASE)
+
+
+def _label_rate(ocr_text: str | None) -> float | None:
+    rates = {float(m[1]) for m in _TAX_LABEL_RE.finditer(ocr_text or "")}
+    return rates.pop() if len(rates) == 1 else None
+
+
 def _check_tax_rate_consistency(
-    core_fields: dict[str, Any], line_items: list[dict[str, Any]] | None = None
+    core_fields: dict[str, Any], line_items: list[dict[str, Any]] | None = None, ocr_text: str | None = None
 ) -> dict[str, Any]:
     rate = _num((core_fields.get("tax_rate") or {}).get("value"))
+    rate_source = "rate"
+    if rate is None:
+        rate, rate_source = _label_rate(ocr_text), "label"
     tax = _num((core_fields.get("tax_amount") or {}).get("value"))
     if rate is None or tax is None:
         return {"status": "skipped", "reason": "No tax rate and/or tax amount to compare."}
@@ -418,6 +626,13 @@ def _check_tax_rate_consistency(
     expected = base * rate / 100
     if abs(expected - tax) <= _rounding_allowance(2):
         return {"status": "pass", "reason": f"Tax {_money(tax)} is {rate:g}% of the {base_label}."}
+    if rate > 0 and abs(tax) < 0.005 and base > 0:
+        label = "printed label" if rate_source == "label" else "tax rate"
+        return _flag(
+            f"The {label} says {rate:g}% tax, but the tax is 0.00 on the {base_label} ({rate:g}% would be "
+            f"{_money(expected)}). A zero-rated fee would not be labelled {rate:g}%.",
+            make_region(core_fields, "tax_amount", f"Field exception: Tax amount (0.00 vs {rate:g}% = {_money(expected)})"),
+        )
     payable = [
         (i, item, t)
         for i, item in enumerate(line_items or [], start=1)
@@ -621,6 +836,358 @@ def _check_rescan_conflict(pdf_info: dict[str, Any] | None, ocr_text: str | None
     return {"status": "pass", "reason": "No phone-scanner watermark on the page."}
 
 
+# --- printed date vs the file's own dates ---------------------------------------------
+
+_FILE_DATE_TOLERANCE = timedelta(days=1)
+# Scanners and PCs with an unset clock write dates at or before this.
+_UNSET_CLOCK_DATE = date(2000, 1, 1)
+
+
+def _iso_datetime(value: Any) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value)) if value else None
+    except ValueError:
+        return None
+
+
+def _check_document_date_vs_file_creation(
+    core_fields: dict[str, Any], pdf_info: dict[str, Any] | None
+) -> dict[str, Any]:
+    """A PDF file cannot predate its own content: a printed date well after
+    the file's CreationDate, in a file modified on or after that date, means
+    an older file was edited and re-dated."""
+    raw = (core_fields.get("date") or {}).get("value")
+    printed = _parse_date(raw) if raw else None
+    created = _iso_datetime((pdf_info or {}).get("CreationDate"))
+    if printed is None:
+        return {"status": "skipped", "reason": "No document date extracted."}
+    if created is None:
+        return {"status": "skipped", "reason": "PDF creation date not recorded for this document."}
+    if created.date() <= _UNSET_CLOCK_DATE:
+        return {"status": "skipped", "reason": f"PDF creation date {created.date().isoformat()} looks like an unset clock."}
+    gap = printed - created.date()
+    if gap <= _FILE_DATE_TOLERANCE:
+        return {
+            "status": "pass",
+            "reason": f"Document date {printed.isoformat()} is not after the file's creation ({created.date().isoformat()}).",
+        }
+    modified = _iso_datetime((pdf_info or {}).get("ModDate"))
+    if modified is None or modified.date() + _FILE_DATE_TOLERANCE < printed:
+        return {
+            "status": "pass",
+            "reason": (
+                f"The file was created {gap.days} days before its printed date {printed.isoformat()} but not "
+                "modified on or after it — consistent with a document generated in advance."
+            ),
+        }
+    return _flag(
+        f"The document is dated {printed.isoformat()}, but its PDF file was created on "
+        f"{created.date().isoformat()} — {gap.days} days earlier — and last modified on "
+        f"{modified.date().isoformat()}. A file cannot predate its own content: an older document appears to "
+        "have been edited and re-dated.",
+        make_region(core_fields, "date", f"Field exception: Date ({raw} is after the file's creation)"),
+    )
+
+
+# A browser's print header, at the top of a printed web page: "8/18/23, 12:54 PM".
+_PRINT_HEADER_RE = re.compile(r"^\s*(\d{1,2})/(\d{1,2})/(\d{2}|\d{4}),?\s+\d{1,2}:\d{2}(?:\s*[AP]M)?\b", re.IGNORECASE)
+
+
+def _print_dates(ocr_text: str | None) -> list[date]:
+    """The browser print header's date, in each reading its digits allow
+    (month/day first, as browsers in English print it, then day/month)."""
+    first_lines = "\n".join((ocr_text or "").strip().splitlines()[:2])
+    match = next((m for line in first_lines.splitlines() if (m := _PRINT_HEADER_RE.match(line))), None)
+    if match is None:
+        return []
+    a, b, year = int(match[1]), int(match[2]), int(match[3])
+    year += 2000 if year < 100 else 0
+    readings = []
+    for month, day in ((a, b), (b, a)):
+        try:
+            readings.append(date(year, month, day))
+        except ValueError:
+            continue
+    return list(dict.fromkeys(readings))
+
+
+def _day(value: date) -> str:
+    return f"{value.day} {value.strftime('%b %Y')}"
+
+
+def _check_date_sequence(
+    core_fields: dict[str, Any], pdf_info: dict[str, Any] | None, ocr_text: str | None
+) -> dict[str, Any]:
+    """Document date -> print date -> PDF creation, in order (module docstring)."""
+    raw = (core_fields.get("date") or {}).get("value")
+    dated = _parse_date(raw) if raw else None
+    created_at = _iso_datetime((pdf_info or {}).get("CreationDate"))
+    created = created_at.date() if created_at and created_at.date() > _UNSET_CLOCK_DATE else None
+    readings = _print_dates(ocr_text)
+    if not readings:
+        return {"status": "skipped", "reason": "No print date on the page (no browser print header)."}
+
+    def problems(printed: date) -> list[str]:
+        found = []
+        if dated and printed + _FILE_DATE_TOLERANCE < dated:
+            found.append(f"printed {_day(printed)}, before its own date {_day(dated)}")
+        if created and created + _FILE_DATE_TOLERANCE < printed:
+            found.append(f"the PDF was created {_day(created)}, before the page was printed ({_day(printed)})")
+        return found
+
+    printed = next((r for r in readings if not problems(r)), None)
+    if printed is not None:
+        chain = ([f"dated {_day(dated)}"] if dated else []) + [f"printed {_day(printed)}"] + (
+            [f"PDF created {_day(created)}"] if created else []
+        )
+        return {"status": "pass", "reason": " → ".join(chain) + ": in order."}
+    return _flag(
+        "The dates are out of order: " + "; ".join(problems(readings[0])) + ".",
+        make_region(core_fields, "date", f"Field exception: Date ({raw} vs the page's print date)"),
+    )
+
+
+def _check_fake_scan_watermark(pdf_info: dict[str, Any] | None, ocr_text: str | None) -> dict[str, Any]:
+    """A scanner app's watermark on a file with no raster image (module docstring)."""
+    watermark = _PHONE_SCANNER_RE.search(ocr_text or "")
+    if not watermark:
+        return {"status": "skipped", "reason": "No scanner-app watermark on the page."}
+    images = (pdf_info or {}).get("image_count")
+    if images is None:
+        return {"status": "skipped", "reason": "The file's images were not counted for this document."}
+    if images == 0:
+        return _flag(
+            f"The page says '{watermark.group(0)}', but the file contains no image at all — nothing was scanned. "
+            "The line is typed text, added to make the document look like a scan of a real paper."
+        )
+    return {"status": "pass", "reason": f"'{watermark.group(0)}' on a file with {images} scanned image(s)."}
+
+
+_SYNTHETIC_MATERIALS = {"text": "live text", "vector": "drawn lines", "text_and_vector": "live text and drawn lines"}
+
+
+def _synthetic_stamps(stamps: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    return [s for s in stamps or [] if s.get("material") in _SYNTHETIC_MATERIALS]
+
+
+def _check_stamp_authenticity(stamps: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """A stamp typed into the file rather than an image of an ink stamp."""
+    if stamps is None:
+        return {"status": "skipped", "reason": "Signature/stamp detection has not finished for this document."}
+    if not stamps:
+        return {"status": "skipped", "reason": "No stamp on this document."}
+    if all("material" not in s for s in stamps):
+        return {"status": "skipped", "reason": "The stamp's material was not recorded for this document."}
+    fake = _synthetic_stamps(stamps)
+    if not fake:
+        made = sorted({s.get("material", "unknown") for s in stamps})
+        return {"status": "pass", "reason": f"The stamp is {' / '.join(made)} — an image of a real stamp."}
+    pages = sorted({(s.get("bounding_box") or {}).get("page") for s in fake} - {None})
+    made = " / ".join(sorted({_SYNTHETIC_MATERIALS[s["material"]] for s in fake}))
+    text = next((s.get("text") for s in fake if s.get("text")), "")
+    return _flag(
+        f"The stamp{' on page ' + ', '.join(map(str, pages)) if pages else ''}"
+        f"{' (' + repr(text) + ')' if text else ''} is {made} in the file, not an image of an ink stamp: it was "
+        "typed into the document, which a real stamped paper never is."
+    )
+
+
+def _check_synthetic_stamp_unsigned(
+    stamps: list[dict[str, Any]] | None, signatures: list[dict[str, Any]] | None
+) -> dict[str, Any]:
+    """A typed-in stamp, and no signature anywhere either."""
+    if stamps is None or signatures is None:
+        return {"status": "skipped", "reason": "Signature/stamp detection has not finished for this document."}
+    if not _synthetic_stamps(stamps):
+        return {"status": "skipped", "reason": "No typed-in stamp."}
+    if signatures:
+        return {"status": "pass", "reason": "A signature is present beside the typed-in stamp."}
+    return _flag("Besides the typed-in stamp, the document carries no signature at all.")
+
+
+_TAX_INVOICE_RE = re.compile(r"\btax\s+invoice\b|فاتورة\s+ضريبية", re.IGNORECASE)
+_UAE_TRN_RE = re.compile(r"(?<!\d)100\d{12}(?!\d)")
+# A tax registration number as printed: its label, then a number of about
+# its length (any country's; whether it is a valid UAE TRN is
+# iban_trn_validation's question — here only whether one is shown).
+_LABELLED_TRN_RE = re.compile(
+    r"(?:\bTRN\b|T\.R\.N|tax\s+registration(?:\s+(?:no|number))?|\bVAT\s+(?:no|number|reg(?:istration)?)\b"
+    r"|الرقم\s+الضريبي|رقم\s+التسجيل\s+الضريبي)[^\d\n]{0,30}(\d[\d\s-]{8,22}\d)",
+    re.IGNORECASE,
+)
+_ARABIC_INDIC = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def _check_tax_invoice_trn(
+    core_fields: dict[str, Any], additional_fields: list[dict[str, Any]], ocr_text: str | None
+) -> dict[str, Any]:
+    """A TAX INVOICE must show the supplier's TRN (module docstring): a
+    labelled 15-digit number, in Western or Arabic-Indic digits, or a UAE
+    TRN (100…) anywhere."""
+    title = _TAX_INVOICE_RE.search(ocr_text or "")
+    if not title:
+        return {"status": "skipped", "reason": "Not titled a tax invoice."}
+    values = [str(f.get("value") or "") for f in additional_fields if isinstance(f, dict)]
+    text = " ".join([ocr_text or "", *values]).translate(_ARABIC_INDIC)
+    labelled = next(
+        (digits for m in _LABELLED_TRN_RE.finditer(text) if 10 <= len(digits := re.sub(r"\D", "", m.group(1))) <= 17),
+        None,
+    )
+    found = labelled or (m.group(0) if (m := _UAE_TRN_RE.search(re.sub(r"[\s-]", "", text))) else None)
+    if found:
+        return {"status": "pass", "reason": f"Tax invoice with TRN {found}."}
+    return _flag(
+        f"Titled '{title.group(0)}' but no TRN appears anywhere on it. A UAE tax invoice must carry the "
+        "supplier's 15-digit Tax Registration Number."
+    )
+
+
+def _invoice_label(invoice: dict[str, Any]) -> str:
+    core = invoice.get("core_fields") or {}
+    ref = (core.get("reference_number") or {}).get("value") or "?"
+    dated = _parse_date((core.get("date") or {}).get("value") or "")
+    amount = _num((core.get("amount") or {}).get("value"))
+    parts = [f"p.{invoice.get('page')}", str(ref)]
+    if dated:
+        parts.append(dated.strftime("%d %b %Y"))
+    if amount is not None:
+        parts.append(_money(amount))
+    return " ".join(parts[:2]) + (f" ({', '.join(parts[2:])})" if len(parts) > 2 else "")
+
+
+def _check_multiple_invoices(invoices: list[dict[str, Any]]) -> dict[str, Any]:
+    """Several invoices in one file; two for the same month are flagged."""
+    if len(invoices) < 2:
+        return {"status": "skipped", "reason": "One invoice in the file."}
+    by_month: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    for invoice in invoices:
+        dated = _parse_date(((invoice.get("core_fields") or {}).get("date") or {}).get("value") or "")
+        if dated:
+            by_month.setdefault((dated.year, dated.month), []).append(invoice)
+    listed = "; ".join(_invoice_label(i) for i in invoices)
+    same = [group for group in by_month.values() if len(group) > 1]
+    if same:
+        month = _parse_date((same[0][0]["core_fields"]["date"])["value"]).strftime("%b %Y")
+        return _flag(
+            f"{len(invoices)} invoices in one file, {len(same[0])} of them for {month}: "
+            + "; ".join(_invoice_label(i) for i in same[0])
+            + f". All invoices: {listed}."
+        )
+    return {"status": "pass", "reason": f"{len(invoices)} invoices in one file, each for a different month: {listed}."}
+
+
+# The arithmetic sub-checks run on each invoice of a multi-invoice file.
+_PER_INVOICE_CHECKS = {
+    "line_item_arithmetic": "line item",
+    "subtotal_line_item_consistency": "line items vs total",
+    "total_tax_consistency": "total and tax",
+    "tax_rate_consistency": "tax rate",
+}
+
+
+def _check_per_invoice(invoices: list[dict[str, Any]], flagged_already: set[str] = frozenset()) -> dict[str, Any]:
+    """Each invoice of a multi-invoice file checked on its own. A kind of
+    problem the document's own sub-checks already flag is listed but not
+    flagged again (`flagged_already`): one cause, scored once."""
+    if len(invoices) < 2:
+        return {"status": "skipped", "reason": "One invoice in the file."}
+    problems = []
+    repeats = []
+    for invoice in invoices:
+        core = invoice.get("core_fields") or {}
+        lines = [i for i in invoice.get("line_items") or [] if isinstance(i, dict)]
+        results = {
+            "line_item_arithmetic": _check_line_item_arithmetic(lines),
+            "subtotal_line_item_consistency": _check_subtotal_line_item_consistency(core, [], lines),
+            "total_tax_consistency": _check_total_tax_consistency(core),
+            "tax_rate_consistency": _check_tax_rate_consistency(core, lines, invoice.get("ocr_text")),
+        }
+        for name, result in results.items():
+            if result["status"] == "flag":
+                line = f"{_invoice_label(invoice)} — {_PER_INVOICE_CHECKS[name]}: {result['reason']}"
+                (repeats if name in flagged_already else problems).append(line)
+    kinds = sorted({_PER_INVOICE_CHECKS[n] for n in flagged_already & set(_PER_INVOICE_CHECKS)})
+    also = (
+        f" The same {', '.join(kinds)} problem the document's own check flags repeats on: " + " | ".join(repeats) + "."
+        if repeats else ""
+    )
+    if problems:
+        return _flag(f"{len(problems)} problem(s) across the file's invoices: " + " | ".join(problems) + also)
+    return {"status": "pass", "reason": f"No other problem in the {len(invoices)} invoices taken one by one.{also}"}
+
+
+# --- stamp vs issuer ------------------------------------------------------------------
+
+# Words on a stamp or in an issuer line that name a place, an address or a
+# legal form, not the organisation.
+_STAMP_NOISE_WORDS = {
+    "po", "p", "o", "box", "pob", "tel", "fax", "br", "branch", "llc", "l", "c", "fze", "fzc", "fz", "co",
+    "est", "ltd", "inc", "uae", "u", "a", "e", "abu", "dhabi", "dubai", "sharjah", "ajman", "fujairah",
+    "ras", "khaimah", "umm", "quwain", "ain", "al", "the", "of", "and",
+    "ص", "ب", "ص.ب", "هاتف", "فاكس", "ذ.م.م", "ش.ذ.م.م", "أبوظبي", "ابوظبي", "دبي", "الشارقة", "عجمان", "العين",
+}
+# Abbreviations written either way on stamps and in issuer names.
+_NAME_ABBREVIATIONS = {
+    "mbz": "mohamed bin zayed", "mbr": "mohammed bin rashid", "intl": "international", "int'l": "international",
+    "sch": "school", "acad": "academy", "univ": "university", "pvt": "private", "est": "establishment",
+}
+# Words that say what kind of organisation it is, not which one.
+_GENERIC_NAME_WORDS = {"school", "schools", "campus", "llc", "branch", "pvt", "private"}
+_ARABIC_RE = re.compile("[؀-ۿ]")
+_STAMP_MATCH_THRESHOLD = 80.0
+
+
+def _name_words(text: str) -> dict[str, str]:
+    """Organisation words of `text`, per writing system ("latin"/"arabic")."""
+    by_script: dict[str, list[str]] = {"latin": [], "arabic": []}
+    for word in re.findall(r"[^\W\d_]+(?:\.[^\W\d_]+)*", text or ""):
+        lowered = word.casefold().strip(".")
+        for part in _NAME_ABBREVIATIONS.get(lowered, lowered).split():
+            if part in _STAMP_NOISE_WORDS or part in _GENERIC_NAME_WORDS or len(part) < 2:
+                continue
+            by_script["arabic" if _ARABIC_RE.search(part) else "latin"].append(part)
+    return {script: " ".join(words) for script, words in by_script.items() if words}
+
+
+def _check_stamp_issuer_consistency(
+    core_fields: dict[str, Any], stamps: list[dict[str, Any]] | None
+) -> dict[str, Any]:
+    """The stamp names the issuer (module docstring)."""
+    issuer = (core_fields.get("issuer") or {}).get("value")
+    read = [s for s in stamps or [] if (s.get("text") or "").strip()]
+    if stamps is None:
+        return {"status": "skipped", "reason": "Signature/stamp detection has not finished for this document."}
+    if not read:
+        return {"status": "skipped", "reason": "No stamp text was read on this document."}
+    if not issuer:
+        return {"status": "skipped", "reason": "No issuer extracted to compare the stamp against."}
+    issuer_words = _name_words(str(issuer))
+    compared = []
+    for stamp in read:
+        stamp_words = _name_words(stamp["text"])
+        for script in stamp_words.keys() & issuer_words.keys():
+            score = fuzz.token_set_ratio(stamp_words[script], issuer_words[script])
+            compared.append((score, stamp["text"]))
+    if not compared:
+        return {
+            "status": "skipped",
+            "reason": f"The stamp ('{read[0]['text']}') and the issuer ('{issuer}') share no writing system to compare.",
+        }
+    score, text = max(compared)
+    if score >= _STAMP_MATCH_THRESHOLD:
+        return {"status": "pass", "reason": f"The stamp ('{text}') names the issuer '{issuer}'.", "score": round(score, 1)}
+    stamp_box = next((s.get("bounding_box") for s in read if s["text"] == text), None)
+    result = _flag(
+        f"The stamp reads '{text}', which does not name the issuer '{issuer}' (similarity {score:.0f}/100): "
+        "the stamp may belong to another organisation.",
+        make_region(core_fields, "issuer", f"Field exception: Issuer (stamp reads '{text}')"),
+    )
+    result["score"] = round(score, 1)
+    if stamp_box:
+        result["stamp_bounding_box"] = stamp_box
+    return result
+
+
 # --- billing periods vs quantity ----------------------------------------------------
 
 _PERIOD_UNITS = {"MONTH", "MON", "MTH"}
@@ -663,23 +1230,31 @@ def _check_period_quantity_consistency(line_items: list[dict[str, Any]]) -> dict
     return {"status": "pass", "reason": f"All {checked} line(s) charge for the months they list as due."}
 
 
-def validate_fields(extracted_fields: dict[str, Any], *, ocr_text: str | None = None) -> dict[str, Any]:
+def validate_fields(
+    extracted_fields: dict[str, Any],
+    *,
+    ocr_text: str | None = None,
+    stamps: list[dict[str, Any]] | None = None,
+    signatures: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Run all field-validation sub-checks against one document's
     `extracted_fields` (and its OCR text, for the checks that read printed
-    marks). Returns {"result": "pass"|"flag", "details": {...}} ready to
+    marks; and the stamps and signatures signature/stamp detection found,
+    None if it has not run). Returns {"result": "pass"|"flag", "details": {...}} ready to
     store directly in a `document_checks.result` jsonb column."""
     core_fields = extracted_fields.get("core_fields") or {}
     additional_fields = extracted_fields.get("additional_fields") or []
     line_items = [i for i in extracted_fields.get("line_items") or [] if isinstance(i, dict)]
+    invoices = [i for i in extracted_fields.get("invoices") or [] if isinstance(i, dict)]
 
     details = {
         "date_in_future": _check_date_in_future(core_fields),
         "line_item_arithmetic": _check_line_item_arithmetic(line_items),
         "subtotal_line_item_consistency": _check_subtotal_line_item_consistency(
-            core_fields, additional_fields, line_items
+            core_fields, additional_fields, line_items, extracted_fields.get("column_totals")
         ),
         "total_tax_consistency": _check_total_tax_consistency(core_fields),
-        "tax_rate_consistency": _check_tax_rate_consistency(core_fields, line_items),
+        "tax_rate_consistency": _check_tax_rate_consistency(core_fields, line_items, ocr_text),
         "amount_in_words_consistency": _check_amount_in_words_consistency(
             core_fields, extracted_fields.get("amount_in_words")
         ),
@@ -687,6 +1262,20 @@ def validate_fields(extracted_fields: dict[str, Any], *, ocr_text: str | None = 
         "iban_trn_validation": _check_iban_trn_validation(core_fields, additional_fields, ocr_text),
         "rescan_conflict": _check_rescan_conflict(extracted_fields.get("pdf_info"), ocr_text),
         "period_quantity_consistency": _check_period_quantity_consistency(line_items),
+        "document_date_vs_file_creation": _check_document_date_vs_file_creation(
+            core_fields, extracted_fields.get("pdf_info")
+        ),
+        "date_sequence": _check_date_sequence(core_fields, extracted_fields.get("pdf_info"), ocr_text),
+        "installment_consistency": _check_installment_consistency(line_items),
+        "stamp_issuer_consistency": _check_stamp_issuer_consistency(core_fields, stamps),
+        "stamp_authenticity": _check_stamp_authenticity(stamps),
+        "synthetic_stamp_unsigned": _check_synthetic_stamp_unsigned(stamps, signatures),
+        "fake_scan_watermark": _check_fake_scan_watermark(extracted_fields.get("pdf_info"), ocr_text),
+        "tax_invoice_trn": _check_tax_invoice_trn(core_fields, additional_fields, ocr_text),
+        "multiple_invoices": _check_multiple_invoices(invoices),
     }
+    details["per_invoice_checks"] = _check_per_invoice(
+        invoices, {name for name, sub in details.items() if sub["status"] == "flag"}
+    )
     overall = "flag" if any(sub["status"] == "flag" for sub in details.values()) else "pass"
     return {"result": overall, "details": details}

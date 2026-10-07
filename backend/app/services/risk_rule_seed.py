@@ -27,6 +27,9 @@ Scores are summed and capped at 100; default tiers are low < 30, medium
     date noise) are 6-15.
   - Missing-but-expected evidence (issuer not in registry, no signature
     where one is expected) is 10-15: a reason to look, not proof.
+The metadata rules ("metadata.*") together add at most the company's
+metadata score cap (risk_settings.metadata_score_cap, default 40): one edit
+leaves several metadata traces, which must not max the score on their own.
 Two signals here are also intentionally NOT scored: `low`-severity
 cross-document findings (the expected claim-vs-evidence issuer/date noise
 — see app/services/cross_document_service.py) and `info` findings, which
@@ -96,6 +99,18 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "'{document}': editing software was found in its metadata. {description}",
     },
     {
+        "rule_id": "metadata.pdf_editor_producer",
+        "category": FORENSICS,
+        "check_type": "metadata_forensics",
+        "condition": _finding("metadata_forensics", finding="pdf_editor_detected"),
+        # An online/desktop PDF editor (iLovePDF, Smallpdf, Sejda, ...) last
+        # wrote the file. Also used innocently (compress, merge, sign), so
+        # far below an image editor.
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}' was last saved by a PDF editor, not a scanner or billing system. {description}",
+    },
+    {
         "rule_id": "metadata.creation_date_mismatch",
         "category": FORENSICS,
         "check_type": "metadata_forensics",
@@ -157,6 +172,41 @@ SEED_RULES: list[dict[str, Any]] = [
         "weight": 12,
         "severity": "medium",
         "reason_template": "'{document}': its edit history names a tool that doesn't fit its stated origin.",
+    },
+    {
+        "rule_id": "metadata.history_scanned_doc_edited",
+        "category": FORENSICS,
+        "check_type": "metadata_forensics",
+        # Acrobat recorded "editedScannedDoc": the scan was converted to
+        # editable text and edited — the document's own history says so.
+        "condition": _finding("metadata_forensics", finding="history_scanned_document_edited"),
+        "weight": 15,
+        "severity": "high",
+        "reason_template": "'{document}': its edit history records that the scanned page was converted to editable text and edited. {description}",
+    },
+    {
+        "rule_id": "metadata.editable_text_over_scan",
+        "category": FORENSICS,
+        "check_type": "metadata_forensics",
+        # Page structure, not metadata: a scan whose text was re-created as
+        # visible live text over it. Still there when the XMP history is
+        # stripped. v2: whatever the fonts are called (a converter's "-NNNN"
+        # subsets, or ordinary "ABCDEF+" subsets as Acrobat's editor leaves).
+        "condition": _finding("metadata_forensics", finding="editable_text_over_scan", severity_in=["medium", "high"]),
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}' is a scan converted to editable text — its words and numbers can be retyped or deleted like a word-processor file. {description}",
+    },
+    {
+        "rule_id": "metadata.producer_scrubbed",
+        "category": FORENSICS,
+        "check_type": "metadata_forensics",
+        # Adobe's XMP library wrote the metadata, yet the tool names and the
+        # edit history are gone: removed to hide which tool last saved it.
+        "condition": _finding("metadata_forensics", finding="producer_scrubbed"),
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}': the names of the tools that wrote it were removed from its metadata. {description}",
     },
     {
         "rule_id": "metadata.history_edit_after_final",
@@ -245,10 +295,20 @@ SEED_RULES: list[dict[str, Any]] = [
         "check_type": "font_consistency",
         # "high" findings come from the PDF's text layer: the font names
         # themselves, not a judgment — a hard signal, weighted like copy-move.
-        "condition": _finding("font_consistency", finding="font_inconsistency", severity_in=["high"]),
+        # v2: on a scan converted to editable text, only a full font among the
+        # converter's -NNNN subset fonts counts (two subsets side by side do
+        # not); a number whose characters mix sizes counts too.
+        # v3: text in a second embedded copy (subset) of a font the page
+        # already embeds, beside text in the main copy, counts too.
+        "condition": {
+            "match": "finding",
+            "check_type": "font_consistency",
+            "finding_in": ["font_inconsistency", "font_size_inconsistency", "font_subset_split"],
+            "severity_in": ["high"],
+        },
         "weight": 40,
         "severity": "high",
-        "reason_template": "'{document}': {count} piece(s) of text are set in a different font family from the text around them — a sign they were typed in after the document was produced. {description}",
+        "reason_template": "'{document}': {count} piece(s) of text are set in a different font, at a different size, or in a second copy of the same font, from the text around them — a sign they were typed in after the document was produced. {description}",
     },
     {
         "rule_id": "font.inconsistency_scanned",
@@ -262,6 +322,30 @@ SEED_RULES: list[dict[str, Any]] = [
         "weight": 25,
         "severity": "medium",
         "reason_template": "'{document}': on the scanned page, {count} word(s) look like a different font from the text around them (OCR font recognition — an estimate). {description}",
+    },
+    # ------------------------------------------ deleted / replaced content (ghost text)
+    {
+        "rule_id": "content.deleted_ghost_block",
+        "category": FORENSICS,
+        "check_type": "ghost_content",
+        # On a scan converted to editable text: faint traces of erased text
+        # in the scan with no live text on top — content deleted after the
+        # conversion (app/services/forensics/ghost_content.py).
+        "condition": _finding("ghost_content", finding="ghost_deleted_block", severity_in=["high"]),
+        "weight": 25,
+        "severity": "high",
+        "reason_template": "'{document}': {count} block(s) of text were deleted after the scan was converted to editable text — their faint traces remain in the scanned background. {description}",
+    },
+    {
+        "rule_id": "content.replaced_ghost_line",
+        "category": FORENSICS,
+        "check_type": "ghost_content",
+        # The trace of a line in the scan runs on well past the live text on
+        # top: the line was shortened or rewritten.
+        "condition": _finding("ghost_content", finding="ghost_replaced_line", severity_in=["medium", "high"]),
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}': {count} line(s) were shortened or rewritten after the scan was converted to editable text — the trace of the original runs on past the text. {description}",
     },
     # -------------------------------------------- visual review (vision model)
     {
@@ -332,6 +416,8 @@ SEED_RULES: list[dict[str, Any]] = [
         "rule_id": "duplicate.cross_case_match",
         "category": DUPLICATION,
         "check_type": "duplicate_detection",
+        # v2: a page match whose invoice number, date, amount or student
+        # differ is "same_template_page" (shown, not scored), not this.
         "condition": _finding("duplicate_detection", finding="near_duplicate_page"),
         "weight": 40,
         "severity": "high",
@@ -426,6 +512,111 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "'{document}': {reason}",
     },
     {
+        "rule_id": "metadata.document_date_after_file_creation",
+        "category": FORENSICS,
+        "check_type": "field_validation",
+        # The printed date is after the PDF file's own creation, and the file
+        # was modified on or after that date: an older file re-dated. Files
+        # generated in advance and never touched again pass.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "document_date_vs_file_creation"},
+        "weight": 25,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.installment_sum_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # Installment rows (Term I/II/III, Installment 1/2) that nearly, but
+        # not exactly, add up to the line they split: one part was changed.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "installment_consistency"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.date_sequence_inconsistent",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # Dated after it was printed, or printed after its PDF was made.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "date_sequence"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.fake_scan_watermark",
+        "category": FORENSICS,
+        "check_type": "field_validation",
+        # A scanner app's watermark on a file with no image: typed in to look like a scan.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "fake_scan_watermark"},
+        "weight": 25,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "signature.synthetic_stamp",
+        "category": VERIFICATION,
+        "check_type": "field_validation",
+        # A stamp that is live text / vector lines in the file, not an image of an ink stamp.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "stamp_authenticity"},
+        "weight": 25,
+        "severity": "high",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "signature.synthetic_stamp_unsigned",
+        "category": VERIFICATION,
+        "check_type": "field_validation",
+        # A typed-in stamp and no signature anywhere.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "synthetic_stamp_unsigned"},
+        "weight": 5,
+        "severity": "low",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.tax_invoice_without_trn",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # Titled TAX INVOICE but no UAE TRN on it.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "tax_invoice_trn"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.multiple_invoices_same_period",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # One file holding two invoices for the same month.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "multiple_invoices"},
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "field.per_invoice_mismatch",
+        "category": CONSISTENCY,
+        "check_type": "field_validation",
+        # An invoice of a multi-invoice file whose own arithmetic does not hold.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "per_invoice_checks"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
+        "rule_id": "metadata.web_page_origin",
+        "category": FORENSICS,
+        "check_type": "metadata_forensics",
+        # Printed from a browser / HTML engine AND built like a web page (no
+        # creation date, a CSS framework's stock colours). The engine alone
+        # is low and not scored: school portals print from browsers too.
+        "condition": _finding("metadata_forensics", finding="web_page_origin", severity_in=["medium", "high"]),
+        "weight": 10,
+        "severity": "medium",
+        "reason_template": "'{document}' was built as a web page and printed to PDF. {description}",
+    },
+    {
         "rule_id": "field.period_quantity_mismatch",
         "category": CONSISTENCY,
         "check_type": "field_validation",
@@ -489,6 +680,18 @@ SEED_RULES: list[dict[str, Any]] = [
         "reason_template": "Issuer '{issuer}' on '{document}' did not match any known issuer in the registry.",
     },
     {
+        "rule_id": "signature.stamp_issuer_mismatch",
+        "category": VERIFICATION,
+        "check_type": "field_validation",
+        # The stamp's text (read by signature/stamp detection) names another
+        # organisation than the issuer. A vision-model reading, so weighted as
+        # a reason to look rather than proof.
+        "condition": {"match": "sub_check", "check_type": "field_validation", "sub_check": "stamp_issuer_consistency"},
+        "weight": 15,
+        "severity": "medium",
+        "reason_template": "'{document}': {reason}",
+    },
+    {
         "rule_id": "signature.expected_missing",
         "category": VERIFICATION,
         "check_type": "signature_stamp_detection",
@@ -547,12 +750,17 @@ SEED_RULES: list[dict[str, Any]] = [
 # editing old rows, so assessments made before keep their own versions.
 SEED_RULE_VERSIONS: dict[str, int] = {
     "metadata.javascript_or_openaction": 2,
-    "field.subtotal_line_item_mismatch": 2,
-    "field.tax_rate_mismatch": 2,
+    "field.subtotal_line_item_mismatch": 3,
+    "field.tax_rate_mismatch": 3,
     "font.inconsistency_scanned": 2,
     "visual.alignment_inconsistency": 2,
     "visual.sharpness_inconsistency": 2,
     "issuer.not_in_registry": 2,
+    "font.inconsistency": 3,
+    "metadata.editable_text_over_scan": 2,
+    "metadata.orphaned_objects": 3,
+    "signature.stamp_issuer_mismatch": 2,
+    "duplicate.cross_case_match": 2,
 }
 
 

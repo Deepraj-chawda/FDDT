@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-from app.services.risk_rule_seed import SEED_RULE_VERSIONS, SEED_RULES
+from app.services.risk_rule_seed import SEED_RULES
 
 revision: str = "a9d3f6b2c8e4"
 down_revision: Union[str, None] = "c4d8e2f6a9b1"
@@ -94,7 +94,8 @@ def upgrade() -> None:
     rules = _rules_table()
 
     # 2a. New version of each changed rule, per company.
-    for rule_id in SEED_RULE_VERSIONS:
+    # Its own list, not SEED_RULE_VERSIONS: later migrations version more rules.
+    for rule_id in CHANGE_NOTES:
         spec = specs[rule_id]
         bind.execute(
             sa.text(

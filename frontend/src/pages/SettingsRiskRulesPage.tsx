@@ -48,6 +48,7 @@ function ThresholdsCard() {
   })
   const [medium, setMedium] = React.useState("")
   const [high, setHigh] = React.useState("")
+  const [cap, setCap] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [ok, setOk] = React.useState<string | null>(null)
 
@@ -55,16 +56,20 @@ function ThresholdsCard() {
     if (data) {
       setMedium(String(data.medium_threshold))
       setHigh(String(data.high_threshold))
+      setCap(String(data.metadata_score_cap))
     }
   }, [data])
 
   const m = Number(medium)
   const h = Number(high)
-  const valid = Number.isInteger(m) && Number.isInteger(h) && m >= 1 && h <= 100 && m < h
-  const dirty = data !== undefined && (m !== data.medium_threshold || h !== data.high_threshold)
+  const c = Number(cap)
+  const valid =
+    Number.isInteger(m) && Number.isInteger(h) && m >= 1 && h <= 100 && m < h && Number.isInteger(c) && c >= 1 && c <= 100
+  const dirty =
+    data !== undefined && (m !== data.medium_threshold || h !== data.high_threshold || c !== data.metadata_score_cap)
 
   const save = useMutation({
-    mutationFn: () => updateRiskThresholds({ medium_threshold: m, high_threshold: h }, token as string, cid),
+    mutationFn: () => updateRiskThresholds({ medium_threshold: m, high_threshold: h, metadata_score_cap: c }, token as string, cid),
     onSuccess: () => {
       setError(null)
       setOk("Thresholds saved. They apply to cases scored from now on; already-scored cases keep the thresholds they were scored with.")
@@ -85,6 +90,8 @@ function ThresholdsCard() {
           <h2 className="text-sm font-bold text-slate-900">Risk tier thresholds</h2>
           <p className="mt-1 text-xs text-slate-500">
             A case's score is the sum of its triggered rule weights, capped at 100. These two cutoffs turn that score into a tier.
+            The metadata rules together add at most the metadata cap: one edit leaves several metadata traces (modified after
+            created, the edit history, a date after the file's creation), which shouldn't max the score on their own.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3 sm:gap-4">
@@ -106,6 +113,12 @@ function ThresholdsCard() {
             </label>
             <input id="high-threshold" type="number" min={2} max={100} value={high} onChange={(e) => setHigh(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
           </div>
+          <div className="text-center">
+            <label htmlFor="metadata-cap" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Metadata cap
+            </label>
+            <input id="metadata-cap" type="number" min={1} max={100} value={cap} onChange={(e) => setCap(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
+          </div>
           <button
             type="button"
             disabled={!dirty || !valid || save.isPending}
@@ -117,7 +130,7 @@ function ThresholdsCard() {
           </button>
         </div>
       </div>
-      {!valid && data && <FieldError message="Use whole numbers with the medium cutoff below the high cutoff (1–100)." className="mt-3 text-xs" />}
+      {!valid && data && <FieldError message="Use whole numbers from 1 to 100, with the medium cutoff below the high cutoff." className="mt-3 text-xs" />}
       {data?.updated_by_name && (
         <p className="mt-3 text-[11px] text-slate-400">
           Last changed by {data.updated_by_name} on {formatWhen(data.updated_at)}.

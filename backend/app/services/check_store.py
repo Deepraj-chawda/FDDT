@@ -35,6 +35,16 @@ def _insert(db: Session):
     return insert
 
 
+def sanitize_null_bytes(val: Any) -> Any:
+    if isinstance(val, str):
+        return val.replace("\x00", "")
+    if isinstance(val, dict):
+        return {sanitize_null_bytes(k): sanitize_null_bytes(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [sanitize_null_bytes(x) for x in val]
+    return val
+
+
 def save_check(
     db: Session,
     *,
@@ -48,14 +58,16 @@ def save_check(
     """Create or replace the single row for (document, check_type)."""
     table = DocumentCheck.__table__
     now = utcnow()
+    clean_result = sanitize_null_bytes(result) if result is not None else None
+    clean_error = error_message.replace("\x00", "") if error_message is not None else None
     stmt = _insert(db)(table).values(
         id=uuid.uuid4(),
         company_id=document.company_id,
         document_id=document.id,
         check_type=check_type,
         status=status,
-        result=result,
-        error_message=error_message,
+        result=clean_result,
+        error_message=clean_error,
         confidence=confidence,
         created_at=now,
         updated_at=now,

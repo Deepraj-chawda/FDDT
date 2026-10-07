@@ -254,8 +254,16 @@ def run_ela_check(pages: list[RenderedPage]) -> dict[str, Any]:
     if not analyzable_pages:
         # Born-digital, text-native document — no photographic/scanned
         # content anywhere for a recompression-error signal to exist in.
-        return {"result": "not_applicable", "details": []}
-
+        return {
+            "result": "not_applicable",
+            "details": [{
+                "finding": "ela_scope",
+                "severity": "info",
+                "description": "Not applicable: born-digital, no images — there is no photographic or scanned "
+                "content for error level analysis to examine.",
+                "data": {"reason": "born-digital, no images"},
+            }],
+        }
     findings: list[Finding] = []
     for page in analyzable_pages:
         findings.extend(_regions_for_page(page))

@@ -1,3 +1,5 @@
+import * as React from "react"
+
 import { cn } from "@/lib/utils"
 
 /**
@@ -23,6 +25,8 @@ import { cn } from "@/lib/utils"
 export interface SeverityFindingProps {
   title: string
   description: string
+  /** The full explanation, behind a "Why?" toggle (the description is the short line). */
+  detail?: string
   /** Signed — pass the literal number with its sign (31, -8), not an
    * absolute value; the "+" for positives is added automatically.
    * Omit when no real weight exists yet. */
@@ -42,14 +46,31 @@ const DELTA_CLASSES: Record<SeverityFindingProps["tone"], string> = {
   positive: "text-success",
 }
 
-export function SeverityFinding({ title, description, pointDelta, tone }: SeverityFindingProps) {
+export function SeverityFinding({ title, description, detail, pointDelta, tone }: SeverityFindingProps) {
+  const [open, setOpen] = React.useState(false)
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-start gap-2.5">
+    <div className="flex items-start justify-between gap-3 min-w-0 w-full">
+      <div className="flex items-start gap-2.5 min-w-0 flex-1">
         <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", DOT_CLASSES[tone])} />
-        <div>
-          <h4 className="text-xs font-bold text-foreground">{title}</h4>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{description}</p>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-xs font-bold text-foreground break-words [overflow-wrap:anywhere]">{title}</h4>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">
+            {description}
+            {detail && (
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="ml-1.5 inline-block font-semibold text-blue-600 hover:underline"
+              >
+                {open ? "Hide" : "Why?"}
+              </button>
+            )}
+          </p>
+          {open && detail && (
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground/90 break-words [overflow-wrap:anywhere]">
+              {detail}
+            </p>
+          )}
         </div>
       </div>
       {pointDelta !== undefined && (

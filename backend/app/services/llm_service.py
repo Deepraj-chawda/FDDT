@@ -253,6 +253,9 @@ class DetectedSignatureRegion(BaseModel):
 
     kind: Literal["signature", "stamp"]
     description: str
+    # A stamp's legible text as printed (organisation, branch, P.O. box,
+    # city); "" for a signature or an unreadable stamp.
+    text: str = ""
     confidence: Literal["low", "medium", "high"]
     bounding_box: NormalizedBoundingBox
 
@@ -265,6 +268,17 @@ class PageSignatureDetection(BaseModel):
 
     signature_expected: bool
     regions: list[DetectedSignatureRegion]
+
+
+class ErasedContentGuess(BaseModel):
+    """A vision model's best guess at what an erased block of text was
+    (app/services/forensics/ghost_content.py). A hint for the reviewer,
+    never evidence."""
+
+    kind: str  # e.g. "bank transfer details", "" when it cannot tell
+    heading: str  # the heading as far as legible, "" if none
+    legible_words: list[str]
+    confidence: str  # "low" | "medium" | "high"
 
 
 class LLMConfigurationError(RuntimeError):
@@ -319,6 +333,13 @@ class LLMService(ABC):
         doesn't have". Language framing must be advisory throughout:
         'visually consistent with reference on file', never 'verified'."""
         raise NotImplementedError
+
+    def guess_erased_content(self, trace_image_data_uri: str, page_image_data_uri: str) -> "ErasedContentGuess":
+        """Best guess at what a block of erased text said: the enhanced trace
+        and the page with the block outlined (both base64 data: URIs). A
+        reviewer's hint only. Not abstract: a backend without vision simply
+        has no guess."""
+        raise LLMConfigurationError("This LLM backend cannot read images.")
 
     @abstractmethod
     def detect_signatures_stamps(self, image_data_uri: str) -> "PageSignatureDetection":
@@ -655,6 +676,27 @@ def _signature_comparison_json_schema() -> dict[str, Any]:
     }
 
 
+def _erased_content_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "kind": {
+                "type": "string",
+                "description": "What the erased block most likely was, in a few words (e.g. 'bank transfer details', 'a note to parents'); empty if it cannot be told.",
+            },
+            "heading": {"type": "string", "description": "The block's heading as far as legible; empty if none can be read."},
+            "legible_words": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Words actually legible in the trace image, as printed. Do not guess or complete words.",
+            },
+            "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+        },
+        "required": ["kind", "heading", "legible_words", "confidence"],
+    }
+
+
 def _signature_detection_json_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -680,6 +722,14 @@ def _signature_detection_json_schema() -> dict[str, Any]:
                             "type": "string",
                             "description": "Brief plain description of what is visible.",
                         },
+                        "text": {
+                            "type": "string",
+                            "description": (
+                                "For a stamp: every word legible on it, exactly as printed and in its own "
+                                "language (organisation name, branch, P.O. box, city), around the ring and in "
+                                "the centre. Empty string for a signature, or if nothing on the stamp is legible."
+                            ),
+                        },
                         "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
                         "bounding_box": {
                             "type": "object",
@@ -693,7 +743,7 @@ def _signature_detection_json_schema() -> dict[str, Any]:
                             "additionalProperties": False,
                         },
                     },
-                    "required": ["kind", "description", "confidence", "bounding_box"],
+                    "required": ["kind", "description", "text", "confidence", "bounding_box"],
                     "additionalProperties": False,
                 },
             },
@@ -891,6 +941,10 @@ structure", "the horizontal stroke weight differs significantly").\
 # System prompt for detect_signatures_stamps. Presence/placement only —
 # SPECIFICATION.md §2.3: signature/stamp detection is assistive, never an
 # identity or authenticity verdict.
+_ERASED_CONTENT_SYSTEM_PROMPT = """You are assisting a human document reviewer. A block of text was erased from a scanned document after it was converted to editable text; only a faint trace of it remains. You get two images: (1) the trace of the erased block, contrast-stretched; (2) a tiny layout thumbnail of the whole page with the erased block filled in teal, only to show WHERE on the page it was.
+
+Say what the block most likely was, from the trace's own shape (a heading, label/value rows, a paragraph) and its position (e.g. under a fee table, at the foot of the page). Heading and legible_words must come ONLY from image 1, the trace; the page's other text is not part of the block. Read only what is legible: never invent names, numbers or account details, and leave fields empty rather than guess. Confidence "high" only when words in the trace are clearly legible; "low" when the guess rests on layout alone."""
+
 _SIGNATURE_DETECTION_SYSTEM_PROMPT = """\
 You are assisting a human document reviewer. Look at this business-document page image \
 and locate any handwritten signature and any stamp or seal (company stamp, round seal, \
@@ -906,6 +960,7 @@ of the document — ignore it when deciding what is a signature or stamp.
 - For each region give a TIGHT normalized bounding box (0-1 fractions of the FULL page's \
 width/height, top-left origin: x/y is the top-left corner) that fully contains the mark \
 and little else.
+- For a stamp, transcribe the text you can actually read on it, exactly as printed (do not guess or complete illegible words). Leave it empty for a signature.
 - Also say whether a document like this would customarily carry a signature or stamp.
 - This is presence and placement only. You are not verifying whose signature it is or \
 whether it is genuine — do not comment on authenticity.\
@@ -969,8 +1024,9 @@ ESTIMATE_SAFETY_MARGIN = 1.05
 MAX_TOKENS_CLASSIFICATION = 4000
 MAX_TOKENS_ENTITY_MATCH = 512
 MAX_TOKENS_VISUAL_REVIEW = 640
-MAX_TOKENS_SIGNATURE_DETECTION = 480
+MAX_TOKENS_SIGNATURE_DETECTION = 640
 MAX_TOKENS_SIGNATURE_COMPARISON = 320
+MAX_TOKENS_ERASED_CONTENT = 300
 
 _MAX_PATCHES = 1536
 _PATCH = 32
@@ -1323,6 +1379,33 @@ class AzureOpenAILLMService(LLMService):
                 f"Azure OpenAI response did not match the expected schema: {exc}"
             ) from exc
 
+
+    def guess_erased_content(self, trace_image_data_uri: str, page_image_data_uri: str) -> ErasedContentGuess:
+        if not self._is_vision_capable:
+            raise LLMConfigurationError(
+                f"AZURE_OPENAI_DEPLOYMENT_NAME ({self._deployment_name!r}) is not a "
+                "vision-capable model; it cannot read the erased-text trace."
+            )
+        parsed = self._chat_json(
+            _ERASED_CONTENT_SYSTEM_PROMPT,
+            [
+                {"type": "text", "text": "What did the erased block say? Image 1: the trace. Image 2: the page."},
+                {"type": "image_url", "image_url": {"url": trace_image_data_uri, "detail": "high"}},
+                {"type": "image_url", "image_url": {"url": page_image_data_uri, "detail": "low"}},
+            ],
+            "erased_content",
+            _erased_content_json_schema(),
+            max_tokens=MAX_TOKENS_ERASED_CONTENT,
+            # Asked several times (app/services/forensics/ghost_content.py
+            # keeps what the answers agree on): the samples must be independent.
+            temperature=0.4,
+        )
+        try:
+            return ErasedContentGuess.model_validate(parsed)
+        except ValueError as exc:
+            raise LLMOperationError(
+                f"Azure OpenAI response did not match the expected schema: {exc}"
+            ) from exc
 
     def detect_signatures_stamps(self, image_data_uri: str) -> PageSignatureDetection:
         if not self._is_vision_capable:

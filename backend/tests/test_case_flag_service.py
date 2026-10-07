@@ -96,10 +96,20 @@ def test_single_document_case_gets_a_real_tier(db_session):
 def test_flag_uses_latest_assessment_and_counts_extra_signals(db_session):
     case = _seed_case(db_session, _seed_user(db_session), document_count=2)
     _assess(db_session, case, RiskTier.high, 80, [{"reason": "old"}], minutes_ago=30)
-    _assess(db_session, case, RiskTier.low, 5, [{"reason": "a"}, {"reason": "b"}, {"reason": "c"}])
+    _assess(db_session, case, RiskTier.low, 5, [{"reason": r} for r in "abcde"])
     flag = get_case_flag(db_session, db_session.info["test_company_id"], case.id)
     assert flag.flag == "low"
-    assert flag.description == "a (+2 more signals)"
+    assert flag.description == "a · b · c (+2 more)"
+
+
+def test_flag_lists_short_rule_titles(db_session):
+    case = _seed_case(db_session, _seed_user(db_session), document_count=1)
+    _assess(db_session, case, RiskTier.high, 90, [
+        {"rule_id": "font.inconsistency", "reason": "'x.pdf': 17 piece(s) of text ..."},
+        {"rule_id": "content.deleted_ghost_block", "reason": "'x.pdf': 1 block(s) ..."},
+    ])
+    flag = get_case_flag(db_session, db_session.info["test_company_id"], case.id)
+    assert flag.description == "Fonts: text retyped · Text deleted after conversion"
 
 
 def test_clean_scored_case_says_no_signals(db_session):

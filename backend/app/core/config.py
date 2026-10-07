@@ -247,6 +247,18 @@ class Settings(BaseSettings):
         default="photoshop,gimp,illustrator,affinity,coreldraw,paint.net,pixlr,canva,inkscape",
         alias="METADATA_FORENSICS_EDITING_SOFTWARE_NAMES",
     )
+    # Same, for PDF editors (online and desktop) — tools that change the
+    # text and numbers of an existing PDF. Kept apart from the image editors
+    # above and weighted lower: they are also used innocently, to compress,
+    # merge or sign a genuine document. Print drivers and plain PDF creators
+    # of the same vendors are deliberately not listed.
+    metadata_forensics_pdf_editor_names: str = Field(
+        default=(
+            "ilovepdf,smallpdf,sejda,pdfescape,pdf-xchange editor,phantompdf,foxit pdf editor,nitro pro,"
+            "nitro pdf pro,pdfelement,soda pdf,sodapdf,pdffiller,dochub,pdfcandy,pdf candy"
+        ),
+        alias="METADATA_FORENSICS_PDF_EDITOR_NAMES",
+    )
 
     # --- Duplicate/near-duplicate detection (app/services/forensics/
     # duplicate_check.py) ---
@@ -269,6 +281,10 @@ class Settings(BaseSettings):
             for name in self.metadata_forensics_editing_software_names.split(",")
             if name.strip()
         ]
+
+    @property
+    def metadata_forensics_pdf_editor_name_list(self) -> list[str]:
+        return [name.strip().lower() for name in self.metadata_forensics_pdf_editor_names.split(",") if name.strip()]
 
     # --- Cloud AI-content-detection API (e.g. Azure AI Content Safety / Hive) ---
     ai_content_detection_endpoint: str | None = Field(

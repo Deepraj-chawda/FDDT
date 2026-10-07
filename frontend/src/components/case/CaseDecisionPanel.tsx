@@ -417,7 +417,14 @@ export function CaseDecisionPanel({
           <ul className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 text-[11px] text-muted-foreground">
             {assessment.triggered_reasons.slice(0, 5).map((r, i) => (
               <li key={`${r.rule_id}-${i}`}>
-                <span className="font-mono font-bold text-foreground">+{r.weight}</span> {r.reason}
+                <span className="font-mono font-bold text-foreground">+{r.weight}</span>{" "}
+                {r.title ? (
+                  <>
+                    <span className="font-semibold text-foreground">{r.title}</span> — {r.short}
+                  </>
+                ) : (
+                  r.reason
+                )}
               </li>
             ))}
             {assessment.triggered_reasons.length > 5 && <li>+{assessment.triggered_reasons.length - 5} more signals</li>}

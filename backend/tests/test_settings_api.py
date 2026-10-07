@@ -163,7 +163,20 @@ def test_thresholds_get_update_validate_and_audit(client, auth_headers, db_sessi
     assert client.put("/settings/risk-thresholds", headers=auth_headers, json={"medium_threshold": 60, "high_threshold": 30}).status_code == 422
     assert client.put("/settings/risk-thresholds", headers=auth_headers, json={"medium_threshold": 0, "high_threshold": 30}).status_code == 422
     (event,) = _events(db_session, "risk_thresholds_updated")
-    assert event.event_data == {"from": {"medium": 30, "high": 60}, "to": {"medium": 25, "high": 55}}
+    assert event.event_data == {
+        "from": {"medium": 30, "high": 60, "metadata_cap": 40},
+        "to": {"medium": 25, "high": 55, "metadata_cap": 40},
+    }
+
+
+def test_metadata_score_cap_defaults_to_40_and_is_kept_unless_sent(client, auth_headers):
+    assert client.get("/settings/risk-thresholds", headers=auth_headers).json()["metadata_score_cap"] == 40
+    body = {"medium_threshold": 30, "high_threshold": 60}
+    res = client.put("/settings/risk-thresholds", headers=auth_headers, json={**body, "metadata_score_cap": 55})
+    assert res.status_code == 200 and res.json()["metadata_score_cap"] == 55
+    assert client.put("/settings/risk-thresholds", headers=auth_headers, json=body).json()["metadata_score_cap"] == 55
+    bad = {**body, "metadata_score_cap": 0}
+    assert client.put("/settings/risk-thresholds", headers=auth_headers, json=bad).status_code == 422
 
 
 # ------------------------------------------------------------------------ users

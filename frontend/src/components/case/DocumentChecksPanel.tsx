@@ -9,6 +9,8 @@ import {
   DOCUMENT_CHECK_TYPE_LABELS,
   SIGNATURE_MATCH_RESULT_LABELS,
   type BoundingBox,
+  type CheckSummary,
+  type CheckSummaryItem,
   type CrossDocumentFinding,
   type DocumentCheck,
   type FieldRegion,
@@ -54,6 +56,7 @@ const RESULT_LABELS: Record<string, string> = {
   flag: "Flagged",
   not_applicable: "Not applicable",
   not_checked: "Not checked",
+  limited: "Limited",
 }
 
 const SUB_CHECK_STATUS_DOT: Record<string, string> = {
@@ -77,7 +80,13 @@ const OVERLAY_COLOR_BY_CHECK_TYPE: Partial<Record<DocumentCheck["check_type"], O
   copy_move_detection: "warning",
   visual_inconsistency_review: "ai",
   font_consistency: "font",
+  ghost_content: "ghost",
 }
+
+// Ghost-content findings that are only notes (the pages searched, a trace
+// set aside as show-through or as a signature/stamp's ink) are listed but
+// not drawn: only deleted / shortened content gets a box on the page.
+const GHOST_DRAWN_FINDINGS = new Set(["ghost_deleted_block", "ghost_replaced_line"])
 
 function isFindingArray(details: unknown): details is Finding[] {
   return Array.isArray(details)
@@ -153,6 +162,7 @@ export function getCheckOverlays(
     const details = check.result?.details
     if (!isFindingArray(details)) continue
     for (const finding of details) {
+      if (check.check_type === "ghost_content" && !GHOST_DRAWN_FINDINGS.has(finding.finding)) continue
       if (finding.bounding_box) {
         boxes.push({ box: finding.bounding_box, color, label: finding.description })
       }
@@ -186,9 +196,10 @@ function FindingsList({ findings }: { findings: Finding[] }) {
                 SEVERITY_DOT_CLASSES[f.severity] ?? "bg-muted-foreground"
               )}
             />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground capitalize">{f.finding.replace(/_/g, " ")}</p>
-              <p className="text-[11px] leading-snug text-muted-foreground">{f.description}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-foreground capitalize break-words [overflow-wrap:anywhere]">{f.finding.replace(/_/g, " ")}</p>
+              <p className="text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{f.description}</p>
+              <GhostCrop finding={f} />
               {duplicateMatch && (
                 <Link
                   to={`/cases/${duplicateMatch.matched_case_id}`}
@@ -206,15 +217,102 @@ function FindingsList({ findings }: { findings: Finding[] }) {
   )
 }
 
+// The ghost-content check's enhanced crop of a faint trace (the scan,
+// contrast-stretched): the trace is too faint to see on the page itself.
+function GhostCrop({ finding }: { finding: Finding }) {
+  const crop = finding.data?.crop_png_base64
+  if (typeof crop !== "string" || !crop) return null
+  const hint = typeof finding.data?.hint === "string" ? finding.data.hint : ""
+  return (
+    <figure className="mt-1.5">
+      <img
+        src={`data:image/png;base64,${crop}`}
+        alt="Enhanced trace of the erased text"
+        className="max-h-40 max-w-full rounded border border-teal-600/60 bg-white"
+      />
+      <figcaption className="mt-0.5 text-[10px] text-muted-foreground">
+        Enhanced scan background{hint ? ` — OCR best guess: “${hint}”` : ""}
+      </figcaption>
+    </figure>
+  )
+}
+
+// The short form of a check (backend/app/services/check_summaries.py): one
+// line per problem with the values, the check's full explanation behind
+// "Why?", then short notes. The raw findings stay under "Technical details".
+function SummaryItem({ item }: { item: CheckSummaryItem }) {
+  const [open, setOpen] = React.useState(false)
+  const hint = item.hint
+  return (
+    <li className="flex items-start gap-2">
+      <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", SEVERITY_DOT_CLASSES[item.severity] ?? "bg-muted-foreground")} />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs leading-snug text-foreground break-words [overflow-wrap:anywhere]">
+          <span className="font-semibold">{item.title}</span>
+          <span className="text-muted-foreground"> — {item.text}</span>
+          {item.detail && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="ml-1.5 inline-block font-semibold text-blue-600 hover:underline"
+            >
+              {open ? "Hide" : "Why?"}
+            </button>
+          )}
+        </p>
+        {open && <p className="mt-1 whitespace-pre-line text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{item.detail}</p>}
+        {item.image_png_base64 && (
+          <figure className="mt-1.5">
+            <img
+              src={`data:image/png;base64,${item.image_png_base64}`}
+              alt="Enhanced trace of the erased text"
+              className="max-h-40 max-w-full rounded border border-teal-600/60 bg-white"
+            />
+            <figcaption className="mt-0.5 text-[10px] text-muted-foreground">
+              Scan background, contrast-stretched
+              {hint && (hint.heading || hint.legible_words?.length)
+                ? ` — the vision model read${hint.heading ? ` the heading “${hint.heading}”` : ""}${
+                    hint.legible_words?.length ? ` the words ${hint.legible_words.join(", ")}` : ""
+                  } (a guess, not evidence)`
+                : ""}
+            </figcaption>
+          </figure>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function SummaryView({ summary }: { summary: CheckSummary }) {
+  return (
+    <div className="space-y-2">
+      {summary.items.length > 0 && (
+        <ul className="space-y-2">
+          {summary.items.map((item, i) => (
+            <SummaryItem key={i} item={item} />
+          ))}
+        </ul>
+      )}
+      {summary.notes.length > 0 && (
+        <ul className="space-y-0.5">
+          {summary.notes.map((note, i) => (
+            <li key={i} className="text-[11px] leading-snug text-muted-foreground">· {note}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function SubCheckList({ details }: { details: Record<string, SubCheck> }) {
   return (
     <ul className="space-y-2">
       {Object.entries(details).map(([name, sub]) => (
         <li key={name} className="flex items-start gap-2">
           <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", SUB_CHECK_STATUS_DOT[sub.status] ?? "bg-muted-foreground")} />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-foreground capitalize">{name.replace(/_/g, " ")}</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">{sub.reason}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-foreground capitalize break-words [overflow-wrap:anywhere]">{name.replace(/_/g, " ")}</p>
+            <p className="text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{sub.reason}</p>
           </div>
         </li>
       ))}
@@ -245,18 +343,34 @@ function KeyValueList({ details }: { details: Record<string, unknown> }) {
 // on purpose (SPECIFICATION.md §2.3: never imply verification).
 interface SignatureDetectionDetails {
   signature_expected?: boolean
-  detected?: { kind: string; description: string; confidence: string; bounding_box: BoundingBox }[]
+  detected?: { kind: string; description: string; text?: string; confidence: string; bounding_box: BoundingBox }[]
 }
+
+// Field validation's stamp-vs-issuer sub-check is stored with field validation
+// (that is what the risk rule reads) but shown here, beside the stamp it is about.
+const STAMP_ISSUER_SUB_CHECK = "stamp_issuer_consistency"
 
 function isSignatureDetectionDetails(details: unknown): details is SignatureDetectionDetails {
   return !!details && typeof details === "object" && !Array.isArray(details) && "detected" in details
 }
 
-function SignatureDetectionSummary({ details }: { details: SignatureDetectionDetails }) {
+function StampIssuerRow({ sub }: { sub: SubCheck }) {
+  return (
+    <li className="flex items-start gap-2">
+      <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", SUB_CHECK_STATUS_DOT[sub.status] ?? "bg-muted-foreground")} />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-foreground break-words [overflow-wrap:anywhere]">Stamp names the issuer</p>
+        <p className="text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{sub.reason}</p>
+      </div>
+    </li>
+  )
+}
+
+function SignatureDetectionSummary({ details, stampIssuer }: { details: SignatureDetectionDetails; stampIssuer?: SubCheck }) {
   const detected = details.detected ?? []
   if (detected.length === 0) {
     return (
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">
         {details.signature_expected
           ? "No signature or stamp was located, though this kind of document would normally carry one. Worth a manual look."
           : "No signature or stamp was located; none is normally expected on this kind of document."}
@@ -268,22 +382,36 @@ function SignatureDetectionSummary({ details }: { details: SignatureDetectionDet
       {detected.map((d, i) => (
         <li key={i} className="flex items-start gap-2">
           <span className="mt-1.5 size-2 shrink-0 rounded-full bg-muted-foreground" />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-foreground capitalize">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-foreground capitalize break-words [overflow-wrap:anywhere]">
               {d.kind} located · page {d.bounding_box.page}
             </p>
-            <p className="text-[11px] leading-snug text-muted-foreground">
+            <p className="text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">
               {d.description} ({d.confidence} confidence). Presence and placement only — not a
               check of who signed it or whether it is genuine.
             </p>
+            {d.kind === "stamp" && d.text && (
+              <p className="mt-0.5 text-[11px] leading-snug text-foreground break-words [overflow-wrap:anywhere]">Stamp reads: “{d.text}”</p>
+            )}
           </div>
         </li>
       ))}
+      {stampIssuer && <StampIssuerRow sub={stampIssuer} />}
     </ul>
   )
 }
 
-function CheckCard({ check }: { check: DocumentCheck }) {
+// Why a check is "not checked" (issuer registry) or "limited" (pixel checks on
+// vector text drawn over a scan) — shown on hover over the result badge.
+function resultTooltip(result: string, details: unknown): string | undefined {
+  if (result === "not_checked") return String((details as Record<string, unknown> | undefined)?.reason ?? "")
+  if (result === "limited" && Array.isArray(details)) {
+    return (details as Finding[]).find((d) => d?.finding === "pixel_analysis_limited")?.description
+  }
+  return undefined
+}
+
+function CheckCard({ check, stampIssuer }: { check: DocumentCheck; stampIssuer?: SubCheck }) {
   const label = DOCUMENT_CHECK_TYPE_LABELS[check.check_type] ?? check.check_type
   const result = check.result?.result
   const details = check.result?.details
@@ -292,6 +420,20 @@ function CheckCard({ check }: { check: DocumentCheck }) {
   // wrong immediately; clean passes start collapsed since there's
   // nothing to act on — the chevron still lets either be toggled.
   const [expanded, setExpanded] = React.useState(needsAttention)
+  const [technical, setTechnical] = React.useState(false)
+  const summary = check.summary
+  const raw =
+    isFindingArray(details) ? (
+      <FindingsList findings={details} />
+    ) : check.check_type === "signature_stamp_detection" && isSignatureDetectionDetails(details) ? (
+      <SignatureDetectionSummary details={details} stampIssuer={stampIssuer} />
+    ) : isSubCheckDict(details) ? (
+      <SubCheckList details={details} />
+    ) : details && typeof details === "object" ? (
+      <KeyValueList details={details as Record<string, unknown>} />
+    ) : (
+      <p className="text-[11px] text-muted-foreground">No further detail recorded.</p>
+    )
 
   return (
     <div className="rounded-lg border border-border bg-card p-3">
@@ -307,8 +449,8 @@ function CheckCard({ check }: { check: DocumentCheck }) {
         </span>
         {check.status === "completed" && typeof result === "string" ? (
           <Badge
-            variant={result === "pass" ? "success" : result === "flag" ? "destructive" : "outline"}
-            title={result === "not_checked" ? String((details as Record<string, unknown> | undefined)?.reason ?? "") : undefined}
+            variant={result === "pass" ? "success" : result === "flag" ? "destructive" : result === "limited" ? "warning" : "outline"}
+            title={resultTooltip(result, details)}
           >
             {RESULT_LABELS[result] ?? result}
           </Badge>
@@ -318,6 +460,11 @@ function CheckCard({ check }: { check: DocumentCheck }) {
           </Badge>
         )}
       </button>
+      {summary?.headline && (
+        <p className={cn("mt-1 pl-5 text-[11px] leading-snug", needsAttention ? "text-foreground" : "text-muted-foreground")}>
+          {summary.headline}
+        </p>
+      )}
 
       {expanded && (
         <>
@@ -329,17 +476,27 @@ function CheckCard({ check }: { check: DocumentCheck }) {
           )}
           {check.status === "completed" && (
             <div className="mt-2.5">
-              {isFindingArray(details) ? (
-                <FindingsList findings={details} />
-              ) : check.check_type === "signature_stamp_detection" &&
-                isSignatureDetectionDetails(details) ? (
-                <SignatureDetectionSummary details={details} />
-              ) : isSubCheckDict(details) ? (
-                <SubCheckList details={details} />
-              ) : details && typeof details === "object" ? (
-                <KeyValueList details={details as Record<string, unknown>} />
+              {summary ? (
+                <>
+                  <SummaryView summary={summary} />
+                  {check.check_type === "signature_stamp_detection" && isSignatureDetectionDetails(details) ? (
+                    <div className="mt-2.5">{raw}</div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setTechnical((v) => !v)}
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                      >
+                        <ChevronDownIcon className={cn("size-3 transition-transform", technical && "rotate-180")} />
+                        Technical details
+                      </button>
+                      {technical && <div className="mt-2 border-t border-border pt-2">{raw}</div>}
+                    </>
+                  )}
+                </>
               ) : (
-                <p className="text-[11px] text-muted-foreground">No further detail recorded.</p>
+                raw
               )}
             </div>
           )}
@@ -460,6 +617,37 @@ function SignatureMatchesCard({ matches }: { matches: SignatureMatch[] }) {
   )
 }
 
+// The stamp sub-checks of field validation (does the stamp name the issuer,
+// is it a real stamp or typed into the file, is it unsigned) are shown with
+// signature/stamp detection: taken out of field validation (re-deriving that
+// card's badge from its remaining sub-checks), and the signature/stamp card
+// shows Flagged when one of them flags. The stamp-vs-issuer one is returned
+// for the card's own row.
+const STAMP_SUB_CHECKS = [STAMP_ISSUER_SUB_CHECK, "stamp_authenticity", "synthetic_stamp_unsigned"]
+
+function moveStampIssuerCheck(checks: DocumentCheck[]): { checks: DocumentCheck[]; stampIssuer?: SubCheck } {
+  const validation = checks.find((c) => c.check_type === "field_validation")
+  const details = validation?.result?.details
+  if (!validation || !isSubCheckDict(details) || !STAMP_SUB_CHECKS.some((name) => name in details)) return { checks }
+  const rest = Object.fromEntries(Object.entries(details).filter(([name]) => !STAMP_SUB_CHECKS.includes(name)))
+  const moved = STAMP_SUB_CHECKS.map((name) => details[name]).filter(Boolean)
+  const stampIssuer = details[STAMP_ISSUER_SUB_CHECK]
+  const anyFlag = Object.values(rest).some((sub) => sub.status === "flag")
+  const stampFlag = moved.some((sub) => sub.status === "flag")
+  return {
+    stampIssuer,
+    checks: checks.map((c) => {
+      if (c === validation) {
+        return { ...c, result: { ...c.result, result: anyFlag ? "flag" : "pass", details: rest } }
+      }
+      if (c.check_type === "signature_stamp_detection" && stampFlag && c.result?.result === "pass") {
+        return { ...c, result: { ...c.result, result: "flag" } }
+      }
+      return c
+    }),
+  }
+}
+
 export function DocumentChecksPanel({
   checks,
   crossDocumentFindings,
@@ -472,11 +660,16 @@ export function DocumentChecksPanel({
   signatureMatches?: SignatureMatch[]
 }) {
   const allChecks = [buildCrossDocumentCheck(crossDocumentFindings, hasEnoughDocumentsForCrossCheck), ...checks]
+  const { checks: shown, stampIssuer } = moveStampIssuerCheck(allChecks)
 
   return (
     <div className="space-y-3">
-      {allChecks.map((check) => (
-        <CheckCard key={check.id} check={check} />
+      {shown.map((check) => (
+        <CheckCard
+          key={check.id}
+          check={check}
+          stampIssuer={check.check_type === "signature_stamp_detection" ? stampIssuer : undefined}
+        />
       ))}
       {signatureMatches.length > 0 && (
         <SignatureMatchesCard matches={signatureMatches} />

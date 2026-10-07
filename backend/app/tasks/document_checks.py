@@ -36,6 +36,7 @@ from app.services.issuer_service import verify_issuer
 from app.services.llm_service import LLMConfigurationError, get_llm_service
 from app.services.risk_scoring_service import request_case_scoring
 from app.tasks.celery_app import celery_app
+from app.tasks.duplicate_check_task import refine_duplicate_check
 from app.tasks.tenant import open_task_session, resolve_company_for_case, resolve_company_for_document
 
 _ERROR_MESSAGE_MAX_LENGTH = 4000
@@ -61,6 +62,67 @@ def _maybe_enqueue_cross_document_check(
         run_cross_document_checks.delay(str(case_id), str(company_id))
 
 
+def detected_stamps(db: Session, document: Document) -> list[dict] | None:
+    """The stamps signature/stamp detection found on `document` — None if it
+    has not finished (it runs in parallel, on the vision queue)."""
+    detected = detected_regions(db, document)
+    return None if detected is None else [d for d in detected if d.get("kind") == "stamp"]
+
+
+def detected_signatures(db: Session, document: Document) -> list[dict] | None:
+    """The signatures detection found on `document` — None if it has not finished."""
+    detected = detected_regions(db, document)
+    return None if detected is None else [d for d in detected if d.get("kind") == "signature"]
+
+
+def detected_regions(db: Session, document: Document) -> list[dict] | None:
+    """Every signature and stamp region detection found on `document` — None
+    if it has not finished (it runs in parallel, on the vision queue)."""
+    check = db.execute(
+        select(DocumentCheck).where(
+            DocumentCheck.document_id == document.id,
+            DocumentCheck.company_id == document.company_id,
+            DocumentCheck.check_type == DocumentCheckType.signature_stamp_detection,
+            DocumentCheck.status == DocumentCheckStatus.completed,
+        )
+    ).scalars().first()
+    if check is None:
+        return None
+    details = (check.result or {}).get("details")
+    detected = details.get("detected") if isinstance(details, dict) else None
+    return [d for d in detected or [] if isinstance(d, dict)]
+
+
+def revalidate_fields(db: Session, document: Document) -> bool:
+    """Re-run field validation once signature/stamp detection has finished,
+    if validation ran first (its stamp-vs-issuer sub-check was skipped then).
+    Returns whether it re-ran. The caller commits."""
+    if document.processing_status != DocumentProcessingStatus.complete:
+        return False
+    existing = db.execute(
+        select(DocumentCheck).where(
+            DocumentCheck.document_id == document.id,
+            DocumentCheck.company_id == document.company_id,
+            DocumentCheck.check_type == DocumentCheckType.field_validation,
+            DocumentCheck.status == DocumentCheckStatus.completed,
+        )
+    ).scalars().first()
+    if existing is None:
+        return False
+    result = validate_fields(
+        document.extracted_fields or {}, ocr_text=document.ocr_text, stamps=detected_stamps(db, document),
+        signatures=detected_signatures(db, document),
+    )
+    save_check(
+        db,
+        document=document,
+        check_type=DocumentCheckType.field_validation,
+        status=DocumentCheckStatus.completed,
+        result=result,
+    )
+    return True
+
+
 @celery_app.task(name="run_document_checks")
 def run_document_checks(document_id: str, company_id: str | None = None) -> None:
     company_uuid = resolve_company_for_document(document_id, company_id)
@@ -82,7 +144,10 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
         extracted_fields = document.extracted_fields or {}
 
         try:
-            field_result = validate_fields(extracted_fields, ocr_text=document.ocr_text)
+            field_result = validate_fields(
+                extracted_fields, ocr_text=document.ocr_text, stamps=detected_stamps(db, document),
+                signatures=detected_signatures(db, document),
+            )
             save_check(
                 db,
                 document=document,
@@ -99,6 +164,13 @@ def run_document_checks(document_id: str, company_id: str | None = None) -> None
                 status=DocumentCheckStatus.failed,
                 error_message=str(exc)[:_ERROR_MESSAGE_MAX_LENGTH],
             )
+
+        # Duplicate matches judged on the fields now that they exist (the
+        # duplicate check runs in parallel with extraction).
+        try:
+            refine_duplicate_check(db, document)
+        except Exception:  # noqa: BLE001 - never block the checks below
+            pass
 
         try:
             try:

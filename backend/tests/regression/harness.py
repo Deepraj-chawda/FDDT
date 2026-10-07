@@ -268,13 +268,33 @@ def replay(entry: Path, db) -> dict[str, Any]:
     results["metadata_forensics"] = analyze_pdf_metadata(pdf)
     results["error_level_analysis"] = run_ela_check(pages)
     results["copy_move_detection"] = run_copy_move_check(pages)
+    structure_fn = _optional("app.services.forensics.page_structure", "analyze_page_structure")
+    if structure_fn is not None:
+        from app.services.forensics.page_structure import limit_pixel_check
+
+        structure = structure_fn(pdf)
+        results["error_level_analysis"] = limit_pixel_check(results["error_level_analysis"], structure, "error level analysis")
+        results["copy_move_detection"] = limit_pixel_check(results["copy_move_detection"], structure, "copy-move detection")
     results["font_consistency"] = analyze_font_consistency(pdf, ocr.pages)
+    ghost_fn = _optional("app.services.forensics.ghost_content", "analyze_ghost_content")
+    if ghost_fn is not None:
+        from app.services.forensics.ghost_content import exclude_signature_regions
+
+        stored_detection = ((stored["checks"].get("signature_stamp_detection") or {}).get("details") or {})
+        results["ghost_content"] = exclude_signature_regions(ghost_fn(pdf), stored_detection.get("detected"))
 
     fields = copy.deepcopy(stored["extracted_fields"] or {})
     enrich = _optional("app.services.line_item_parsing", "enrich_extracted_fields")
     if enrich is not None:
-        fields = _call(enrich, fields, ocr_text=ocr.text, ocr_tables=ocr.tables, pdf_bytes=pdf)
-    results["field_validation"] = _call(validate_fields, fields, ocr_text=stored["ocr_text"] or ocr.text)
+        fields = _call(
+            enrich, fields, ocr_text=ocr.text, ocr_tables=ocr.tables, pdf_bytes=pdf, ocr_pages=ocr.pages,
+            signature_regions=((stored["checks"].get("signature_stamp_detection") or {}).get("details") or {}).get("detected"),
+        )
+    detected = ((stored["checks"].get("signature_stamp_detection") or {}).get("details") or {}).get("detected")
+    results["field_validation"] = _call(
+        validate_fields, fields, ocr_text=stored["ocr_text"] or ocr.text,
+        stamps=None if detected is None else [d for d in detected if d.get("kind") == "stamp"],
+    )
 
     verify = _optional("app.services.issuer_service", "verify_issuer")
     if verify is not None:
@@ -316,6 +336,9 @@ def replay(entry: Path, db) -> dict[str, Any]:
     for f in sorted(fired, key=lambda f: f.rule.rule_id):
         rules[f.rule.rule_id] = {"version": f.rule.version, "points": f.rule.weight, "reason": f.reason}
     raw = sum(r["points"] for r in rules.values())
+    capped = _optional("app.services.risk_scoring_service", "capped_raw_score")
+    if capped is not None:
+        raw, _caps = capped(fired, 40)  # risk_settings.metadata_score_cap default
     return {
         "document": {
             "file": stored["filename"],

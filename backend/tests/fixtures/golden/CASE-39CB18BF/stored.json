@@ -1,0 +1,510 @@
+{
+ "case_number": "CASE-39CB18BF",
+ "pdf": "sample-documents/tampered_test_samples/case10.pdf",
+ "sha256": "6f2775326148bd2e58df7531be2d595b79a370310f56620aab8e560dc0333460",
+ "document_type": "school_document",
+ "ocr_text": "أجيال\najyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH\nTRN :100263418400003\nAJYAL INTERNATIONAL SCHOOL- AL FALAH Al Falah City, Behind Al Falah Mosque Email: registrar@ajyalfalah.sch.ae Website: https://www.ajyalfalah.sch.ae Tel: 02 2034 500, 02 2034 517 Fax: Date: 12/06/2023\nSCHOOL FEE TAX INVOICE - 2023-2024\nFamily Code : P2331\nInvoice Number: 2616/2023-2024\nParent Name : Saleh Alharthi\nFee Description\nAmount\nVat\nNet Amount\nAL REEM SALEH MOHAMED ALHARTHI (2820) Class PRE-KG-NA\nRegistration Fees\n1,450.00\n0\n1,450.00\nTerm 1 Fees\n16,450.00\n0\n16,450.00\nBooks Fees\n2,300.00\n0\n2,300.00\nBus Transport Fees\n4,575.00\n0\n4,575.00\nTerm 2 Fees\n13,350.00\n0\n13,350.00\nTerm 3 Fees\n13,350.00\n0\n13,350.00\n51,475.00\n0\n51,475.00\nAmount in words AED: Fifty-One Thousand Four Hundred Seventy-Five Only\n51,475.00\nThe above figures represent the tuition estimate based on data from our current database. Any changes in the above data have not been accounted for.\nParent's Signature\nP.O.DU EGY MAUL ARE - ALERLAM > ADU U.A.E.\nجيال الدولية . الهلا\nFAT\nThe Account Dept.",
+ "extracted_fields": {
+  "pdf_info": {
+   "ModDate": "2023-06-21T12:27:26+04:00",
+   "CreationDate": "2023-06-12T11:41:06+00:00"
+  },
+  "line_items": [
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 1450.0,
+    "unit_price": null,
+    "description": "Registration Fees",
+    "bounding_box": {
+     "x": 0.8837,
+     "y": 0.2583,
+     "page": 1,
+     "width": 0.0555,
+     "height": 0.0117
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "1,450.00"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 16450.0,
+    "unit_price": null,
+    "description": "Term 1 Fees",
+    "bounding_box": {
+     "x": 0.8808,
+     "y": 0.2758,
+     "page": 1,
+     "width": 0.0654,
+     "height": 0.0118
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "16,450.00"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 2300.0,
+    "unit_price": null,
+    "description": "Books Fees",
+    "bounding_box": {
+     "x": 0.8823,
+     "y": 0.2944,
+     "page": 1,
+     "width": 0.0577,
+     "height": 0.0121
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "2,300.00"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 4575.0,
+    "unit_price": null,
+    "description": "Bus Transport Fees",
+    "bounding_box": {
+     "x": 0.7013,
+     "y": 0.312,
+     "page": 1,
+     "width": 0.0584,
+     "height": 0.0118
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "4,575.00"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 13350.0,
+    "unit_price": null,
+    "description": "Term 2 Fees",
+    "bounding_box": {
+     "x": 0.696,
+     "y": 0.3306,
+     "page": 1,
+     "width": 0.0644,
+     "height": 0.0117
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "13,350.00"
+   },
+   {
+    "source": "llm",
+    "discount": null,
+    "quantity": null,
+    "uncertain": false,
+    "confidence": 0.95,
+    "line_total": 13350.0,
+    "unit_price": null,
+    "description": "Term 3 Fees",
+    "bounding_box": {
+     "x": 0.8827,
+     "y": 0.3479,
+     "page": 1,
+     "width": 0.0648,
+     "height": 0.0119
+    },
+    "counts_toward_total": true,
+    "line_total_raw_text": "13,350.00"
+   }
+  ],
+  "core_fields": {
+   "date": {
+    "value": "2023-06-12",
+    "raw_text": "12/06/2023",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.8644,
+     "y": 0.1047,
+     "page": 1,
+     "width": 0.0797,
+     "height": 0.0115
+    }
+   },
+   "amount": {
+    "value": 51475.0,
+    "currency": "AED",
+    "raw_text": "51,475.00",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.8742,
+     "y": 0.3908,
+     "page": 1,
+     "width": 0.0671,
+     "height": 0.0119
+    }
+   },
+   "issuer": {
+    "value": "ajyal مدرسة أجيال الدولية - الفلاح AJYAL INTERNATIONAL SCHOOL - AL FALAH",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.1509,
+     "y": 0.0406,
+     "page": 1,
+     "width": 0.1316,
+     "height": 0.0355
+    }
+   },
+   "subtotal": {
+    "value": null,
+    "currency": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_rate": {
+    "value": null,
+    "raw_text": null,
+    "uncertain": false,
+    "confidence": 0.0
+   },
+   "tax_amount": {
+    "value": 0.0,
+    "currency": "AED",
+    "raw_text": "0",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.792,
+     "y": 0.3708,
+     "page": 1,
+     "width": 0.0098,
+     "height": 0.0107
+    }
+   },
+   "reference_number": {
+    "value": "2616/2023-2024",
+    "uncertain": false,
+    "confidence": 0.95,
+    "bounding_box": {
+     "x": 0.8218,
+     "y": 0.1565,
+     "page": 1,
+     "width": 0.1195,
+     "height": 0.0126
+    }
+   }
+  },
+  "amount_in_words": {
+   "text": "Fifty-One Thousand Four Hundred Seventy-Five Only",
+   "value": 51475.0,
+   "confidence": 0.95,
+   "bounding_box": {
+    "x": 0.0628,
+    "y": 0.3901,
+    "page": 1,
+    "width": 0.5405,
+    "height": 0.0137
+   }
+  },
+  "additional_fields": [
+   {
+    "value": "P2331",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "family_code",
+    "bounding_box": {
+     "x": 0.1973,
+     "y": 0.1566,
+     "page": 1,
+     "width": 0.0441,
+     "height": 0.0125
+    }
+   },
+   {
+    "value": "Saleh Alharthi",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "parent_name",
+    "bounding_box": {
+     "x": 0.1985,
+     "y": 0.1824,
+     "page": 1,
+     "width": 0.106,
+     "height": 0.0127
+    }
+   },
+   {
+    "value": "AL REEM SALEH MOHAMED ALHARTHI (2820) Class PRE-KG-NA",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "student_name_and_class",
+    "bounding_box": {
+     "x": 0.0634,
+     "y": 0.2399,
+     "page": 1,
+     "width": 0.5374,
+     "height": 0.0124
+    }
+   },
+   {
+    "value": "registrar@ajyalfalah.sch.ae",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "issuer_email",
+    "bounding_box": {
+     "x": 0.4943,
+     "y": 0.0568,
+     "page": 1,
+     "width": 0.1786,
+     "height": 0.014
+    }
+   },
+   {
+    "value": "https://www.ajyalfalah.sch.ae",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "issuer_website",
+    "bounding_box": {
+     "x": 0.7478,
+     "y": 0.0568,
+     "page": 1,
+     "width": 0.1928,
+     "height": 0.014
+    }
+   },
+   {
+    "value": "02 2034 500, 02 2034 517",
+    "uncertain": false,
+    "confidence": 0.95,
+    "field_name": "issuer_phone",
+    "bounding_box": {
+     "x": 0.7226,
+     "y": 0.0785,
+     "page": 1,
+     "width": 0.1704,
+     "height": 0.0133
+    }
+   }
+  ],
+  "document_type_confidence": 0.95
+ },
+ "visual_inconsistency_review": {
+  "result": "pass",
+  "details": [
+   {
+    "finding": "experimental_signal_notice",
+    "severity": "info",
+    "description": "This check uses a vision-capable language model's visual judgment, run twice independently per page — not deterministic pixel-level analysis like error level analysis or copy-move detection. Every category below is reported regardless of outcome, including a clean 'no issue' result — a finding only counts as confirmed (and affects this check's pass/flag result) if it appeared in both runs or was reported with high confidence in at least one; anything else is shown but marked as not corroborated. Treat this as one probabilistic, experimental signal among several, not a standalone verdict."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "font_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_font_consistency",
+    "severity": "info",
+    "description": "Page 1 — Font consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "text_alignment",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_text_alignment",
+    "severity": "info",
+    "description": "Page 1 — Text alignment: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "color_contrast_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_color_contrast_consistency",
+    "severity": "info",
+    "description": "Page 1 — Color / contrast consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The blue circular stamp in the lower right corner appears softer and less sharp compared to the rest of the printed text, consistent with a rubber stamp.",
+      "bounding_box": {
+       "x": 0.8,
+       "y": 0.85,
+       "width": 0.15,
+       "height": 0.1
+      }
+     },
+     "run_2": {
+      "confidence": "high",
+      "consistent": false,
+      "description": "The blue circular stamp at the bottom right is noticeably softer and less sharp than the printed text on the rest of the page.",
+      "bounding_box": {
+       "x": 0.75,
+       "y": 0.88,
+       "width": 0.2,
+       "height": 0.1
+      }
+     },
+     "category": "resolution_sharpness_consistency",
+     "region_filter": {
+      "reason": "it is about the detected stamp (covers 100% of it) — pen strokes and rubber-stamp ink are naturally softer than printed text",
+      "original_severity": "high",
+      "original_description": "Page 1 — Resolution / sharpness consistency: The blue circular stamp in the lower right corner appears softer and less sharp compared to the rest of the printed text, consistent with a rubber stamp. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding."
+     },
+     "run_agreement": "2-of-2 runs"
+    },
+    "page": 1,
+    "finding": "visual_resolution_sharpness_consistency",
+    "severity": "info",
+    "description": "Page 1 — Resolution / sharpness consistency: The blue circular stamp in the lower right corner appears softer and less sharp compared to the rest of the printed text, consistent with a rubber stamp. This is a vision-model judgment, not pixel-level analysis — a probabilistic signal, not a definitive finding. Not counted: it is about the detected stamp (covers 100% of it) — pen strokes and rubber-stamp ink are naturally softer than printed text.",
+    "bounding_box": {
+     "x": 0.8,
+     "y": 0.85,
+     "page": 1,
+     "width": 0.15,
+     "height": 0.1
+    }
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "run_2": {
+      "confidence": null,
+      "consistent": true,
+      "description": null,
+      "bounding_box": null
+     },
+     "category": "shadow_lighting_consistency",
+     "run_agreement": "consistent in both runs"
+    },
+    "page": 1,
+    "finding": "visual_shadow_lighting_consistency",
+    "severity": "info",
+    "description": "Page 1 — Shadow / lighting consistency: no inconsistency detected (both runs agreed)."
+   },
+   {
+    "data": {
+     "run_1": {
+      "confidence": "high",
+      "description": "The document shows consistent font, alignment, and color typical of a real digitally created invoice. The presence of a natural-looking rubber stamp with softer edges further supports it being a real document rather than AI-generated.",
+      "likely_ai_generated": false
+     },
+     "run_2": {
+      "confidence": "high",
+      "description": "The document shows natural print characteristics, consistent fonts, alignment, and a natural stamp with expected softness. No visual artifacts or inconsistencies typical of AI-generated or synthetic documents are present.",
+      "likely_ai_generated": false
+     },
+     "flagged": false,
+     "run_agreement": "not flagged"
+    },
+    "page": 1,
+    "finding": "ai_generation_assessment",
+    "severity": "info",
+    "description": "Page 1: no notable signs of AI-generated/synthetic content reported."
+   }
+  ]
+ },
+ "signature_stamp_detection": {
+  "result": "pass",
+  "details": {
+   "detected": [
+    {
+     "kind": "stamp",
+     "text": "AJYAL INTERNATIONAL SCHOOL - AL FALAH\nAL FALAH CITY - AL FALAH",
+     "confidence": "high",
+     "refinement": "embedded_image",
+     "description": "Round blue company stamp with Arabic and English text and a signature inside it.",
+     "bounding_box": {
+      "x": 0.8121800720780069,
+      "y": 0.8221950744217417,
+      "page": 1,
+      "width": 0.14382067773566776,
+      "height": 0.09270697564849772
+     }
+    },
+    {
+     "kind": "signature",
+     "confidence": "high",
+     "refinement": "second_look",
+     "description": "Handwritten signature inside the round stamp.",
+     "bounding_box": {
+      "x": 0.8494,
+      "y": 0.857,
+      "page": 1,
+      "width": 0.07350000000000001,
+      "height": 0.03400000000000003
+     }
+    }
+   ],
+   "bounding_box": {
+    "x": 0.8494,
+    "y": 0.857,
+    "page": 1,
+    "width": 0.07350000000000001,
+    "height": 0.03400000000000003
+   },
+   "signature_expected": true
+  }
+ },
+ "duplicate_detection": {
+  "result": "pass",
+  "details": []
+ }
+}

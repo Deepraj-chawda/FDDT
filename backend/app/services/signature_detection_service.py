@@ -16,7 +16,7 @@ Result shape (stored in `document_checks.result`):
       "result": "pass" | "flag",
       "details": {
         "signature_expected": bool,
-        "detected": [{kind, description, confidence, bounding_box{page,x,y,width,height}}],
+        "detected": [{kind, description, text?, confidence, bounding_box{page,x,y,width,height}}],
         "bounding_box": {page,x,y,width,height} | None,   # primary region
       }
     }
@@ -34,6 +34,10 @@ before it is stored, and each detected entry records how in `refinement`:
      a whole-page view.
   3. "none" — neither worked; the (padded) first-pass box is kept.
 Both refined kinds are then trimmed to the ink inside them.
+
+Each entry also records its `material` (app/services/forensics/pdf_facts.py):
+"image", "scan", or "text" / "vector" / "text_and_vector" — a stamp drawn
+as live text and lines in a born-digital file, not an ink stamp.
 """
 from __future__ import annotations
 
@@ -45,6 +49,7 @@ import cv2
 import numpy as np
 import pymupdf
 
+from app.services.forensics.pdf_facts import annotate_region_materials
 from app.services.forensics.pdf_render import RenderedPage
 from app.services.llm_service import LLMService
 from app.services.visual_inconsistency_service import _encode_page_image
@@ -328,11 +333,17 @@ def detect_signatures(
                 {
                     "kind": region.kind,
                     "description": region.description,
+                    **({"text": region.text.strip()} if region.kind == "stamp" and region.text.strip() else {}),
                     "confidence": region.confidence,
                     "refinement": refinement,
                     "bounding_box": {"page": page.page_number, **box},
                 }
             )
+
+    # What each region is made of (an embedded image, part of a scanned
+    # page, or live text and vector lines) — field validation's
+    # stamp_authenticity reads it.
+    detected = annotate_region_materials(detected, pdf_bytes)
 
     primary = (
         max(

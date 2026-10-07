@@ -319,17 +319,30 @@ export function CaseDetailPage() {
                 {documents.map((doc, idx) => {
                   const isSelected = selectedDocIndex === idx
                   const totalChecks = doc.checks?.length ?? 0
-                  const failedChecks = doc.checks?.filter((c) => c.status === "failed").length ?? 0
-                  const completedChecks = doc.checks?.filter((c) => c.status === "completed").length ?? 0
+                  // Counted by RESULT, not by run status: a check that ran and
+                  // flagged is not "passed".
+                  const resultOf = (c: { status: string; result: Record<string, unknown> | null }) =>
+                    c.status === "completed" ? String(c.result?.result ?? "") : c.status
+                  const countOf = (r: string) => doc.checks?.filter((c) => resultOf(c) === r).length ?? 0
+                  const flaggedChecks = countOf("flag")
+                  const passedChecks = countOf("pass")
+                  const limitedChecks = countOf("limited")
+                  const failedChecks = countOf("failed")
                   const docTypeLabel = doc.document_type
                     ? DOCUMENT_TYPE_LABELS[doc.document_type] ?? doc.document_type
                     : "Classification pending"
+                  const statusParts = [
+                    flaggedChecks > 0 && `${flaggedChecks} flagged`,
+                    limitedChecks > 0 && `${limitedChecks} limited`,
+                    failedChecks > 0 && `${failedChecks} failed to run`,
+                    passedChecks > 0 && `${passedChecks} passed`,
+                  ].filter(Boolean)
                   const statusText =
                     totalChecks === 0
                       ? "No checks run yet"
-                      : failedChecks > 0
-                      ? `${failedChecks} check${failedChecks === 1 ? "" : "s"} failed · ${completedChecks} passed`
-                      : `All ${completedChecks} check${completedChecks === 1 ? "" : "s"} passed`
+                      : flaggedChecks + limitedChecks + failedChecks === 0
+                      ? `All ${passedChecks} check${passedChecks === 1 ? "" : "s"} passed`
+                      : statusParts.join(" · ")
 
                   return (
                     <div
@@ -357,9 +370,15 @@ export function CaseDetailPage() {
                             </p>
                             <div className="flex items-center gap-1.5 mt-2">
                               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                totalChecks === 0 ? "bg-slate-300" : failedChecks > 0 ? "bg-red-500" : "bg-emerald-500"
+                                totalChecks === 0
+                                  ? "bg-slate-300"
+                                  : flaggedChecks + failedChecks > 0
+                                  ? "bg-red-500"
+                                  : limitedChecks > 0
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
                               }`}></span>
-                              <span className={`text-[10px] font-semibold ${failedChecks > 0 ? "text-red-600" : "text-slate-600"}`}>
+                              <span className={`text-[10px] font-semibold ${flaggedChecks + failedChecks > 0 ? "text-red-600" : "text-slate-600"}`}>
                                 {statusText}
                               </span>
                             </div>
@@ -520,9 +539,9 @@ export function CaseDetailPage() {
           </section>
 
           {/* RIGHT COLUMN: Risk & Findings */}
-          <section aria-label="Risk and Explainable Findings" className="lg:col-span-4 flex flex-col space-y-4">
+          <section aria-label="Risk and Explainable Findings" className="lg:col-span-4 flex flex-col space-y-4 min-w-0">
             {isReviewerRole && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500">Risk assessment</span>
                 {caseDetail && <RiskBadge tier={caseDetail.assessment?.tier ?? null} />}
@@ -545,15 +564,19 @@ export function CaseDetailPage() {
                       style={{ width: `${caseDetail.assessment.score}%` }}
                     />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed break-words [overflow-wrap:anywhere]">
                     Sum of the weights of {caseDetail.assessment.triggered_reasons.length} triggered rule
-                    {caseDetail.assessment.triggered_reasons.length === 1 ? "" : "s"}, capped at 100. Tiers: medium from{" "}
+                    {caseDetail.assessment.triggered_reasons.length === 1 ? "" : "s"}
+                    {caseDetail.assessment.group_caps?.metadata
+                      ? ` (metadata rules: ${caseDetail.assessment.group_caps.metadata.points} points, counted as ${caseDetail.assessment.group_caps.metadata.cap})`
+                      : ""}
+                    , capped at 100. Tiers: medium from{" "}
                     {caseDetail.assessment.thresholds.medium ?? "—"}, high from {caseDetail.assessment.thresholds.high ?? "—"}
                     {" "}(as configured when scored). Advisory — for reviewer use.
                   </p>
                 </>
               ) : caseDetail ? (
-                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed break-words [overflow-wrap:anywhere]">
                   Analyzing — the risk score appears once every automated check for this case has finished.
                   {caseDetail.pipeline.pending.length > 0 && (
                     <span className="block mt-1 text-slate-400">
@@ -569,7 +592,7 @@ export function CaseDetailPage() {
             {caseDetail && token && <CaseDecisionPanel caseDetail={caseDetail} role={user?.role} token={token} />}
 
             {isReviewerRole && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col flex-1">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col flex-1 min-w-0">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                   Explainable findings
@@ -578,7 +601,7 @@ export function CaseDetailPage() {
                   {reasons.length} signal{reasons.length === 1 ? "" : "s"}
                 </span>
               </div>
-              <div className="space-y-3.5">
+              <div className="space-y-3.5 min-w-0">
                 {!caseDetail ? (
                   <p className="text-xs text-slate-400">Loading...</p>
                 ) : !caseDetail.assessment ? (
@@ -590,14 +613,15 @@ export function CaseDetailPage() {
                     {visibleReasons.map((r, i) => (
                       <SeverityFinding
                         key={`${r.rule_id}:${r.document_id ?? "case"}:${i}`}
-                        title={r.rule_id}
-                        description={r.reason}
+                        title={r.title || r.rule_id}
+                        description={r.short || r.reason}
+                        detail={r.short ? r.reason : undefined}
                         pointDelta={r.weight}
                         tone={SEVERITY_TONE[r.severity] ?? "warning"}
                       />
                     ))}
                     {hiddenReasonCount > 0 && (
-                      <p className="text-[11px] text-slate-400 pt-1">
+                      <p className="text-[11px] text-slate-400 pt-1 break-words [overflow-wrap:anywhere]">
                         +{hiddenReasonCount} more lower-weight signal{hiddenReasonCount === 1 ? "" : "s"} contributed to the score.
                       </p>
                     )}
@@ -607,7 +631,7 @@ export function CaseDetailPage() {
             </div>
             )}
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col flex-1">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col flex-1 min-w-0">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                   Document checks

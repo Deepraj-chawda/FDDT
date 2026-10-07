@@ -59,12 +59,13 @@ CONTENT = A4 + (MARGIN_X, 48, -MARGIN_X, -56)  # room for the header and footer
 RENDER_DPI = 144  # crisp enough to read, small enough to keep the report light
 
 # Live-UI colours (frontend/src/index.css: --destructive #DC2626, --warning
-# #D97706, --info #2563EB) plus violet for field exceptions and fuchsia for
-# text-layer font mismatches.
+# #D97706, --info #2563EB) plus violet for field exceptions, fuchsia for
+# text-layer font mismatches and teal for ghost content (deleted text).
 _HEX = {
     "ela": "#DC2626", "copy_move": "#D97706", "model": "#2563EB",
-    "field": "#7C3AED", "font": "#C026D3", "page_level": "#64748B",
+    "field": "#7C3AED", "font": "#C026D3", "ghost": "#0D9488", "page_level": "#64748B",
 }
+_KIND_ORDER = ("ela", "copy_move", "font", "ghost", "field", "model", "page_level")
 
 
 def _rgb(hex_colour: str) -> tuple[float, float, float]:
@@ -79,6 +80,7 @@ _STYLE = {
     "model": (_rgb(_HEX["model"]), True),
     "field": (_rgb(_HEX["field"]), False),
     "font": (_rgb(_HEX["font"]), False),
+    "ghost": (_rgb(_HEX["ghost"]), False),
     "page_level": (_rgb(_HEX["page_level"]), False),
 }
 _KIND_LEGEND = {
@@ -87,6 +89,7 @@ _KIND_LEGEND = {
     "model": "Model judgment (dashed blue, approximate)",
     "field": "Field exception (solid purple)",
     "font": "Font mismatch in the text layer (solid fuchsia)",
+    "ghost": "Ghost text: deleted or shortened content (solid teal)",
     "page_level": "Page-level finding (not localized)",
 }
 
@@ -103,6 +106,7 @@ _RESULT = {
     "failed": ("Failed", "#991B1B", "#FEE2E2"),
     "not_applicable": ("N/A", "#475569", "#E2E8F0"),
     "not_checked": ("Not checked", "#475569", "#E2E8F0"),
+    "limited": ("Limited", "#92400E", "#FEF3C7"),
     "in_progress": ("In progress", "#475569", "#E2E8F0"),
 }
 _CROSS_RESULT = {
@@ -269,7 +273,13 @@ def _findings_html(d: ReportData) -> str:
     t = d.risk.thresholds
     parts.append(
         f"<p>The risk engine is a transparent, weighted rule set. Each row is one rule that fired, with the reason text "
-        f"stored at scoring time. Points are summed (raw {d.risk.raw_score:g}), capped at 100, and mapped to a tier"
+        f"stored at scoring time. Points are summed (raw {d.risk.raw_score:g}"
+        + (
+            f"; the metadata rules' {d.risk.group_caps['metadata']['points']:g} points count as "
+            f"{d.risk.group_caps['metadata']['cap']:g}, as one edit leaves several metadata traces"
+            if d.risk.group_caps.get("metadata") else ""
+        )
+        + "), capped at 100, and mapped to a tier"
         + (f" (medium from {t.get('medium')}, high from {t.get('high')})" if t else "")
         + f" — here <b>{d.risk.score}/100, {d.risk.tier}</b>.</p>"
     )
@@ -279,7 +289,7 @@ def _findings_html(d: ReportData) -> str:
     parts.append(
         '<table cellspacing="0"><tr><th width="9%" align="left">Severity</th><th width="7%" align="left">Points</th>'
         '<th width="17%" align="left">Check</th><th width="20%" align="left">Document / page</th>'
-        '<th align="left">Reason</th></tr>'
+        '<th align="left">What was found</th></tr>'
     )
     for f in d.findings:
         fg, bg = _SEVERITY_CHIP.get(f.severity, _SEVERITY_CHIP["low"])
@@ -287,10 +297,18 @@ def _findings_html(d: ReportData) -> str:
         regions = f'<br/><span class="small muted">Highlights:</span> {_ids(f.annotations)}' if f.annotations else ""
         parts.append(
             f"<tr><td>{_chip(f.severity.upper(), fg, bg)}</td><td>{f.weight:g}</td><td>{html.escape(f.check)}</td>"
-            f"<td class=\"small\">{_e(f.document or 'Case-level')}{page}</td><td>{_e(f.text)}{regions}</td></tr>"
+            f"<td class=\"small\">{_e(f.document or 'Case-level')}{page}</td><td>{_short_first(f.title, f.short, f.text)}{regions}</td></tr>"
         )
     parts.append("</table>")
     return "".join(parts)
+
+
+def _short_first(title: str, short: str, full: str) -> str:
+    """The short line in bold, the full explanation under it in grey."""
+    if not (title or short):
+        return _e(full)
+    head = f"<b>{_e(title)}</b>" + (f" — {_e(short)}" if short else "")
+    return f'{head}<br/><span class="small muted">{_e(full)}</span>' if full else head
 
 
 def _all_checks_html(d: ReportData) -> str:
@@ -316,7 +334,9 @@ def _all_checks_html(d: ReportData) -> str:
             label, fg, bg = _RESULT.get(row.result, _RESULT["in_progress"])
             parts.append(
                 f'<tr><td><b>{html.escape(row.name)}</b><br/><span class="muted small">{html.escape(row.description)}</span></td>'
-                f"<td>{_chip(label, fg, bg)}</td><td>{_e(row.summary)}</td></tr>"
+                f"<td>{_chip(label, fg, bg)}</td><td><b>{_e(row.summary)}</b>"
+                + "".join(f'<br/><span class="small">• {_e(line)}</span>' for line in row.lines)
+                + "</td></tr>"
             )
         parts.append("</table>")
     if d.cross_document is not None:
@@ -548,7 +568,7 @@ def _regions_intro_html(d: ReportData, regions: list[tuple[DocumentSection, Page
         return "".join(parts)
     parts.append("<h3>Colour key</h3><table cellspacing=\"0\">" + "".join(
         f'<tr><td width="7%"><span style="color:{_HEX[k]}"><b>■</b></span></td><td>{html.escape(_KIND_LEGEND[k])}</td></tr>'
-        for k in ("ela", "copy_move", "font", "field", "model", "page_level")
+        for k in _KIND_ORDER
     ) + "</table>")
     parts.append("<h3>Region index</h3>")
     parts.append('<table cellspacing="0"><tr><th width="8%" align="left">Region</th><th width="30%" align="left">Document</th><th width="8%" align="left">Page</th><th align="left">What it shows</th></tr>')
@@ -603,7 +623,7 @@ def _draw_dashes(dashed: bool) -> str | None:
 
 def _legend(page: pymupdf.Page, kinds: set[str], y: float) -> None:
     x = MARGIN_X
-    for kind in ("ela", "copy_move", "font", "field", "model", "page_level"):
+    for kind in _KIND_ORDER:
         if kind not in kinds:
             continue
         colour, dashed = _STYLE[kind]
@@ -708,6 +728,46 @@ def _add_annotated_page(
 
     list_rect = pymupdf.Rect(MARGIN_X, img_rect.y1 + 8, A4.width - MARGIN_X, A4.height - 50)
     page.insert_htmlbox(list_rect, _findings_list_html(annotations), css=_CSS, scale_low=0.55)
+
+
+_CROP_MAX_HEIGHT = 230.0
+
+
+def _add_crop_pages(out: pymupdf.Document, doc: DocumentSection, page_number: int, annotations: list[PageAnnotation]) -> None:
+    """The enhanced crops some highlights carry (the ghost-content check's
+    faint traces of erased text), each under its region ID, on pages after
+    the annotated page — the trace is too faint to see on the page render."""
+    with_images = [a for a in annotations if a.image_png]
+    if not with_images:
+        return
+    page, y = None, 0.0
+    width = A4.width - 2 * MARGIN_X
+    for a in with_images:
+        try:
+            pix = pymupdf.Pixmap(a.image_png)
+        except Exception:  # noqa: BLE001 - an unreadable crop is just not shown
+            continue
+        scale = min(width / pix.width, _CROP_MAX_HEIGHT / pix.height, 2.5)
+        w, h = pix.width * scale, pix.height * scale
+        if page is None or y + h + 40 > A4.height - 60:
+            page = out.new_page(width=A4.width, height=A4.height)
+            header = (
+                f'<body><p style="font-size:11pt"><b>{_e(doc.filename)}</b> — page {page_number}: enhanced traces</p>'
+                '<p class="muted" style="font-size:8pt">The scanned background, contrast-stretched so the faint '
+                "trace of erased text shows. These traces are what the ghost-content highlights on the previous page "
+                "mark.</p></body>"
+            )
+            page.insert_htmlbox(pymupdf.Rect(MARGIN_X, 42, A4.width - MARGIN_X, 86), header, css=_CSS)
+            y = 92.0
+        colour, _ = _STYLE[a.kind]
+        _draw_text(page, (MARGIN_X, y + 9), f"{a.region_id} · {a.caption}", 8.5, colour, _BOLD)
+        rect = pymupdf.Rect(MARGIN_X, y + 14, MARGIN_X + w, y + 14 + h)
+        page.insert_image(rect, stream=a.image_png)
+        frame = page.new_shape()
+        frame.draw_rect(rect)
+        frame.finish(color=colour, width=1.0)
+        frame.commit()
+        y = rect.y1 + 18
 
 
 def _decorate(out: pymupdf.Document, d: ReportData) -> None:
@@ -841,6 +901,7 @@ def build_report_pdf(d: ReportData) -> bytes:
                     targets[a.region_id] = len(out)
                 toc.append([2, f"Document {doc.index}: {doc.filename} — page {page_number}", len(out) + 1])
                 _add_annotated_page(out, d, doc, source, page_number, by_page[page_number])
+                _add_crop_pages(out, doc, page_number, by_page[page_number])
         finally:
             if source is not None:
                 source.close()

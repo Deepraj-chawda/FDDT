@@ -18,6 +18,7 @@ blob (SPECIFICATION.md section 4: original files are stored immutably).
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import re
 import uuid
@@ -29,6 +30,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
+from app.services.check_summaries import (
+    STAMP_SUB_CHECKS, risk_reason_short, sub_check_item, summarize_document_checks,
+)
 from app.models.case import Case, CaseStatus
 from app.models.case_action import CaseAction, CaseActionType
 from app.models.cross_document_finding import CrossDocumentFinding
@@ -63,12 +67,17 @@ DASH = "—"
 #   judgment (dashed).
 #   Font mismatch (font consistency check) -> solid fuchsia box around the
 #   text set in an out-of-place font.
-AnnotationKind = Literal["ela", "copy_move", "model", "field", "font", "page_level"]
+#   Ghost content (deleted / replaced content check) -> solid teal box around
+#   the faint trace of erased text, shown with the enhanced crop of it.
+AnnotationKind = Literal["ela", "copy_move", "model", "field", "font", "ghost", "page_level"]
 
 _MATERIAL_SEVERITIES = ("medium", "high")
 # Notes derived from other checks / explanatory notices — never findings in
 # their own right (same list the risk engine leaves unscored).
-_NOTE_FINDINGS = {"metadata_forensics_correlation", "experimental_signal_notice"}
+_NOTE_FINDINGS = {
+    "metadata_forensics_correlation", "experimental_signal_notice", "pixel_analysis_limited",
+    "ghost_content_scope", "ghost_show_through", "ghost_near_signature",
+}
 
 # Ordered as they appear in each document's checks-summary table:
 # (check type, label, what it looks at).
@@ -92,6 +101,12 @@ CHECK_CATALOG: list[tuple[DocumentCheckType, str, str]] = [
         DocumentCheckType.copy_move_detection,
         "Copy-move detection",
         "Regions of a page that were duplicated elsewhere on the same page.",
+    ),
+    (
+        DocumentCheckType.ghost_content,
+        "Deleted / replaced content (ghost text)",
+        "On a scan converted to editable text: faint traces of the original text left in the scanned background, "
+        "with no live text on top (deleted) or running on past it (shortened).",
     ),
     (
         DocumentCheckType.visual_inconsistency_review,
@@ -122,18 +137,6 @@ CHECK_CATALOG: list[tuple[DocumentCheckType, str, str]] = [
 CROSS_DOCUMENT_LABEL = "Cross-document consistency"
 CROSS_DOCUMENT_DESC = "Issuer, date and amount compared pairwise across every document in the case."
 REQUIRED_CORE_FIELDS = ("issuer", "reference_number", "date", "amount")
-_SUBCHECK_TITLES = {
-    "date_in_future": "Future-dated document",
-    "line_item_arithmetic": "Line item miscalculation",
-    "subtotal_line_item_consistency": "Line items do not add up",
-    "total_tax_consistency": "Total / tax miscalculation",
-    "tax_rate_consistency": "Tax / rate miscalculation",
-    "amount_in_words_consistency": "Amount in words differs from figures",
-    "reference_number_format": "Reference number format",
-    "iban_trn_validation": "Invalid IBAN / TRN",
-    "rescan_conflict": "Printed and re-scanned",
-    "period_quantity_consistency": "Months charged differ from months due",
-}
 SIGNATURE_COMPARISON_LABEL = "Signature comparison (advisory)"
 SIGNATURE_COMPARISON_DESC = (
     "Qualitative visual comparison against a reviewer-set reference signature."
@@ -155,7 +158,7 @@ _EVENT_LABELS = {
     "document_processing_failed": "Text extraction / classification failed",
     "document_checks_completed": "Field validation and issuer verification completed",
     "metadata_forensics_completed": "Metadata forensics completed",
-    "tampering_checks_completed": "ELA and copy-move checks completed",
+    "tampering_checks_completed": "ELA, copy-move and ghost-content checks completed",
     "tampering_checks_failed": "ELA and copy-move checks failed",
     "duplicate_check_completed": "Duplicate detection completed",
     "visual_inconsistency_review_completed": "Visual inconsistency review completed",
@@ -195,6 +198,9 @@ class PageAnnotation:
     check_type: str = ""
     # Short, plain-language exception line ("ELA: possible tamper region").
     exception_text: str = ""
+    # An image shown with the highlight (the ghost-content check's enhanced
+    # crop of the faint trace), PNG bytes.
+    image_png: bytes | None = None
     # "R1", "R2", ... — assigned once, report-wide, after every annotation
     # exists (assign_region_ids); the Exceptions section and Section 9 both
     # refer to a highlight by this ID.
@@ -230,6 +236,9 @@ class FindingRow:
     page: int | None
     text: str  # the stored, already-rendered reason
     annotations: list[PageAnnotation] = field(default_factory=list)
+    # Short form, shown first (app/services/check_summaries.py).
+    title: str = ""
+    short: str = ""
 
 
 @dataclass
@@ -242,8 +251,10 @@ class TechnicalBlock:
 class CheckRow:
     name: str
     description: str
-    result: str  # pass | flag | review | not_applicable | failed | in_progress
-    summary: str
+    result: str  # pass | flag | review | limited | not_applicable | not_checked | failed | in_progress
+    summary: str  # the headline
+    # One short line per problem ("Amounts retyped — 1,450.00 · ..."), then notes.
+    lines: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -303,6 +314,8 @@ class RiskSummary:
     reasons: list[ReasonRow]
     rule_versions: list[tuple[str, int, float]]  # (rule_id, version, weight)
     thresholds: dict[str, int]
+    # Rule families capped together when scored: {"metadata": {"cap", "points"}}.
+    group_caps: dict[str, dict[str, float]] = field(default_factory=dict)
 
 
 @dataclass
@@ -449,12 +462,30 @@ def _describe_finding(
     finding, or None for a check type this doesn't draw."""
     name = str(item.get("finding") or "")
     if check_type == DocumentCheckType.font_consistency:
+        if name == "font_subset_split":
+            return (
+                "font" if located else "page_level",
+                f"Font mismatch {DASH} second embedded copy of the font",
+                "Font consistency: text set in a second embedded copy of a font the page already uses",
+            )
         scanned = (item.get("data") or {}).get("source") == "ocr"
         return (
             "font" if located else "page_level",
             f"Font mismatch {DASH} text set in a different font family" + (" (scan, estimated)" if scanned else ""),
             "Font consistency: text set in a different font family from the text around it"
             + (" (OCR font recognition on a scan)" if scanned else ""),
+        )
+    if check_type == DocumentCheckType.ghost_content:
+        if name == "ghost_replaced_line":
+            return (
+                "ghost" if located else "page_level",
+                f"Ghost text {DASH} line shortened or rewritten",
+                "Deleted / replaced content: a line was shortened or rewritten after the scan was converted",
+            )
+        return (
+            "ghost" if located else "page_level",
+            f"Ghost text {DASH} deleted content",
+            "Deleted / replaced content: text deleted after the scan was converted to editable text",
         )
     if check_type == DocumentCheckType.error_level_analysis:
         if located:
@@ -494,6 +525,18 @@ def _describe_finding(
     return None
 
 
+def _crop_png(item: dict[str, Any]) -> bytes | None:
+    """The enhanced crop a ghost-content finding carries, decoded."""
+    data = item.get("data")
+    encoded = data.get("crop_png_base64") if isinstance(data, dict) else None
+    if not encoded:
+        return None
+    try:
+        return base64.b64decode(encoded)
+    except (ValueError, TypeError):
+        return None
+
+
 def derive_findings(
     doc: Document,
     index: int,
@@ -519,10 +562,12 @@ def derive_findings(
         exceptions.append(item)
         return item
 
+    summaries = summarize_document_checks(list(latest_checks.values()), members=True)
     for check_type, label, _ in CHECK_CATALOG:
         check = latest_checks.get(check_type)
         if check is None:
             continue
+        summary = summaries.get(check_type.value) or {"items": []}
         if check.status == DocumentCheckStatus.failed:
             add_exception(
                 source=label, text=f"{label}: the check failed to run",
@@ -533,8 +578,12 @@ def derive_findings(
             continue
         details = _details(check)
 
-        # -- list-shaped findings (ELA, copy-move, visual, duplicate, metadata)
+        # -- list-shaped findings (ELA, copy-move, visual, duplicate, metadata):
+        # every located finding is drawn; the exceptions are the summary's
+        # items (one per problem, grouping findings with one cause).
         if isinstance(details, list):
+            items = summary["items"]
+            shown: dict[int, list[PageAnnotation]] = {}
             for item in details:
                 if not isinstance(item, dict) or not _is_material(item):
                     continue
@@ -548,8 +597,21 @@ def derive_findings(
                     annotation = PageAnnotation(
                         page=page, kind=kind, check_label=label, caption=caption, description=description,
                         box=located[1] if located else None, check_type=check_type.value, exception_text=text,
+                        image_png=_crop_png(item),
                     )
                     annotations.append(annotation)
+                plain = " ".join(description.split())
+                owner = next(
+                    (n for n, it in enumerate(items) if item.get("finding") in it["findings"] and plain in it.get("members", [])),
+                    None,
+                )
+                if owner is not None:
+                    shown.setdefault(owner, [])
+                    if annotation is not None:
+                        shown[owner].append(annotation)
+                    continue
+                if item.get("severity") == "info":
+                    continue  # drawn for context; an info note is not an exception
                 add_exception(
                     source=label,
                     text=described[2] if described else f"{label}: {_shorten(description, 260)}",
@@ -558,6 +620,16 @@ def derive_findings(
                     page=page if isinstance(page, int) else None,
                     severity=item.get("severity"),
                     annotations=[annotation] if annotation else [],
+                )
+            for n, linked in shown.items():
+                it = items[n]
+                line = f"{it['title']} — {it['text']}"
+                for annotation in linked:
+                    annotation.exception_text = line
+                add_exception(
+                    source=label, text=line, detail=it["detail"],
+                    page=it.get("page") if isinstance(it.get("page"), int) else (linked[0].page if linked else None),
+                    severity=it["severity"], annotations=linked,
                 )
             continue
 
@@ -570,7 +642,8 @@ def derive_findings(
                 if not isinstance(sub, dict) or sub.get("status") != "flag":
                     continue
                 reason = str(sub.get("reason") or name)
-                title = _SUBCHECK_TITLES.get(name, humanize(name))
+                short = sub_check_item(name, sub)
+                title = f"{short['title']} — {short['text']}"
                 linked: list[PageAnnotation] = []
                 for region in sub.get("regions") or []:
                     box = _valid_box(region.get("bounding_box"))
@@ -581,28 +654,30 @@ def derive_findings(
                             page=box[0], kind="field", check_label=label,
                             caption=str(region.get("caption") or ""),
                             description=f"{reason} ({region.get('label')}: {region.get('value')})",
-                            box=box[1], check_type=check_type.value, exception_text=f"{title}: {reason}",
+                            box=box[1], check_type=check_type.value, exception_text=title,
                         )
                     )
                 annotations.extend(linked)
                 add_exception(
-                    source=label, text=f"{title}: {reason}",
+                    source=label, text=title, detail=reason,
                     page=linked[0].page if linked else None, severity="medium", annotations=linked,
                 )
             continue
 
         if result != "flag":
             continue
-        _, summary = _summarize_check(check_type, check)
-        if check_type == DocumentCheckType.issuer_verification:
-            add_exception(source=label, text=f"Issuer not in registry: {summary}", severity="medium")
-        elif check_type == DocumentCheckType.signature_stamp_detection:
-            add_exception(
-                source=label, text="Signature / stamp: expected on this document but none was located",
-                severity="low",
-            )
+        _, result_summary = _summarize_check(check_type, check)
+        shorts = [
+            it for it in summary["items"]
+            if not (check_type == DocumentCheckType.signature_stamp_detection and set(STAMP_SUB_CHECKS) & set(it["findings"]))
+        ]
+        if shorts:
+            for it in shorts:
+                add_exception(
+                    source=label, text=f"{it['title']} — {it['text']}", detail=it["detail"], severity=it["severity"]
+                )
         else:
-            add_exception(source=label, text=f"{label}: {summary}")
+            add_exception(source=label, text=f"{label}: {result_summary}")
 
     # -- required fields that were never extracted (nothing to draw)
     if doc.processing_status == DocumentProcessingStatus.complete and isinstance(doc.extracted_fields, dict):
@@ -681,6 +756,9 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
     details = _details(check)
     if result == "not_applicable":
         return "not_applicable", "Not applicable to this document."
+    if result == "limited" and isinstance(details, list):
+        note = next((d for d in details if isinstance(d, dict) and d.get("finding") == "pixel_analysis_limited"), {})
+        return "limited", _shorten(str(note.get("description") or "Limited: this check could not see the page's text."), 260)
 
     if check_type == DocumentCheckType.issuer_verification and isinstance(details, dict):
         name = details.get("issuer_name")
@@ -698,6 +776,25 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
                 f"Matched registry entry '{matched}' (similarity {details.get('match_score')}).", 220
             )
         return "pass", "Issuer matched the registry."
+
+    if check_type == DocumentCheckType.ghost_content and isinstance(details, list):
+        found = [d for d in details if isinstance(d, dict)]
+        deleted = [d for d in found if d.get("finding") == "ghost_deleted_block"]
+        replaced = [d for d in found if d.get("finding") == "ghost_replaced_line"]
+        scope = next((d for d in found if d.get("finding") == "ghost_content_scope"), {})
+        pages = ", ".join(str(p.get("page")) for p in (scope.get("data") or {}).get("pages") or [])
+        if deleted or replaced:
+            parts = []
+            if deleted:
+                lines = sum(int((d.get("data") or {}).get("lines") or 0) for d in deleted)
+                parts.append(f"{len(deleted)} deleted text block(s) ({lines} line(s))")
+            if replaced:
+                texts = ", ".join(repr(str((d.get("data") or {}).get("text") or "")) for d in replaced[:3])
+                parts.append(f"{len(replaced)} shortened or rewritten line(s) ({texts})")
+            return "flag", _shorten(
+                "Faint traces of the original text in the scanned background show " + " and ".join(parts) + ".", 260
+            )
+        return "pass", f"Converted page(s) {pages} searched: no traces of deleted or shortened text."
 
     if check_type == DocumentCheckType.signature_stamp_detection and isinstance(details, dict):
         detected = details.get("detected") or []
@@ -721,8 +818,14 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
             d for d in details
             if isinstance(d, dict)
             and d.get("finding") not in _NOTE_FINDINGS
-            and (d.get("severity") in _MATERIAL_SEVERITIES or d.get("bounding_box"))
+            and (d.get("severity") in _MATERIAL_SEVERITIES or (d.get("bounding_box") and d.get("severity") != "info"))
         ]
+        scored = [d for d in material if d.get("severity") in _MATERIAL_SEVERITIES]
+        if material and not scored and result != "flag":
+            first = material[0]
+            return "review", _shorten(
+                f"{len(material)} finding(s) shown for review, not scored. {first.get('description') or ''}", 260
+            )
         if result == "flag" or material:
             first = material[0] if material else (details[0] if details else {})
             desc = str(first.get("description") or first.get("finding") or "Flagged.") if isinstance(first, dict) else "Flagged."
@@ -740,12 +843,19 @@ def _check_rows(
     signature_matches: list[tuple[SignatureMatch, str]],
 ) -> list[CheckRow]:
     rows: list[CheckRow] = []
+    summaries = summarize_document_checks(list(latest_checks.values()))
     for check_type, label, description in CHECK_CATALOG:
         check = latest_checks.get(check_type)
         if check is None:
             continue  # didn't run on this document — reported in "coverage" instead
-        result, summary = _summarize_check(check_type, check)
-        rows.append(CheckRow(name=label, description=description, result=result, summary=summary))
+        result, _ = _summarize_check(check_type, check)
+        short = summaries.get(check_type.value) or {"headline": "", "items": [], "notes": []}
+        rows.append(
+            CheckRow(
+                name=label, description=description, result=result, summary=short["headline"],
+                lines=[f"{it['title']} — {it['text']}" for it in short["items"]] + list(short["notes"]),
+            )
+        )
         if check_type == DocumentCheckType.signature_stamp_detection and signature_matches:
             verdicts = [m.result.value for m, _ in signature_matches]
             outcome = (
@@ -945,6 +1055,23 @@ def audit_rows(db: Session, company_id: uuid.UUID, case_id: uuid.UUID) -> tuple[
 # Coverage (Limitations section: "which checks ran on THIS case")
 # ---------------------------------------------------------------------------
 
+_NOT_APPLICABLE_WHY = {
+    DocumentCheckType.ghost_content: " (no page is a scan converted to editable text)",
+}
+
+
+def _not_applicable_reason(check: DocumentCheck) -> str | None:
+    """The short reason a check stored for being not applicable, if any."""
+    details = _details(check)
+    if isinstance(details, list):
+        return next(
+            (str((d.get("data") or {}).get("reason")) for d in details
+             if isinstance(d, dict) and isinstance(d.get("data"), dict) and d["data"].get("reason")),
+            None,
+        )
+    return None
+
+
 def coverage_rows(
     documents: list[Document],
     latest_by_doc: dict[uuid.UUID, dict[DocumentCheckType, DocumentCheck]],
@@ -957,12 +1084,21 @@ def coverage_rows(
     for check_type, label, _ in CHECK_CATALOG:
         ran = [latest_by_doc[d.id][check_type] for d in documents if check_type in latest_by_doc[d.id]]
         completed = [c for c in ran if c.status == DocumentCheckStatus.completed]
-        flagged = [c for c in completed if _summarize_check(check_type, c)[0] == "flag"]
+        outcomes = [_summarize_check(check_type, c)[0] for c in completed]
+        flagged = [o for o in outcomes if o == "flag"]
+        not_applicable = [o for o in outcomes if o == "not_applicable"]
         failed = [c for c in ran if c.status == DocumentCheckStatus.failed]
         if not ran:
             rows.append(CoverageRow(label, "not_run", f"Did not run on any of the {total} document(s)."))
             continue
+        if len(not_applicable) == len(ran):
+            reasons = list(dict.fromkeys(r for c in completed if (r := _not_applicable_reason(c))))
+            why = ("; ".join(reasons) if reasons else _NOT_APPLICABLE_WHY.get(check_type, "").strip(" ()")) or "—"
+            rows.append(CoverageRow(label, "not_applicable", f"Not applicable: {why}."))
+            continue
         detail = f"Ran on {len(ran)} of {total} document(s); {len(flagged)} flagged"
+        if not_applicable:
+            detail += f"; not applicable to {len(not_applicable)}"
         if failed:
             detail += f"; {len(failed)} failed to run"
         rows.append(CoverageRow(label, "ran", detail + "."))
@@ -1386,11 +1522,15 @@ def collect_report_data(
             ],
             rule_versions=sorted((rid, ver, w) for (rid, ver), w in versions.items()),
             thresholds=dict(snapshot.get("thresholds", {})),
+            group_caps=dict(snapshot.get("group_caps") or {}),
         )
         check_labels = {ct.value: label for ct, label, _ in CHECK_CATALOG}
         check_labels["cross_document_consistency"] = CROSS_DOCUMENT_LABEL
         check_labels["signature_comparison"] = SIGNATURE_COMPARISON_LABEL
         filenames = {str(s.document_id): s.filename for s in sections}
+        short_by_doc = {
+            str(doc.id): summarize_document_checks(list(latest_by_doc[doc.id].values())) for doc in documents
+        }
         for r in sorted(assessment.triggered_reasons or [], key=lambda r: -float(r.get("weight", 0))):
             check_type = str(r.get("check_type") or "")
             document_id = str(r["document_id"]) if r.get("document_id") else None
@@ -1400,6 +1540,7 @@ def collect_report_data(
             ]
             text = str(r.get("reason", ""))
             mentioned = _PAGE_IN_TEXT.search(text)
+            title, short = risk_reason_short(r, short_by_doc.get(document_id or ""))
             findings_rows.append(
                 FindingRow(
                     severity=str(r.get("severity", "")),
@@ -1409,6 +1550,8 @@ def collect_report_data(
                     page=int(mentioned.group(1)) if mentioned else (linked[0].page if linked else None),
                     text=text,
                     annotations=linked,
+                    title=title,
+                    short=short,
                 )
             )
     pipeline = pipeline_status(db, case.company_id, case.id)

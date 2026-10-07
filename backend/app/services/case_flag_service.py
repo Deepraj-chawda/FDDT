@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.models.case_risk_assessment import CaseRiskAssessment
 from app.models.document import Document
 from app.models.document_check import DocumentCheckStatus, DocumentCheckType
+from app.services.check_summaries import risk_reason_short
 
 CaseFlagType = Literal["low", "medium", "high", "pending"]
 
@@ -91,9 +92,15 @@ class ForensicFinding:
 def _describe_assessment(reasons: list[dict[str, Any]]) -> str:
     if not reasons:
         return "No risk signals fired across this case's documents."
-    top = reasons[0].get("reason", "")  # stored highest-weight first
-    extra = len(reasons) - 1
-    return top if extra <= 0 else f"{top} (+{extra} more signal{'s' if extra != 1 else ''})"
+    # Stored highest-weight first; their short titles (app/services/check_summaries.py).
+    def label(r: dict[str, Any]) -> str:
+        title, short = risk_reason_short(r, None)
+        return title if r.get("rule_id") else short
+
+    titles = list(dict.fromkeys(label(r) for r in reasons))
+    shown = " · ".join(titles[:3])
+    extra = len(titles) - 3
+    return shown if extra <= 0 else f"{shown} (+{extra} more)"
 
 
 def _flag_from_assessment(assessment: CaseRiskAssessment | None) -> CaseFlag:

@@ -31,6 +31,7 @@ app/tasks/duplicate_check_task.py).
 """
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -267,3 +268,115 @@ def run_duplicate_check(
     )
     store_page_hashes(db, company_id=company_id, document_id=document_id, page_hashes=page_hashes)
     return {"result": "flag" if matches else "pass", "details": [m.to_dict() for m in matches]}
+
+
+# --- field-aware: resubmission, or the same template with other values ------------
+
+# Additional fields that name the student / customer the document is for.
+_PERSON_FIELD_RE = re.compile(r"student|pupil|child|learner|bill_to|billed_to|customer|parent", re.IGNORECASE)
+_PERSON_MATCH = 90.0
+# A resubmission needs at least this many fields compared, all equal.
+_MIN_COMPARED = 2
+
+
+def _fields_on_page(extracted: dict[str, Any] | None, page: int) -> dict[str, Any]:
+    """The core/additional fields of the invoice printed on `page` (a
+    multi-invoice file), else the document's own."""
+    from app.services.multi_invoice import invoice_on_page
+
+    return invoice_on_page(extracted, page) or (extracted or {})
+
+
+def _value(fields: dict[str, Any], name: str) -> Any:
+    return ((fields.get("core_fields") or {}).get(name) or {}).get("value")
+
+
+def _person(fields: dict[str, Any]) -> str | None:
+    for item in fields.get("additional_fields") or []:
+        if isinstance(item, dict) and _PERSON_FIELD_RE.search(str(item.get("field_name") or "")) and item.get("value"):
+            return str(item["value"])
+    return None
+
+
+def compare_fields(mine: dict[str, Any], theirs: dict[str, Any]) -> list[dict[str, Any]]:
+    """[{field, mine, theirs, equal}] for the identifying fields both sides have."""
+    from rapidfuzz import fuzz
+
+    rows = []
+    a, b = _value(mine, "reference_number"), _value(theirs, "reference_number")
+    if a and b:
+        norm = lambda v: re.sub(r"[^0-9A-Z]", "", str(v).upper())  # noqa: E731
+        rows.append({"field": "invoice number", "mine": a, "theirs": b, "equal": norm(a) == norm(b)})
+    a, b = _value(mine, "date"), _value(theirs, "date")
+    if a and b:
+        rows.append({"field": "date", "mine": a, "theirs": b, "equal": str(a) == str(b)})
+    a, b = _value(mine, "amount"), _value(theirs, "amount")
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        rows.append({"field": "amount", "mine": a, "theirs": b, "equal": abs(a - b) < 0.01})
+    a, b = _person(mine), _person(theirs)
+    if a and b:
+        rows.append({"field": "student / customer", "mine": a, "theirs": b,
+                     "equal": fuzz.token_set_ratio(a.casefold(), b.casefold()) >= _PERSON_MATCH})
+    return rows
+
+
+def _shown(value: Any) -> str:
+    return f"{value:,.2f}" if isinstance(value, float) else str(value)
+
+
+def refine_with_fields(
+    result: dict[str, Any], mine: dict[str, Any] | None, matched: dict[str, dict[str, Any] | None]
+) -> dict[str, Any]:
+    """`result` with each near-duplicate page match (not the same file)
+    judged on the fields: the same invoice number, date, amount and student
+    as the matched document → a resubmission (stays high); any of them
+    different → `same_template_page`, low: the same layout with other values,
+    shown for review, not scored. `matched`: {document_id: its extracted
+    fields}. A match whose fields cannot be compared yet is left as it is."""
+    details = []
+    changed = False
+    for f in result.get("details") or []:
+        data = f.get("data") if isinstance(f, dict) else None
+        if f.get("finding") != "near_duplicate_page" or not isinstance(data, dict) or data.get("identical_file"):
+            details.append(f)
+            continue
+        theirs_all = matched.get(str(data.get("matched_document_id")))
+        if not mine or not theirs_all:
+            details.append(f)
+            continue
+        rows = compare_fields(
+            _fields_on_page(mine, int(f.get("page") or 1)),
+            _fields_on_page(theirs_all, int(data.get("matched_page") or 1)),
+        )
+        if not rows:
+            details.append(f)
+            continue
+        changed = True
+        same = [r["field"] for r in rows if r["equal"]]
+        differ = [r for r in rows if not r["equal"]]
+        where = f"page {data.get('matched_page')} of \"{data.get('matched_document_filename')}\" in case {data.get('matched_case_number')}"
+        if not differ and len(rows) >= _MIN_COMPARED:
+            details.append({
+                **f,
+                "description": f"Page {f.get('page')} looks the same as {where} and carries the same "
+                               f"{', '.join(same)}: the same document submitted again.",
+                "data": {**data, "field_comparison": rows, "verdict": "resubmission"},
+            })
+            continue
+        if not differ:
+            details.append({**f, "data": {**data, "field_comparison": rows}})
+            continue
+        differences = "; ".join(f"{r['field']} {_shown(r['mine'])} vs {_shown(r['theirs'])}" for r in differ)
+        details.append({
+            **f,
+            "finding": "same_template_page",
+            "severity": "low",
+            "description": f"Page {f.get('page')} has the same layout as {where}, but different values "
+                           f"({differences}{'; same ' + ', '.join(same) if same else ''}): the same template "
+                           "with other values, not the same document. Shown for review, not scored.",
+            "data": {**data, "field_comparison": rows, "verdict": "same_template"},
+        })
+    if not changed:
+        return result
+    flagged = any(d.get("severity") in ("medium", "high") for d in details if isinstance(d, dict))
+    return {**result, "result": "flag" if flagged else "pass", "details": details}

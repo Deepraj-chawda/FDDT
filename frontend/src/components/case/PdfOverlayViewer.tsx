@@ -28,7 +28,12 @@ import type { BoundingBox } from "@/types/case"
 // "font" is a solid FUCHSIA box around text whose font family differs from
 // the text around it, read from the PDF's text layer
 // (backend/app/services/forensics/font_consistency.py) — exact, not judged.
-export type OverlayColor = "destructive" | "warning" | "ai" | "field" | "font"
+//
+// "ghost" is a solid TEAL box around the faint trace of text erased from a
+// scan converted to editable text, with no live text on top (deleted) or
+// running on past it (shortened) — backend/app/services/forensics/
+// ghost_content.py.
+export type OverlayColor = "destructive" | "warning" | "ai" | "field" | "font" | "ghost"
 
 export interface OverlayBox {
   box: BoundingBox
@@ -42,6 +47,7 @@ const OVERLAY_COLOR_CLASSES: Record<OverlayColor, string> = {
   ai: "border-dashed border-info bg-info/10",
   field: "border-violet-600 bg-violet-600/15",
   font: "border-fuchsia-600 bg-fuchsia-600/15",
+  ghost: "border-teal-600 bg-teal-600/20",
 }
 
 const OVERLAY_COLOR_LEGEND: Record<OverlayColor, string> = {
@@ -50,6 +56,7 @@ const OVERLAY_COLOR_LEGEND: Record<OverlayColor, string> = {
   ai: "AI-described area (approximate)",
   field: "Field exception",
   font: "Font mismatch",
+  ghost: "Deleted / replaced content",
 }
 
 // react-pdf/pdf.js can throw synchronously during render on a load

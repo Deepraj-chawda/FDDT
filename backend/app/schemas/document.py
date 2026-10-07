@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.services.check_summaries import summarize_document_checks
 from app.services.field_exception_service import with_field_regions
 
 
@@ -60,11 +61,16 @@ class DocumentCheckSummary(BaseModel):
     result: dict[str, Any] | None
     error_message: str | None
     created_at: datetime
+    # Short, readable form of the result (headline, one-line items, notes) —
+    # app/services/check_summaries.py. Computed when read.
+    summary: dict[str, Any] | None = None
 
     model_config = {"from_attributes": True}
 
     @classmethod
-    def from_check(cls, check, extracted_fields: dict[str, Any] | None = None) -> "DocumentCheckSummary":
+    def from_check(
+        cls, check, extracted_fields: dict[str, Any] | None = None, summary: dict[str, Any] | None = None
+    ) -> "DocumentCheckSummary":
         result = check.result
         if check.check_type.value == "field_validation":
             # Rows stored before field locations existed carry no highlight
@@ -78,6 +84,7 @@ class DocumentCheckSummary(BaseModel):
             result=result,
             error_message=check.error_message,
             created_at=check.created_at,
+            summary=summary,
         )
 
 
@@ -113,6 +120,7 @@ class CaseDocumentSummary(BaseModel):
 
     @classmethod
     def from_document(cls, document, file_url: str) -> "CaseDocumentSummary":
+        summaries = summarize_document_checks(document.checks)
         return cls(
             id=document.id,
             original_filename=document.original_filename,
@@ -126,7 +134,9 @@ class CaseDocumentSummary(BaseModel):
             file_url=file_url,
             uploaded_at=document.created_at,
             checks=[
-                DocumentCheckSummary.from_check(check, document.extracted_fields)
+                DocumentCheckSummary.from_check(
+                    check, document.extracted_fields, summaries.get(check.check_type.value)
+                )
                 for check in sorted(document.checks, key=lambda c: c.created_at)
             ],
         )

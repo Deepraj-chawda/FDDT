@@ -122,7 +122,9 @@ def _append_orphan_object(base_bytes: bytes) -> bytes:
     idx = base_bytes.rfind(b"startxref")
     prev_offset = int(re.match(rb"\s*(\d+)", base_bytes[idx + len(b"startxref") :]).group(1))
 
-    new_obj = f"{orphan_objnum} 0 obj\n<</Type/OrphanTest>>\nendobj\n".encode("ascii")
+    # A font: content an edit can leave behind (a bare dictionary or array
+    # would be ignored as trivial).
+    new_obj = f"{orphan_objnum} 0 obj\n<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>\nendobj\n".encode("ascii")
     obj_offset = len(base_bytes)
     xref_offset = obj_offset + len(new_obj)
     xref_entry = f"{obj_offset:010d} 00000 n \r\n".encode("ascii")

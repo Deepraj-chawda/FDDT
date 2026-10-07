@@ -58,7 +58,10 @@ def test_not_applicable_when_no_page_has_embedded_image():
     every one of the 12 real sample-documents/ PDFs takes this path."""
     page = _page(_textured_page(), has_image_content=False)
     result = run_ela_check([page])
-    assert result == {"result": "not_applicable", "details": []}
+    assert result["result"] == "not_applicable"
+    [scope] = result["details"]
+    assert scope["finding"] == "ela_scope" and scope["severity"] == "info"
+    assert scope["data"]["reason"] == "born-digital, no images"
 
 
 def test_clean_textured_page_passes():

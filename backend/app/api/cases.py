@@ -323,7 +323,10 @@ def get_case_detail(
         cross_document_findings=cross_document_findings,
         forensic_findings=forensic_findings,
         assessment=(
-            RiskAssessmentSchema.from_assessment(assessment)
+            RiskAssessmentSchema.from_assessment(
+                assessment,
+                {str(d.id): {c.check_type: c.summary for c in d.checks if c.summary} for d in documents},
+            )
             if assessment and current_user.role != UserRole.user
             else None
         ),

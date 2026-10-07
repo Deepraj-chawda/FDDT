@@ -37,6 +37,7 @@ import pikepdf
 from lxml import etree
 
 from app.core.config import settings
+from app.services.forensics.page_structure import analyze_page_structure
 
 Severity = Literal["info", "low", "medium", "high"]
 
@@ -51,6 +52,11 @@ _XML_NS = {
     "xmpMM": _NS_MM,
     "stEvt": "http://ns.adobe.com/xap/1.0/sType/ResourceEvent#",
 }
+
+# xmpMM:History actions that record a change to the document's content
+# itself, whatever tool wrote them: Acrobat's "Edit scanned document" (the
+# scan was converted to editable text and edited).
+_CONTENT_EDIT_ACTIONS = {"editedscanneddoc"}
 
 # Two Info/XMP (or XMP-history) dates within this tolerance of each
 # other count as "the same", not a mismatch — allows for whole-second
@@ -138,14 +144,14 @@ def _parse_xmp_date(value: Any) -> datetime | None:
 
 def _to_jsonable(value: Any) -> Any:
     if isinstance(value, pikepdf.Name):
-        return str(value)
+        return str(value).replace("\x00", "")
     if isinstance(value, pikepdf.String):
-        return str(value)
+        return str(value).replace("\x00", "")
     if isinstance(value, pikepdf.Array):
         return [_to_jsonable(v) for v in value]
     if isinstance(value, (bool, int, float)) or value is None:
         return value
-    return str(value)
+    return str(value).replace("\x00", "")
 
 
 def _extract_info_dict(pdf: pikepdf.Pdf) -> dict[str, Any]:
@@ -192,6 +198,20 @@ def _extract_xmp(pdf: pikepdf.Pdf) -> tuple[dict[str, Any], str | None]:
         return {}, None
 
 
+_XMP_TOOLKIT_RE = re.compile(rb'x:xmptk\s*=\s*["\']([^"\']*)["\']')
+
+
+def _xmp_toolkit(pdf: pikepdf.Pdf) -> str:
+    """The x:xmptk attribute of the raw XMP packet (the library that wrote
+    it, e.g. "Adobe XMP Core 9.1-c001 ..."); "" if none."""
+    try:
+        raw = pdf.Root.Metadata.read_bytes()
+    except Exception:  # noqa: BLE001 - no or unreadable metadata stream
+        return ""
+    match = _XMP_TOOLKIT_RE.search(raw[:4096])
+    return match.group(1).decode("utf-8", "replace").strip() if match else ""
+
+
 def _extract_xmp_history(raw_xml: str | None) -> list[HistoryEntry]:
     if not raw_xml:
         return []
@@ -201,12 +221,12 @@ def _extract_xmp_history(raw_xml: str | None) -> list[HistoryEntry]:
         return []
     entries: list[HistoryEntry] = []
     for li in root.findall(".//xmpMM:History//rdf:li", namespaces=_XML_NS):
+        # Written either as child elements or as attributes of the rdf:li.
+        def value(name: str) -> str | None:
+            return li.findtext(f"stEvt:{name}", namespaces=_XML_NS) or li.get(f"{{{_XML_NS['stEvt']}}}{name}")
+
         entries.append(
-            HistoryEntry(
-                action=li.findtext("stEvt:action", namespaces=_XML_NS),
-                when=li.findtext("stEvt:when", namespaces=_XML_NS),
-                software_agent=li.findtext("stEvt:softwareAgent", namespaces=_XML_NS),
-            )
+            HistoryEntry(action=value("action"), when=value("when"), software_agent=value("softwareAgent"))
         )
     return entries
 
@@ -282,6 +302,91 @@ def _is_structural_object(obj: Any) -> bool:
         keys = {str(k) for k in obj.keys()}
         if keys and keys.issubset(_ADMINISTRATIVE_STREAM_KEYS):
             return True
+    return False
+
+
+# PDF producers that render an HTML page: a browser's "Save as PDF" or a
+# headless HTML-to-PDF engine.
+_WEB_ENGINES = (
+    "pdfium", "skia/pdf", "chromium", "headlesschrome", "google chrome", "wkhtmltopdf", "puppeteer",
+    "playwright", "weasyprint", "prince", "phantomjs", "electron", "dompdf", "mpdf",
+)
+
+
+def _web_page_origin(
+    pdf_bytes: bytes, producer_creator: dict[str, str], info: dict[str, Any]
+) -> Finding | None:
+    """`web_page_origin`: the PDF was made from a web page — its producer is
+    a browser's or an HTML engine's — and how strongly it looks built as one:
+    no CreationDate (what a browser print leaves) and a CSS framework's
+    stock colours. The engine alone is low (shown only: schools' own portals
+    print from browsers too); with either sign it is medium."""
+    from app.services.forensics.pdf_facts import css_palette
+
+    engine = next(
+        (value for value in producer_creator.values() if any(e in value.lower() for e in _WEB_ENGINES)), None
+    )
+    if engine is None:
+        return None
+    no_date = not str(info.get("/CreationDate") or "").strip()
+    framework, colours = css_palette(pdf_bytes)
+    signs = []
+    if no_date:
+        signs.append("no creation date")
+    if framework:
+        signs.append(f"{framework} stock colours ({', '.join(colours[:6])})")
+    description = (
+        f"The PDF was made by {engine!r}, a web browser's or HTML engine's PDF output: the document was "
+        "built as a web page and printed, not produced by a billing or school-management system"
+        + (f" — {' and '.join(signs)}." if signs else ".")
+        + ("" if signs else " Shown for review only: school portals print from browsers too.")
+    )
+    return Finding(
+        finding="web_page_origin",
+        severity="medium" if signs else "low",
+        description=description,
+        data={"engine": engine, "no_creation_date": no_date, "css_framework": framework, "css_colours": colours},
+    )
+
+
+_CONTENT_TYPES = {"/Font", "/Page", "/Annot", "/XObject", "/FontDescriptor"}
+
+
+def _object_kind(obj: Any) -> str:
+    if isinstance(obj, pikepdf.Stream):
+        subtype = obj.get("/Subtype")
+        return {"/Image": "image", "/Form": "form"}.get(str(subtype), "stream") if subtype is not None else "stream"
+    if isinstance(obj, pikepdf.Dictionary):
+        kind = str(obj.get("/Type") or obj.get("/Subtype") or "")
+        return kind.lstrip("/").lower() or "dictionary"
+    return "other"
+
+
+# A stream this short (or empty once decoded) holds nothing — PDFium leaves
+# an empty Form XObject per page.
+_EMPTY_STREAM_BYTES = 16
+
+
+def _is_empty_stream(obj: pikepdf.Stream) -> bool:
+    try:
+        length = int(obj.get("/Length", 0))
+    except (TypeError, ValueError):
+        length = 0
+    if length <= _EMPTY_STREAM_BYTES:
+        return True
+    try:
+        return len(obj.read_bytes()) == 0
+    except Exception:  # noqa: BLE001 - undecodable: count it
+        return False
+
+
+def _is_content_object(obj: Any) -> bool:
+    """An orphan that can be deleted content: a non-empty stream, or a font,
+    page, annotation or image/form XObject dictionary."""
+    if isinstance(obj, pikepdf.Stream):
+        return not _is_empty_stream(obj)
+    if isinstance(obj, pikepdf.Dictionary):
+        return str(obj.get("/Type")) in _CONTENT_TYPES or str(obj.get("/Subtype")) in ("/Image", "/Form")
     return False
 
 
@@ -477,6 +582,7 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
     findings: list[Finding] = []
     try:
         editing_names = settings.metadata_forensics_editing_software_name_list
+        pdf_editor_names = settings.metadata_forensics_pdf_editor_name_list
 
         # --- #9 orphaned/unreferenced objects — MUST run before anything
         # touches pdf.open_metadata() (used by _extract_xmp below).
@@ -492,23 +598,36 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
         # common in scanner output) come back from pikepdf as plain Python
         # ints/floats with no objgen — and an orphaned number cannot hide
         # deleted content, so they are skipped.
-        candidate_objgens = {
-            obj.objgen
+        candidates = {
+            obj.objgen: obj
             for obj in pdf.objects
             if isinstance(obj, pikepdf.Object) and not _is_structural_object(obj)
         }
-        orphaned = sorted(candidate_objgens - reachable)
+        unreachable = sorted(set(candidates) - reachable)
+        # Only content can be deleted content: an unreachable stream (page
+        # content, an image, an embedded file), font, image, page or
+        # annotation. Trivial leftovers — a bare array or number, a plain
+        # dictionary (macOS Quartz leaves its page box [0 0 612 792]) — are
+        # not counted.
+        orphaned = [o for o in unreachable if _is_content_object(candidates[o])]
+        trivial = len(unreachable) - len(orphaned)
         findings.append(
             Finding(
                 finding="orphaned_objects",
                 severity="medium" if orphaned else "info",
                 description=(
-                    f"Found {len(orphaned)} object(s) present in the file but not reachable "
-                    "from /Root or /Info — likely leftover remnants from editing software."
+                    f"Found {len(orphaned)} content object(s) (streams, fonts, images, pages or annotations) present "
+                    "in the file but not reachable from /Root or /Info — likely leftover remnants from editing software."
                     if orphaned
-                    else "No orphaned/unreferenced objects found."
+                    else "No orphaned content objects found"
+                    + (f" ({trivial} trivial unreachable object(s), such as a bare array, ignored)." if trivial else ".")
                 ),
-                data={"count": len(orphaned), "object_numbers": [objgen[0] for objgen in orphaned[:50]]},
+                data={
+                    "count": len(orphaned),
+                    "object_numbers": [objgen[0] for objgen in orphaned[:50]],
+                    "kinds": sorted({_object_kind(candidates[o]) for o in orphaned}),
+                    "trivial_ignored": trivial,
+                },
             )
         )
 
@@ -578,6 +697,53 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
                         data={"field": field_label, "value": value, "matched_name": matched_name},
                     )
                 )
+        # PDF editors: one finding however many fields name the same tool.
+        pdf_editor_fields = {
+            field_label: (value, name)
+            for field_label, value in producer_creator_values.items()
+            if (name := next((n for n in pdf_editor_names if n in value.lower()), None))
+        }
+        for name in sorted({name for _, name in pdf_editor_fields.values()}):
+            fields = [label for label, (_, n) in pdf_editor_fields.items() if n == name]
+            value = pdf_editor_fields[fields[0]][0]
+            findings.append(
+                Finding(
+                    finding="pdf_editor_detected",
+                    severity="medium",
+                    description=(
+                        f"The file was last written by a PDF editor ({value!r} in {', '.join(fields)}), not by a "
+                        "scanner or the issuer's billing system — the tool can change the text and numbers of an "
+                        "existing PDF."
+                    ),
+                    data={"fields": fields, "value": value, "matched_name": name},
+                )
+            )
+
+        # --- producer fields removed: Adobe's XMP library wrote the packet
+        # (Acrobat, InDesign, Photoshop ...), and every one of those writes
+        # its name into Producer/CreatorTool and its saves into the history.
+        # With all of them gone, they were deleted afterwards. A fully empty
+        # file is metadata_entirely_stripped above instead. ---
+        toolkit = _xmp_toolkit(pdf)
+        if (
+            xmp
+            and toolkit.lower().startswith("adobe xmp core")
+            and not any(v.strip() for v in producer_creator_values.values())
+            and not history
+        ):
+            findings.append(
+                Finding(
+                    finding="producer_scrubbed",
+                    severity="medium",
+                    description=(
+                        f"The XMP metadata was written by Adobe's own library ({toolkit.split(',')[0].strip()}), "
+                        "yet Producer, Creator, CreatorTool and the edit history are all missing. Adobe software "
+                        "always records its name and saves there, so they were removed afterwards — hiding which "
+                        "tool last changed the file."
+                    ),
+                    data={"xmp_toolkit": toolkit, "empty_fields": list(producer_creator_values), "history": 0},
+                )
+            )
 
         # --- #3 Info-vs-XMP consistency ---
         info_created = _parse_pdf_date(info.get("/CreationDate"))
@@ -705,8 +871,22 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
             )
         )
         for entry in history:
+            if (entry.action or "").lower() in _CONTENT_EDIT_ACTIONS:
+                findings.append(
+                    Finding(
+                        finding="history_scanned_document_edited",
+                        severity="high",
+                        description=(
+                            f"xmpMM:History records '{entry.action}' at {entry.when}"
+                            + (f" by {entry.software_agent!r}" if entry.software_agent else "")
+                            + " — the scanned page was converted to editable text and edited (Acrobat's "
+                            "\"Edit scanned document\")."
+                        ),
+                        data={"action": entry.action, "when": entry.when, "software_agent": entry.software_agent},
+                    )
+                )
             agent = (entry.software_agent or "").lower()
-            matched_name = next((name for name in editing_names if name in agent), None)
+            matched_name = next((name for name in editing_names + pdf_editor_names if name in agent), None)
             if matched_name:
                 findings.append(
                     Finding(
@@ -814,6 +994,35 @@ def analyze_pdf_metadata(pdf_bytes: bytes) -> dict[str, Any]:
                 data=ocg,
             )
         )
+
+        # --- #12 editable text over a scan: page structure, independent of
+        # the XMP history (still holds when the metadata is stripped) ---
+        layered = [p for p in analyze_page_structure(pdf_bytes) if p.vector_text_over_image]
+        if layered:
+            listed = ", ".join(str(p.page) for p in layered)
+            converted = [p.page for p in layered if p.converter_fonts]
+            fonts = (
+                " in converter-generated fonts (\"-NNNN\" subsets)" if converted
+                else " (in ordinary subset fonts, as Acrobat's own editor or a re-saved converted file leaves them)"
+            )
+            description = (
+                f"Page(s) {listed}: a page-sized scan image with visible, editable text drawn on top of it{fonts} — "
+                "a scan converted to editable text. A normal searchable scan keeps its OCR text invisible; this "
+                "structure is what lets a scan's words and numbers be retyped or deleted."
+            )
+            findings.append(
+                Finding(
+                    finding="editable_text_over_scan",
+                    severity="medium",
+                    description=description,
+                    data={"pages": [p.page for p in layered], "converter_font_pages": converted},
+                )
+            )
+
+        # --- a web page printed to PDF: built as HTML, not by a billing system ---
+        web = _web_page_origin(pdf_bytes, producer_creator_values, info)
+        if web is not None:
+            findings.append(web)
 
         # --- #10 digital signature presence (data point only) ---
         signature = _detect_signature(pdf)
