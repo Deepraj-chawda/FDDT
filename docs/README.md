@@ -28,7 +28,8 @@ current build, and those outside its scope, are collected in the table in
 | Call or change the API | [api/README.md](api/README.md) → Swagger at `http://localhost:8000/docs` |
 | Change the database | [database/schema.md](database/schema.md), [database/erd.md](database/erd.md) |
 | Work on the UI | [frontend/screens.md](frontend/screens.md), [frontend/components.md](frontend/components.md) |
-| **Deploy to production on Azure** (architecture, service tiers, costs, step-by-step runbook) | [deployment/production-deployment.md](deployment/production-deployment.md) |
+| **Deploy to production on Azure, step by step** (network/IP/port plan, every command, scaling, alerts, release) | [deployment/azure-production-runbook.md](deployment/azure-production-runbook.md) |
+| Understand the production design on Azure (architecture, service tiers, costs) | [deployment/production-deployment.md](deployment/production-deployment.md) |
 | See the remaining pre-production gaps | [deployment/azure-migration-notes.md](deployment/azure-migration-notes.md) |
 | See how the Azure demo is deployed | [deployment/azure-demo-deployment.md](deployment/azure-demo-deployment.md) |
 | Read what changed in the multi-tenancy / queues work, and why | [MULTI_TENANCY_CHANGE_REPORT.md](MULTI_TENANCY_CHANGE_REPORT.md) |
@@ -75,6 +76,9 @@ limitations and the risk rules it feeds.
 
 ### Deployment
 - [Local setup](deployment/local-setup.md) · [Environment variables](deployment/environment-variables.md)
+- [Azure production runbook](deployment/azure-production-runbook.md) — the step-by-step production deployment:
+  address plan, ports and NSGs, static IPs, DNS, Key Vault, YAML for every container app, autoscaling,
+  alerts, release/rollback, troubleshooting and go-live checklist
 - [Production deployment](deployment/production-deployment.md) — Azure Container Apps architecture, S/M/L
   service tiers with monthly costs (UAE North list prices), deployment runbook, operations and go-live
   checklist

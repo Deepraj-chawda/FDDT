@@ -107,6 +107,7 @@ const DOC_LIST = [
   { file: "22-Environment-Variables", src: "docs/deployment/environment-variables.md", group: "Deployment" },
   { file: "23-Azure-Migration-Notes", src: "docs/deployment/azure-migration-notes.md", group: "Deployment" },
   { file: "29-Production-Deployment", src: "docs/deployment/production-deployment.md", group: "Deployment" },
+  { file: "37-Azure-Production-Runbook", src: "docs/deployment/azure-production-runbook.md", group: "Deployment" },
   { file: "25-Azure-Demo-Deployment", src: "docs/deployment/azure-demo-deployment.md", group: "Deployment" },
 ]
 const BOOK_FILE = "FDDT-Complete-Documentation"

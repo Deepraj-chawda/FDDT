@@ -7,6 +7,10 @@
 > [Azure Retail Prices API](https://prices.azure.com/api/retail/prices); they exclude VAT and any
 > EA/CSP discount. Re-check them in the [pricing calculator](https://azure.microsoft.com/pricing/calculator/)
 > before quoting.
+>
+> **To deploy, follow [azure-production-runbook.md](azure-production-runbook.md)**, the complete
+> copy-paste runbook (network/IP/port plan, NSGs, DNS, YAML for every app, autoscaling, alerts, release and
+> rollback). Section 4 below is the condensed version of it.
 
 ## 1. Target architecture
 
@@ -95,7 +99,7 @@ SKUs differ, so moving between them is a scaling change, not a redeployment.
 | `fddt-beat` | 1 × 0.25 / 0.5 | 1 × 0.25 / 0.5 | 1 × 0.25 / 0.5 |
 | PostgreSQL | Burstable **B2s** (2 vCore, 4 GiB), 64 GB, no HA, direct connections | General Purpose **D2ds_v5** (2 vCore, 8 GiB), 128 GB, **zone-redundant HA**, built-in PgBouncer | General Purpose **D4ds_v5** (4 vCore, 16 GiB), 512 GB, zone-redundant HA, built-in PgBouncer |
 | Redis | Managed Redis **B0**, no HA | Managed Redis **B0**, HA | Managed Redis **B3**, HA |
-| Azure OpenAI quota to request (TPM) | 100k | 150k | 500k |
+| Azure OpenAI gpt-4.1-mini Global Standard TPM (target; no quota is requested, the deployment uses the subscription's free capacity) | 100k | 150k | 500k |
 | Availability | single zone, no failover | zone-redundant DB + Redis, 2+ replicas for web/API | same as M |
 
 Notes on sizing:
@@ -104,11 +108,12 @@ Notes on sizing:
   (`start-worker.sh` runs one prefork process per vCPU of the container's limit).
 - **Vision/extraction** pools are I/O-bound threads; their real ceiling is the Azure OpenAI quota.
   Throughput ≈ (TPM cap) ÷ ~32k tokens *reserved* per 2-page document — e.g. 80k TPM ≈ 2.5 documents/min,
-  400k TPM ≈ 12/min. Quota itself costs nothing; request it before go-live
+  400k TPM ≈ 12/min. No quota is requested: the deployment uses the subscription's free capacity, which is then the ceiling
   ([processing-queues.md](../processing-queues.md#azure-rate-limits)).
-- Workers keep `minReplicas ≥ 1` (they poll Redis). Autoscaling with KEDA on queue length is possible but
-  must sum all ten priority lists per queue (`<queue>`, `<queue>\x06\x163`, …); fixed replica counts are the
-  simpler, predictable choice.
+- Workers keep `minReplicas ≥ 1` (they poll Redis). Autoscaling with KEDA on queue length must watch the
+  priority lists per queue (`<queue>`, `<queue>:1` … `<queue>:9`). It is worth it for the CPU-bound
+  forensics queue only ([runbook](azure-production-runbook.md#152-forensics-worker-cpu-bound-autoscaled-on-queue-backlog));
+  the two Azure queues are quota-bound, so fixed replica counts are the right choice there.
 
 ## 3. Costs
 
@@ -293,7 +298,7 @@ changed after the database is created** — choose it correctly the first time.)
   multi-key commands across `<queue>`, `<queue>:1…9`; the default *OSS* policy needs a cluster-aware
   client, and *Enterprise* can reject cross-slot multi-key commands.
 - Only database **0** exists — point **both** Celery URLs at `/0`
-  (`rediss://:<KEY>@<name>.<region>.redis.azure.net:10000/0`; port 10000, TLS). Result keys are prefixed, so
+  (`rediss://:<KEY>@<name>.<region>.redis.azure.net:10000/0?ssl_cert_reqs=required`; port 10000, TLS). Result keys are prefixed, so
   sharing the database is safe.
 - Add a private DNS zone link for the private endpoint (`privatelink.redis.azure.net`) so the apps resolve
   it inside the VNet.
@@ -325,7 +330,7 @@ az cognitiveservices account create -g $RG -n $PREFIX-openai -l $LOC --kind AISe
   --custom-domain $PREFIX-openai
 az cognitiveservices account deployment create -g $RG -n $PREFIX-openai --deployment-name gpt-4.1-mini \
   --model-name gpt-4.1-mini --model-version 2025-04-14 --model-format OpenAI \
-  --sku-name GlobalStandard --sku-capacity 150      # capacity in thousands of TPM (tier M)
+  --sku-name GlobalStandard --sku-capacity <free>      # thousands of TPM: the subscription's free capacity (runbook step 10)
 ```
 
 - The deployment name must contain `gpt-4.1` (or `gpt-4o`, …) — the app checks it is vision-capable.
@@ -351,7 +356,7 @@ done
 | `jwt-secret` | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `owner-db-url` | `postgresql+psycopg2://fddtowner:<OWNER_PASSWORD>@<pg-host>:5432/fddt?sslmode=require` |
 | `app-db-password` / `platform-db-password` | Two long random passwords (they become the passwords of `fddt_app` / `fddt_platform`) |
-| `redis-url` | `rediss://:<REDIS_KEY>@<redis-host>:10000/0` |
+| `redis-url` | `rediss://:<REDIS_KEY>@<redis-host>:10000/0?ssl_cert_reqs=required` (Celery refuses a `rediss://` URL without `ssl_cert_reqs`; URL-encode the key) |
 | `storage-conn` | The storage account connection string (the code signs SAS URLs with the account key) |
 | `docintel-key`, `openai-key` | Resource keys |
 | `seed-admin-password` | The first platform admin's password |
@@ -441,7 +446,9 @@ az containerapp create -g $RG -n fddt-web --environment $PREFIX-env \
 ```
 
 (Add `--registry-server`, `--registry-identity` and `--user-assigned` for the managed identity on each
-command; the replica counts above are tier M — take them from section 2.)
+command; the replica counts above are tier M — take them from section 2. The CLI parses `--host`-style
+tokens inside `--args` as its own flags, so in practice create the apps from YAML as the
+[runbook](azure-production-runbook.md#step-14--api-fddt-api) does.)
 
 - `API_UPSTREAM` is the API's **internal FQDN** (`az containerapp show -n fddt-api --query
   properties.configuration.ingress.fqdn`). nginx strips `/api`, forwards to it, and refuses bodies over
@@ -528,7 +535,7 @@ Recovery objectives with tier M as designed: RPO ≈ 5 minutes (PostgreSQL log b
   removed or pinned to the real password.
 - [ ] `DATABASE_URL` ends in `?sslmode=require`; tiers M/L connect through the built-in PgBouncer (6432).
 - [ ] Redis is Non-Clustered and both Celery URLs use `/0` over `rediss://`.
-- [ ] Azure OpenAI quota granted for the tier; the app caps at 80 % of it.
+- [ ] gpt-4.1-mini Global Standard deployment uses the free capacity (no quota request); the app caps at 80 % of it.
 - [ ] Exactly one `fddt-beat` replica.
 - [ ] Blob container private, anonymous access off, CORS limited to the app origin, soft delete on.
 - [ ] Only `fddt-web` has public ingress.
