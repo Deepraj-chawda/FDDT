@@ -46,8 +46,10 @@ const caseTypeSchema = z.object({
 type CaseTypeFormValues = z.infer<typeof caseTypeSchema>
 
 export function NewCasePage() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const navigate = useNavigate()
+  const isPlatformAdmin = Boolean(user?.is_platform_admin)
+  const canUpload = Boolean(user) && !isPlatformAdmin
   // This company's per-file limit (set by a platform admin).
   const maxFileBytes = useUploadLimits()?.max_file_size_bytes ?? null
 
@@ -148,7 +150,7 @@ export function NewCasePage() {
   }
 
   const onSubmit = async (values: CaseTypeFormValues) => {
-    if (!token) return
+    if (!token || isPlatformAdmin) return
     if (fileEntries.length === 0) {
       setFilesError("Attach at least one supporting document")
       return
@@ -218,7 +220,11 @@ export function NewCasePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {allDone ? (
+              {!canUpload ? (
+                <p className="text-sm text-muted-foreground">
+                  Platform admins have read-only access and can't submit cases.
+                </p>
+              ) : allDone ? (
                 <div className="flex flex-col gap-4">
                   <div className="rounded-md border border-success/30 bg-success/10 px-4 py-3 text-sm">
                     <p className="font-medium text-foreground">Case submitted successfully.</p>

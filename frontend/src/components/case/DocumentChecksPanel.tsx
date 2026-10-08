@@ -242,6 +242,7 @@ function GhostCrop({ finding }: { finding: Finding }) {
 // "Why?", then short notes. The raw findings stay under "Technical details".
 function SummaryItem({ item }: { item: CheckSummaryItem }) {
   const [open, setOpen] = React.useState(false)
+  const detailId = React.useId()
   const hint = item.hint
   return (
     <li className="flex items-start gap-2">
@@ -253,6 +254,8 @@ function SummaryItem({ item }: { item: CheckSummaryItem }) {
           {item.detail && (
             <button
               type="button"
+              aria-expanded={open}
+              aria-controls={detailId}
               onClick={() => setOpen((v) => !v)}
               className="ml-1.5 inline-block font-semibold text-blue-600 hover:underline"
             >
@@ -260,7 +263,7 @@ function SummaryItem({ item }: { item: CheckSummaryItem }) {
             </button>
           )}
         </p>
-        {open && <p className="mt-1 whitespace-pre-line text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{item.detail}</p>}
+        {open && <p id={detailId} className="mt-1 whitespace-pre-line text-[11px] leading-snug text-muted-foreground break-words [overflow-wrap:anywhere]">{item.detail}</p>}
         {item.image_png_base64 && (
           <figure className="mt-1.5">
             <img

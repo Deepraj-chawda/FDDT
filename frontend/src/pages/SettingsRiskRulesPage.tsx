@@ -63,10 +63,20 @@ function ThresholdsCard() {
   const m = Number(medium)
   const h = Number(high)
   const c = Number(cap)
-  const valid =
-    Number.isInteger(m) && Number.isInteger(h) && m >= 1 && h <= 100 && m < h && Number.isInteger(c) && c >= 1 && c <= 100
+  const isRangeOverlap = Number.isFinite(m) && Number.isFinite(h) && m >= h
+  const isCapInvalid = !Number.isInteger(c) || c < 1 || c > 100
+  const isValuesInvalid = !Number.isInteger(m) || !Number.isInteger(h) || m < 1 || h > 100
+  const valid = !isRangeOverlap && !isCapInvalid && !isValuesInvalid
   const dirty =
     data !== undefined && (m !== data.medium_threshold || h !== data.high_threshold || c !== data.metadata_score_cap)
+
+  const validationErrorMessage = isRangeOverlap
+    ? `Medium threshold (${m}) must be strictly lower than High threshold (${h}).`
+    : isCapInvalid
+      ? "Metadata cap must be an integer between 1 and 100."
+      : isValuesInvalid
+        ? "Thresholds must be whole numbers from 1 to 100."
+        : null
 
   const save = useMutation({
     mutationFn: () => updateRiskThresholds({ medium_threshold: m, high_threshold: h, metadata_score_cap: c }, token as string, cid),
@@ -105,13 +115,13 @@ function ThresholdsCard() {
             <label htmlFor="medium-threshold" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-600">
               <span className="size-2 rounded-full bg-amber-500" /> Medium from
             </label>
-            <input id="medium-threshold" type="number" min={1} max={99} value={medium} onChange={(e) => setMedium(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
+            <input id="medium-threshold" type="number" min={1} max={Number.isFinite(h) && h > 1 ? h - 1 : 99} value={medium} onChange={(e) => setMedium(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
           </div>
           <div className="text-center">
             <label htmlFor="high-threshold" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-600">
               <span className="size-2 rounded-full bg-rose-500" /> High from
             </label>
-            <input id="high-threshold" type="number" min={2} max={100} value={high} onChange={(e) => setHigh(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
+            <input id="high-threshold" type="number" min={Number.isFinite(m) && m < 100 ? m + 1 : 2} max={100} value={high} onChange={(e) => setHigh(e.target.value)} aria-invalid={!valid} className={valid ? inputClass : `${inputClass} ${invalidFieldClass}`} />
           </div>
           <div className="text-center">
             <label htmlFor="metadata-cap" className="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
@@ -130,7 +140,7 @@ function ThresholdsCard() {
           </button>
         </div>
       </div>
-      {!valid && data && <FieldError message="Use whole numbers from 1 to 100, with the medium cutoff below the high cutoff." className="mt-3 text-xs" />}
+      {!valid && data && validationErrorMessage && <FieldError message={validationErrorMessage} className="mt-3 text-xs" />}
       {data?.updated_by_name && (
         <p className="mt-3 text-[11px] text-slate-400">
           Last changed by {data.updated_by_name} on {formatWhen(data.updated_at)}.

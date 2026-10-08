@@ -21,6 +21,7 @@
  *    changes status.
  */
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle2Icon, FlameIcon, Loader2Icon, XCircleIcon } from "lucide-react"
 
@@ -126,7 +127,7 @@ function ActionDialog({
     return () => window.removeEventListener("keydown", onKey)
   }, [onClose, isPending])
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4"
       onClick={(e) => {
@@ -200,7 +201,8 @@ function ActionDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

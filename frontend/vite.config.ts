@@ -53,8 +53,23 @@ export default defineConfig({
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
     },
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom',
+      '@tanstack/react-query',
+    ],
   },
   server: {
+    allowedHosts: [
+      'busybody-entail-parkway.ngrok-free.dev',
+      '.ngrok-free.dev',
+      '.ngrok.app',
+    ],
     proxy: {
       // Backend runs on :8000 (see backend/README / SPECIFICATION.md). Proxying
       // avoids CORS config for local dev.

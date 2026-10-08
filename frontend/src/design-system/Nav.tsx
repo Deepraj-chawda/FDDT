@@ -74,6 +74,11 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
   const [changingPassword, setChangingPassword] = React.useState(false)
   const displayName = user?.full_name || user?.email || ""
 
+  const handleSignOut = React.useCallback(() => {
+    logout()
+    navigate("/login", { replace: true })
+  }, [logout, navigate])
+
   // Close mobile drawer when route changes
   React.useEffect(() => {
     setMobileOpen(false)
@@ -178,7 +183,7 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
             type="button"
             aria-label="Sign out"
             title="Sign out"
-            onClick={logout}
+            onClick={handleSignOut}
             className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             <LogOutIcon className="size-3.5" />
@@ -223,7 +228,7 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={handleSignOut}
                   className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 transition"
                 >
                   <LogOutIcon className="size-3" />

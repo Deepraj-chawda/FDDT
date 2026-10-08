@@ -48,6 +48,7 @@ const DELTA_CLASSES: Record<SeverityFindingProps["tone"], string> = {
 
 export function SeverityFinding({ title, description, detail, pointDelta, tone }: SeverityFindingProps) {
   const [open, setOpen] = React.useState(false)
+  const detailId = React.useId()
   return (
     <div className="flex items-start justify-between gap-3 min-w-0 w-full">
       <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -59,6 +60,8 @@ export function SeverityFinding({ title, description, detail, pointDelta, tone }
             {detail && (
               <button
                 type="button"
+                aria-expanded={open}
+                aria-controls={detailId}
                 onClick={() => setOpen((v) => !v)}
                 className="ml-1.5 inline-block font-semibold text-blue-600 hover:underline"
               >
@@ -67,7 +70,7 @@ export function SeverityFinding({ title, description, detail, pointDelta, tone }
             )}
           </p>
           {open && detail && (
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground/90 break-words [overflow-wrap:anywhere]">
+            <p id={detailId} className="mt-1 text-[11px] leading-snug text-muted-foreground/90 break-words [overflow-wrap:anywhere]">
               {detail}
             </p>
           )}
