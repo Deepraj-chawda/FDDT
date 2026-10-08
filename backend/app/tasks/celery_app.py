@@ -15,8 +15,13 @@ scalable worker pool (start-worker.sh <queue>):
                     (AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE); size to saturate it.
   forensics_queue   Local CPU only — metadata forensics, ELA + copy-move,
                     duplicate hashing — plus the light DB steps (cross-document
-                    check, risk scoring) and housekeeping (usage
-                    reconciliation). NO rate limit: scale freely with cores.
+                    check, risk scoring). NO rate limit: scale freely with
+                    cores, down to zero replicas when there is no work.
+  housekeeping_queue  Periodic platform jobs (queue metrics, usage
+                    reconciliation, stuck-document recovery). Served by the
+                    single beat container (start-beat.sh runs beat + a
+                    one-slot worker for this queue), so these every-minute
+                    jobs never wake the forensics workers.
 
 FAIRNESS — every document's every step is its own task (enqueued per
 document by app/api/documents.py; no task ever processes a whole batch or
@@ -45,9 +50,12 @@ EXTRACTION_QUEUE = "extraction_queue"
 VISION_QUEUE = "vision_queue"
 FORENSICS_QUEUE = "forensics_queue"
 QUEUES = (EXTRACTION_QUEUE, VISION_QUEUE, FORENSICS_QUEUE)
+# Not a processing queue (not in QUEUES / the monitor): platform jobs only.
+HOUSEKEEPING_QUEUE = "housekeeping_queue"
 
 # Task name -> queue. Anything unlisted falls to forensics_queue (the default),
-# which always has workers, so nothing is ever stranded on an unserved queue.
+# which is always served (its autoscaler starts a worker as soon as a task
+# waits), so nothing is ever stranded on an unserved queue.
 TASK_QUEUES: dict[str, str] = {
     "process_document": EXTRACTION_QUEUE,
     "run_document_checks": VISION_QUEUE,
@@ -62,8 +70,9 @@ TASK_QUEUES: dict[str, str] = {
     # Bulk zip ingestion: unzip + PDF parsing, local CPU only. Each document
     # it creates is then queued like any single upload.
     "ingest_bulk_upload": FORENSICS_QUEUE,
-    "reconcile_usage_stats": FORENSICS_QUEUE,
-    "log_queue_metrics": FORENSICS_QUEUE,
+    "reconcile_usage_stats": HOUSEKEEPING_QUEUE,
+    "log_queue_metrics": HOUSEKEEPING_QUEUE,
+    "requeue_stuck_documents": HOUSEKEEPING_QUEUE,
 }
 
 celery_app = Celery(
@@ -83,6 +92,7 @@ celery_app = Celery(
         "app.tasks.signature_comparison_task",
         "app.tasks.risk_scoring_task",
         "app.tasks.usage_tasks",
+        "app.tasks.stuck_documents_task",
         "app.tasks.bulk_upload_task",
     ],
 )
@@ -117,6 +127,8 @@ celery_app.conf.update(
         # Queue depth / wait time to the worker log every minute, so the data
         # exists even when nobody has the monitor page open.
         "log-queue-metrics": {"task": "log_queue_metrics", "schedule": 60.0},
+        # Re-queue documents whose tasks were lost (Redis restart / outage).
+        "requeue-stuck-documents": {"task": "requeue_stuck_documents", "schedule": 300.0},
     },
 )
 

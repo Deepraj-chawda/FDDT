@@ -75,7 +75,8 @@ empty subscription to a verified go-live. Every step has the exact commands, the
 | App hostname | e.g. `fddt.client.com` | `app.<client-domain>` |
 | Edge | Container Apps ingress only (free managed TLS) **or** Front Door Standard + WAF (rate limiting on login, edge TLS) | Container Apps only; Front Door in step 19 |
 | Who may reach the UI | Whole internet **or** client office IP ranges only | Internet (restrict in step 16.4 if required) |
-| Static egress IP | Needed if a client/partner firewall must allow-list our outbound traffic, or to lock the AI services to our IP | Yes (NAT Gateway) |
+| Static egress IP | Needed only if a client/partner firewall must allow-list our outbound traffic, or to lock the AI services to our IP. A NAT Gateway costs ~$33/month + data | **No** (`USE_NAT="no"`); set `yes` if needed |
+| **High availability (HA)** for PostgreSQL and Redis | HA = a standby in another zone (99.99 %). Without it: one zone, 99.9 %, a zone outage means a restore (~1 hour). Redis without HA is safe: lost tasks are re-queued automatically | **Tier M launches without HA** (saves ~$229/month); tier L keeps HA. Get the client's OK in writing |
 | Azure OpenAI data processing | gpt-4.1-mini is **Global**-only in UAE North (prompts may be processed in any Azure region). **Get written client sign-off**, or pick a region with a regional/Data Zone deployment | Global, signed off |
 | **OCR service** | Azure Document Intelligence, pricing tier **S0 (Standard)**. **Not F0 (Free)**: F0 analyses only the first 2 pages of each document and allows 500 pages per month at 1 request/s, which is not usable for production | **S0** (decided) |
 | **LLM** | Azure OpenAI, model **gpt-4.1-mini**, deployment type **Global Standard**: pay per token, no commitment, and the largest default capacity. Not *Provisioned* (PTU: reserved capacity billed every hour even when idle) and not *Standard/Data Zone* (not offered for this model in UAE North) | **gpt-4.1-mini, Global Standard** (decided) |
@@ -259,7 +260,7 @@ flowchart TB
         subgraph PES["snet-pe 10.20.3.0/24"]
             RD[("Managed Redis (private endpoint)<br/>:10000 TLS")]
         end
-        NAT["NAT Gateway<br/>static egress IP"]
+        NAT["NAT Gateway (optional)<br/>static egress IP"]
     end
     subgraph AZ["Azure PaaS (public endpoints, key auth)"]
         DI["Document Intelligence S0"]
@@ -345,7 +346,7 @@ job listen on nothing.
 |---|---|---|
 | **Inbound public IP** of the Container Apps environment | `az containerapp env show -g $RG -n $ENV --query properties.staticIp -o tsv` (step 12) | Client firewall allow-lists; an A record if an apex domain is used |
 | App default FQDN | `az containerapp show -g $RG -n fddt-web --query properties.configuration.ingress.fqdn -o tsv` | CNAME target (step 18) |
-| **Outbound (egress) public IP** | `az network public-ip show -g $RG -n $PREFIX-egress-ip --query ipAddress -o tsv` (step 4) | Partner allow-lists; AI-service IP rules |
+| **Outbound (egress) public IP** (only with `USE_NAT="yes"`) | `az network public-ip show -g $RG -n $PREFIX-egress-ip --query ipAddress -o tsv` (step 4) | Partner allow-lists; AI-service IP rules |
 | PostgreSQL private IP | `az network private-dns record-set a list -g $RG -z $PG_DNS_ZONE -o table` | Diagnostics only (always connect by FQDN) |
 | Redis private IP | `az network private-endpoint show -g $RG -n $REDIS-pe --query "customDnsConfigs[0].ipAddresses[0]" -o tsv` | Diagnostics only |
 | Storage hostname | `$SA.blob.core.windows.net` | Client proxy allow-list (flow 2) |
@@ -409,6 +410,7 @@ export APP_DOMAIN="app.client-domain.com"
 export SEED_ADMIN_EMAIL="platform-admin@operator-domain.com"
 export ALERT_EMAIL="ops@operator-domain.com"
 export OFFICE_CIDRS=""                   # e.g. "203.0.113.0/24 198.51.100.10/32" to restrict the UI; empty = internet
+export USE_NAT="no"                      # "yes" = NAT Gateway with a fixed outbound IP (~$33/month), only if someone must allow-list it
 
 # ---------- network ----------
 export VNET_CIDR="10.20.0.0/16"
@@ -451,23 +453,23 @@ case "$TIER" in
   S) export API_CPU=0.5 API_MEM=1Gi API_MIN=1 API_MAX=2
      export EXT_CPU=0.5 EXT_MEM=1Gi EXT_N=1
      export VIS_CPU=0.5 VIS_MEM=1Gi VIS_N=1
-     export FOR_CPU=1   FOR_MEM=2Gi FOR_MIN=1 FOR_MAX=2
+     export FOR_CPU=1   FOR_MEM=2Gi FOR_MIN=0 FOR_MAX=2     # forensics scales to zero when idle
      export WEB_MIN=1 WEB_MAX=2
      export PG_TIER=Burstable PG_SKU=Standard_B2s PG_STORAGE=64 PG_HA=Disabled
      export REDIS_SKU=Balanced_B0 REDIS_HA=Disabled
      export AOAI_TPM_K=100 ;;
-  M) export API_CPU=1   API_MEM=2Gi API_MIN=2 API_MAX=4
+  M) export API_CPU=1   API_MEM=2Gi API_MIN=1 API_MAX=4
      export EXT_CPU=1   EXT_MEM=2Gi EXT_N=1
      export VIS_CPU=1   VIS_MEM=2Gi VIS_N=1
-     export FOR_CPU=2   FOR_MEM=4Gi FOR_MIN=2 FOR_MAX=4
+     export FOR_CPU=2   FOR_MEM=4Gi FOR_MIN=0 FOR_MAX=4     # forensics scales to zero when idle
      export WEB_MIN=2 WEB_MAX=4
-     export PG_TIER=GeneralPurpose PG_SKU=Standard_D2ds_v5 PG_STORAGE=128 PG_HA=ZoneRedundant
-     export REDIS_SKU=Balanced_B0 REDIS_HA=Enabled
+     export PG_TIER=GeneralPurpose PG_SKU=Standard_D2ds_v5 PG_STORAGE=128 PG_HA=Disabled   # HA: client decision (0.1)
+     export REDIS_SKU=Balanced_B0 REDIS_HA=Disabled
      export AOAI_TPM_K=150 ;;
   L) export API_CPU=1   API_MEM=2Gi API_MIN=3 API_MAX=6
      export EXT_CPU=1   EXT_MEM=2Gi EXT_N=2
      export VIS_CPU=1   VIS_MEM=2Gi VIS_N=4
-     export FOR_CPU=2   FOR_MEM=4Gi FOR_MIN=4 FOR_MAX=10
+     export FOR_CPU=2   FOR_MEM=4Gi FOR_MIN=1 FOR_MAX=10
      export WEB_MIN=2 WEB_MAX=6
      export PG_TIER=GeneralPurpose PG_SKU=Standard_D4ds_v5 PG_STORAGE=512 PG_HA=ZoneRedundant
      export REDIS_SKU=Balanced_B3 REDIS_HA=Enabled
@@ -574,6 +576,8 @@ few minutes).
 
 ```bash
 az monitor log-analytics workspace create -g $RG -n $LAW -l $LOC --retention-time 30
+# Guard against a runaway log bill: at most 1 GB ingested per day (the app normally logs far less)
+az monitor log-analytics workspace update -g $RG -n $LAW --quota 1
 export LA_ID=$(az monitor log-analytics workspace show -g $RG -n $LAW --query customerId -o tsv)
 export LA_KEY=$(az monitor log-analytics workspace get-shared-keys -g $RG -n $LAW --query primarySharedKey -o tsv)
 export LAW_RES_ID=$(az monitor log-analytics workspace show -g $RG -n $LAW --query id -o tsv)
@@ -589,7 +593,8 @@ export LAW_RES_ID=$(az monitor log-analytics workspace show -g $RG -n $LAW --que
 > - **fddtprod-vnet › Settings › Subnets**: four subnets with the prefixes from [2.1](#21-address-plan); the
 >   *Delegated to* column shows `Microsoft.App/environments` and `Microsoft.DBforPostgreSQL/flexibleServers`.
 > - **nsg-aca / nsg-pg / nsg-pe › Settings › Inbound security rules**: the rules from [2.4](#24-nsg-rules-created-in-step-4).
-> - **fddtprod-egress-ip › Overview**: *IP address* = the static outbound IP. Write it in the handover sheet.
+> - Only if `USE_NAT="yes"`: **fddtprod-egress-ip › Overview**: *IP address* = the static outbound IP. Write it
+>   in the handover sheet.
 
 ```bash
 # NSGs
@@ -622,14 +627,18 @@ az network nsg rule create -g $RG --nsg-name nsg-pe -n allow-jump-redis --priori
 az network nsg rule create -g $RG --nsg-name nsg-pe -n deny-vnet --priority 4000 --direction Inbound \
   --access Deny --protocol '*' --source-address-prefixes VirtualNetwork --destination-port-ranges '*'
 
-# Static egress IP (NAT Gateway) — every outbound call from the apps leaves from this one IP
-az network public-ip create -g $RG -n $PREFIX-egress-ip --sku Standard --allocation-method Static
-az network nat gateway create -g $RG -n $PREFIX-nat --public-ip-addresses $PREFIX-egress-ip --idle-timeout 10
+# Optional static egress IP (NAT Gateway): every outbound call from the apps leaves from this one IP
+NAT_ARGS=""
+if [ "$USE_NAT" = "yes" ]; then
+  az network public-ip create -g $RG -n $PREFIX-egress-ip --sku Standard --allocation-method Static
+  az network nat gateway create -g $RG -n $PREFIX-nat --public-ip-addresses $PREFIX-egress-ip --idle-timeout 10
+  NAT_ARGS="--nat-gateway $PREFIX-nat"
+fi
 
 # VNet + subnets
 az network vnet create -g $RG -n $VNET -l $LOC --address-prefixes $VNET_CIDR
 az network vnet subnet create -g $RG --vnet-name $VNET -n snet-aca --address-prefixes $SNET_ACA \
-  --delegations Microsoft.App/environments --network-security-group nsg-aca --nat-gateway $PREFIX-nat
+  --delegations Microsoft.App/environments --network-security-group nsg-aca $NAT_ARGS
 az network vnet subnet create -g $RG --vnet-name $VNET -n snet-pg --address-prefixes $SNET_PG \
   --delegations Microsoft.DBforPostgreSQL/flexibleServers --network-security-group nsg-pg
 az network vnet subnet create -g $RG --vnet-name $VNET -n snet-pe --address-prefixes $SNET_PE \
@@ -637,12 +646,13 @@ az network vnet subnet create -g $RG --vnet-name $VNET -n snet-pe --address-pref
 az network vnet subnet create -g $RG --vnet-name $VNET -n snet-jump --address-prefixes $SNET_JUMP
 
 export ACA_SUBNET_ID=$(az network vnet subnet show -g $RG --vnet-name $VNET -n snet-aca --query id -o tsv)
-export EGRESS_IP=$(az network public-ip show -g $RG -n $PREFIX-egress-ip --query ipAddress -o tsv)
-echo "Egress IP: $EGRESS_IP"
+[ "$USE_NAT" = "yes" ] && export EGRESS_IP=$(az network public-ip show -g $RG -n $PREFIX-egress-ip --query ipAddress -o tsv)
+echo "Egress IP: ${EGRESS_IP:-none (no NAT Gateway)}"
 ```
 
-> The NAT Gateway (~$33/month + data) is what gives a **guaranteed** static outbound IP. Skip both NAT
-> commands and the `--nat-gateway` flag if nobody needs to allow-list our outbound traffic.
+> The NAT Gateway (~$33/month + data) is what gives a **guaranteed** static outbound IP. It is off by default
+> (`USE_NAT="no"`). It can be added later: create the two resources above, then
+> `az network vnet subnet update -g $RG --vnet-name $VNET -n snet-aca --nat-gateway $PREFIX-nat`.
 
 ✅ **Verify:** `az network vnet subnet list -g $RG --vnet-name $VNET -o table` shows four subnets with the
 right prefixes; note `$EGRESS_IP` in the [handover sheet](#handover-sheet).
@@ -758,7 +768,7 @@ az postgres flexible-server parameter set -g $RG -s $PG -n log_min_duration_stat
 | `require_secure_transport` | `on` (default) | Leave it. Every URL ends in `?sslmode=require` |
 | PgBouncer | port **6432**, transaction mode, `default_pool_size` 50 per (user, db) | Tenant context is transaction-local (`set_config(..., true)`), proven safe by `tests/test_pgbouncer_rls.py` |
 | `max_connections` | the SKU default (B2s ≈ 429, D2ds_v5 ≈ 859) | PgBouncer uses at most 2 roles × 50 = 100 server connections + owner/admin. Plenty |
-| HA | Zone-redundant (M/L) | Automatic failover in 60–120 s; the apps reconnect on the next transaction |
+| HA | **Off on S and M** (launch), zone-redundant on L | With HA: automatic failover in 60–120 s. Without: 99.9 %, a zone outage means a point-in-time restore (~1 hour). Turn it on later with `az postgres flexible-server update -g $RG -n $PG --high-availability ZoneRedundant` (doubles the database cost) |
 | Backups | 35 days PITR | Restore target for a bad migration |
 
 ✅ **Verify:**
@@ -816,6 +826,7 @@ export REDIS_KEY=$(az redisenterprise database list-keys -g $RG --cluster-name $
 | Database | **0 only** | **Both** `CELERY_BROKER_URL` and `CELERY_RESULT_BACKEND` point to `/0`. Keys are prefixed, so sharing is safe |
 | `ssl_cert_reqs=required` in the URL | **mandatory** | Celery 5.4 refuses a `rediss://` URL without it ("A rediss:// URL must have parameter ssl_cert_reqs"). `required` is accepted by both Celery and redis-py |
 | Eviction | leave the default (no eviction of broker keys) | Queued tasks must never be evicted |
+| HA | **Off on S and M**, on for L | Redis holds no durable data. If it restarts and loses queued tasks, the stuck-document job (every 5 min) queues the affected documents again. Whether HA can be switched on later depends on the SKU: check *Settings › High availability* in the portal; otherwise it means a new cache (a short maintenance window, nothing to migrate) |
 
 ✅ **Verify:** `az redisenterprise show -g $RG -n $REDIS --query "{state:provisioningState,res:resourceState}"`
 → `Succeeded` / `Running`; `echo $REDIS_HOST:$REDIS_PORT`.
@@ -1226,8 +1237,10 @@ applied yet. Wait 5 minutes and run `az containerapp update -g $RG -n fddt-api -
 > `fddt-worker-vision`, `fddt-worker-forensics`, `fddt-beat`):
 > - **Application › Revisions and replicas**: **Running**. Workers have no ingress, so the *Health* column
 >   may stay empty. That is normal.
-> - **Monitoring › Log stream**: a worker prints `Connected to rediss://…` and `… ready.`; beat prints
->   `beat: Starting...`.
+> - **Monitoring › Log stream**: a worker prints `Connected to rediss://…` and `… ready.`; `fddt-beat` prints
+>   `beat: Starting...` and `housekeeping@… ready.`, then a `log_queue_metrics` task every minute.
+> - `fddt-worker-forensics` showing **0 replicas** while no documents are being processed is **normal** (scale
+>   to zero). Upload a document and it starts within ~30–60 s.
 > - `fddt-worker-forensics` **› Application › Scale**: the two Redis rules `backlog-level0` and `backlog-level9`.
 
 No ingress. `terminationGracePeriodSeconds: 300` matters: on scale-in or a new revision, Celery gets SIGTERM,
@@ -1269,9 +1282,14 @@ az containerapp create -g $RG -n fddt-worker-vision     --yaml $WORK/fddt-yaml/w
 Intelligence quotas through the global limiter. Extra replicas would only sit waiting on the limiter. Size
 them so the threads just saturate the caps (see the [scaling playbook](#scaling-playbook)).
 
-### 15.2 Forensics worker (CPU-bound, autoscaled on queue backlog)
+### 15.2 Forensics worker (CPU-bound, autoscaled on queue backlog, scale to zero)
 
-Forensics has no external rate limit, so it is the queue that benefits from scaling out.
+Forensics has no external rate limit, so it is the queue that benefits from scaling out, and from scaling
+**to zero** when there is no work (`FOR_MIN=0` on tiers S/M). That works because the every-minute platform jobs
+run on their own `housekeeping_queue` in the beat container (15.3), so nothing wakes the forensics workers
+except real work. The Redis rules below start the first replica as soon as one forensics task waits, and the
+platform stops the last replica after ~5 minutes without work. The first document after a quiet period
+waits ~30–60 s longer for its forensic checks.
 `start-worker.sh forensics` runs **one prefork process per vCPU of the container's limit** (it reads the
 cgroup quota). Give it about **2 GiB per vCPU**: pages are rendered at 200 DPI in memory.
 
@@ -1312,9 +1330,9 @@ az containerapp create -g $RG -n fddt-worker-forensics --yaml $WORK/fddt-yaml/wo
 
 `listLength: 20` adds one replica per ~20 waiting forensics tasks (each document creates about 4 of them).
 Lower it to scale out sooner. For fixed replicas instead, delete the `rules:` block and set
-`FOR_MIN = FOR_MAX`.
+`FOR_MIN = FOR_MAX` (never `FOR_MIN=0` without the rules: nothing would start the worker).
 
-### 15.3 Beat (scheduler) — exactly one replica
+### 15.3 Beat (scheduler + housekeeping worker) — exactly one replica
 
 ```bash
 { yaml_head; cat <<EOF
@@ -1326,8 +1344,8 @@ Lower it to scale out sooner. For fixed replicas instead, delete the `rules:` bl
         command: ["sh"]
         args: ["start-beat.sh"]
         resources:
-          cpu: 0.25
-          memory: 0.5Gi
+          cpu: 0.5
+          memory: 1Gi
         env:
 $(backend_env)
     scale:
@@ -1338,8 +1356,10 @@ EOF
 az containerapp create -g $RG -n fddt-beat --yaml $WORK/fddt-yaml/beat.yaml
 ```
 
-Beat schedules the per-minute `queue_metrics` / `queue_alert` log lines and the nightly (02:00 UTC) usage
-reconciliation. **Two beats would run every job twice. Never scale it above 1.**
+`start-beat.sh` runs Celery beat **and** a one-slot worker for `housekeeping_queue` in the same process. That
+worker runs the jobs beat schedules: the per-minute `queue_metrics` / `queue_alert` log lines, the
+stuck-document recovery every 5 minutes, and the nightly (02:00 UTC) usage reconciliation. **Two beats would
+run every job twice. Never scale it above 1.**
 
 ✅ **Verify (all four):**
 `for a in fddt-worker-extraction fddt-worker-vision fddt-worker-forensics fddt-beat; do az containerapp revision list -g $RG -n $a --query "[0].properties.runningState" -o tsv; done`
@@ -1520,8 +1540,9 @@ certificate.
 > (endpoint, route `default`, origin group `web`), **› Settings › Domains** (*Validation state* **Approved**,
 > certificate *Deployed*), **› Settings › Security policies** (the WAF policy attached).
 
-Use this if you want an edge WAF, **rate limiting on the login endpoint** (the app has no login lockout yet),
-or global edge caching of the static files. The Front Door **Standard** tier supports WAF *custom rules*
+Optional, and not needed for sign-in protection: the app itself throttles sign-ins (5 failures lock an email
+address for 15 minutes; 20 attempts per IP per minute). Use Front Door only if you want an edge WAF, or global
+edge caching of the static files (~$35/month + usage). The Front Door **Standard** tier supports WAF *custom rules*
 (including rate limits). The managed OWASP rule sets and bot protection need **Premium**.
 
 ```bash
@@ -1561,7 +1582,7 @@ Then:
 ## Step 20 — Monitoring and alerts
 
 > 📍 **Who:** you · **Type in:** Cloud Shell, then the portal for the extra alerts · **Check in the portal:**
-> search **Monitor** → **Alerts › Alert rules**: filter by resource group `rg-fddtprod` → 5 log alerts + 3
+> search **Monitor** → **Alerts › Alert rules**: filter by resource group `rg-fddtprod` → 7 log alerts + 3
 > PostgreSQL alerts. **Monitor › Alerts › Action groups** → `fddtprod-oncall` → **Test action group** sends a
 > test email. To add a portal-only alert: open the resource → **Monitoring › Alerts** → **+ Create › Alert
 > rule** → pick the *Signal name* from the table below → threshold → *Actions*: select `fddtprod-oncall`.
@@ -1580,6 +1601,8 @@ logalert fddt-queue-backlog   "ContainerAppConsoleLogs_CL | where Log_s has 'que
 logalert fddt-worker-errors   "ContainerAppConsoleLogs_CL | where ContainerAppName_s startswith 'fddt-worker' | where Log_s has_any ('ERROR','Traceback')" 5 15m 2
 logalert fddt-db-permission   "ContainerAppConsoleLogs_CL | where Log_s has 'permission denied'" 0 15m 1
 logalert fddt-azure-throttled "ContainerAppConsoleLogs_CL | where Log_s has '429'" 10 15m 3
+logalert fddt-stuck-documents "ContainerAppConsoleLogs_CL | where Log_s has 'stuck_documents_requeued'" 0 15m 3
+logalert fddt-login-lockouts  "ContainerAppConsoleLogs_CL | where Log_s has 'login_lockout'" 10 15m 2
 logalert fddt-api-errors      "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'fddt-api' | where Log_s has_any ('ERROR','Traceback')" 5 15m 2
 
 export PG_ID=$(az postgres flexible-server show -g $RG -n $PG --query id -o tsv)
@@ -1611,7 +1634,7 @@ ContainerAppConsoleLogs_CL
 
 The live view is also in the app: **Platform › Processing queues**.
 
-✅ **Verify:** `az monitor scheduled-query list -g $RG -o table` lists 5 alerts; the action group's test
+✅ **Verify:** `az monitor scheduled-query list -g $RG -o table` lists 7 alerts; the action group's test
 notification (portal → *Test action group*) reaches the on-call mailbox.
 
 ---
@@ -1644,6 +1667,15 @@ psql "host=<PG_HOST> port=5432 dbname=fddt user=fddtowner sslmode=require"
 redis-cli -h <REDIS_HOST> -p 10000 --tls -a '<REDIS_KEY>' LLEN forensics_queue
 ```
 
+**When you are done, remove Bastion** (it costs ~$0.29/hour while it exists, ~$210/month if forgotten) and stop
+the VM; recreate both next time with the commands above:
+
+```bash
+az network bastion delete -g $RG -n $PREFIX-bastion
+az network public-ip delete -g $RG -n $PREFIX-bastion-ip
+az vm deallocate -g $RG -n $PREFIX-jump
+```
+
 ---
 
 ## Step 22 — Smoke test and first-day setup
@@ -1658,7 +1690,8 @@ redis-cli -h <REDIS_HOST> -p 10000 --tls -a '<REDIS_KEY>' LLEN forensics_queue
    thresholds, and its **issuer registry is empty**. Set its upload limits; if they exceed 10 MB / 300 MB, raise
    the nginx limits (step 16.2).
 3. **Platform › Users** → create the company's users (submitter, Reviewer L1, Reviewer L2).
-4. **Platform › Processing queues** → all three queues show **≥ 1 consumer**; waiting = 0.
+4. **Platform › Processing queues** → extraction and vision show **≥ 1 consumer**; waiting = 0. Forensics may
+   show 0 consumers while idle (scale to zero); after the upload in item 5 it shows one.
 5. As a company user, create a case and upload one sample PDF from `sample-documents/`. Confirm:
    - the document goes `pending → processing → completed` and gets a risk tier within a few minutes;
    - **the PDF renders in the case viewer** (if it is blank, Blob CORS is wrong: step 17);
@@ -1668,7 +1701,11 @@ redis-cli -h <REDIS_HOST> -p 10000 --tls -a '<REDIS_KEY>' LLEN forensics_queue
 8. As a reviewer, **generate a report** and open it.
 9. As Reviewer L2, load the client's **real issuer registry**. Until then almost every document flags
    `issuer.not_in_registry`.
-10. Check the logs: no `ERROR` / `Traceback` / `429` in the last hour (the Log Analytics queries from step 20).
+10. **Sign-in throttling:** in a private browser window, sign in with a wrong password 6 times for a test
+    user. The 6th answer must be *Too many sign-in attempts. Try again in 15 minutes.* (It clears by itself
+    after 15 minutes, or at once after a successful sign-in from another session.)
+11. Check the logs: no `ERROR` / `Traceback` / `429` from the Azure services in the last hour (the Log
+    Analytics queries from step 20).
 
 Then **remove the seed step** from the migration job, so later releases do not reset the admin password:
 
@@ -1690,16 +1727,16 @@ az containerapp job update -g $RG -n fddt-migrate --yaml $WORK/fddt-yaml/migrate
 | Lock the AI services to our egress IP | `az cognitiveservices account network-rule add -g $RG -n $DI --ip-address $EGRESS_IP`, then `az resource update --ids $(az cognitiveservices account show -g $RG -n $DI --query id -o tsv) --set properties.networkAcls.defaultAction=Deny` (repeat both for `$AOAI`). Only with the NAT Gateway from step 4 | High |
 | Defender for Storage malware scanning on upload | Portal → Storage account → *Microsoft Defender for Cloud* → enable *On-upload malware scanning* (billed per GB scanned) | High (the app has no malware scan) |
 | Key Vault diagnostic logs → Log Analytics | Portal → Key Vault → *Diagnostic settings* | Medium |
-| PostgreSQL reserved capacity (1 year ≈ −40 %) | Portal → Reservations | Medium (cost) |
-| Document Intelligence commitment tier | When volume is steady ([costs](production-deployment.md#ways-to-reduce-cost)) | Medium (cost) |
-| Logs: console logs to *Basic Logs* | Log Analytics → table `ContainerAppConsoleLogs_CL` → plan | Low (cost) |
+| PostgreSQL reserved capacity (1 year ≈ −40 % of compute) | Portal → Reservations, after 1–2 months on a stable size | Medium (cost) |
+| Document Intelligence commitment tier | When volume is steady ([cost levers](production-deployment.md#cost-levers)) | Medium (cost) |
+| Check the real bill and right-size | Cost Management, filter tag `app=fddt`; compare with [the estimate](production-deployment.md#monthly-estimate-per-tier-2-page-documents); shrink apps whose CPU/memory stay low (each app › **Monitoring › Metrics**) | Medium (cost), after month 1 |
 | Resource lock on the RG | `az lock create -g $RG -n no-delete --lock-type CanNotDelete` | High |
 
 **Known application gaps to accept or schedule** (from [azure-migration-notes.md](azure-migration-notes.md)):
-no login rate limiting or lockout (use the WAF rule in step 19); no forgot-password flow (users change their
-own password; admins reset others); JWT in `localStorage`; no automatic retry of a failed Azure call and no
-sweeper for documents left `pending` if Redis was down at upload; keys and connection strings, not managed
-identity, for Storage / Document Intelligence / OpenAI; no page-count limit on uploads.
+no forgot-password flow (users change their own password; admins reset others); JWT in `localStorage`; no
+automatic retry of a failed Azure call (documents whose queued tasks were lost are re-queued, but a check lost
+after extraction finished is not); keys and connection strings, not managed identity, for Storage / Document
+Intelligence / OpenAI; no page-count limit on uploads.
 
 ---
 
@@ -1712,7 +1749,7 @@ identity, for Storage / Document Intelligence / OpenAI; no page-count limit on u
 | Upload / UI | API replicas (HTTP autoscale), nginx | Automatic: `API_MIN…API_MAX`, `WEB_MIN…WEB_MAX` |
 | OCR (`extraction_queue`) | Document Intelligence cap **10 calls/s** (Azure S0 allows 15) | Rarely the bottleneck. Raise the cap only after an Azure TPS increase |
 | AI review (`vision_queue`, plus the classification call in extraction) | **The gpt-4.1-mini deployment's TPM** (= the subscription's free capacity, step 10). The app reserves ~24k tokens per 1-page and ~32k per 2-page document | Only more TPM helps; replicas alone do nothing. We don't request quota, so this is the ceiling. Plan with it |
-| Forensics (`forensics_queue`) | CPU | Automatic: KEDA on backlog, `FOR_MIN…FOR_MAX`, 1 process per vCPU |
+| Forensics (`forensics_queue`) | CPU | Automatic: KEDA on backlog, `FOR_MIN…FOR_MAX` (0 = scale to zero), 1 process per vCPU |
 | Database | vCores / connections | Scale the SKU; PgBouncer already multiplexes connections |
 | Redis | Memory / ops (small: queues and counters only) | B0 → B3 |
 
@@ -1788,14 +1825,15 @@ az redisenterprise update -g $RG -n $REDIS --sku Balanced_B3
 ```
 
 **Tier S → M** requires moving PostgreSQL from Burstable to General Purpose (the SKU update above with
-`--tier GeneralPurpose`), enabling HA (`az postgres flexible-server update --high-availability ZoneRedundant`)
+`--tier GeneralPurpose`), optionally HA (`az postgres flexible-server update --high-availability ZoneRedundant`),
 and PgBouncer (step 7), then switching every backend app from `DB_POOL_SIZE`/`DB_MAX_OVERFLOW` to
 `DATABASE_POOLER_HOST`/`PORT`. Regenerate the YAML with `TIER=M` and run `az containerapp update --yaml` per app.
 
 ### Things that must NOT be scaled
 
-- **`fddt-beat` stays at exactly 1** replica.
-- **Do not autoscale extraction/vision on queue length.** They are quota-bound.
+- **`fddt-beat` stays at exactly 1** replica (it also runs the housekeeping jobs).
+- **Do not autoscale extraction/vision on queue length.** They are quota-bound. Keep one replica each (not
+  zero), so OCR of a new document starts at once.
 - Do not raise `AZURE_OPENAI_MAX_*` above 80 % of the real quota.
 - Every backend app must carry the **same** `AZURE_OPENAI_MAX_*` and `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` values.
 
@@ -1872,7 +1910,7 @@ federated (OIDC) service principal holding *Contributor* on the RG and *AcrPush*
 |---|---|---|
 | PostgreSQL | Automatic backups, **35-day PITR**; zone-redundant HA (M/L) fails over automatically | PITR to a new server, repoint the URL/pooler host |
 | Blob Storage | ZRS + soft delete (14 d) + versioning | Undelete / restore a previous version |
-| Redis | Only queued tasks, fair-share counters, limiter windows | If lost: affected documents stay `pending`; re-upload them |
+| Redis | Only queued tasks, fair-share and sign-in counters, limiter windows | If lost: the stuck-document job queues affected documents again within ~15 minutes (checks lost after a document's extraction finished are not re-run; re-upload such a document if a check is missing) |
 | Secrets | Key Vault soft delete + purge protection | Recover the deleted secret |
 | App config | `~/fddt-deploy/fddt-yaml/*.yaml` + image tags in ACR | Re-apply with `az containerapp update --yaml` |
 
@@ -1913,6 +1951,10 @@ Key Vault references are re-read when a revision starts, so **restart the apps a
 | `413 Request Entity Too Large` | nginx body limits | Step 16.2 |
 | Many `429`s | Caps vs. quota | Step 10: caps = 80 % of `rateLimits` |
 | Jobs run twice (nightly reconciliation twice) | `fddt-beat` replicas | Must be exactly 1 |
+| No `queue_metrics` lines, stuck documents never re-queued | `fddt-beat` log stream shows `housekeeping@… ready.`? | It must run `start-beat.sh` (beat **and** the housekeeping worker), not `celery beat` alone |
+| Forensics checks never start | `fddt-worker-forensics` has `minReplicas: 0` but no Redis scale rules, or the rules can't reach Redis | Add the rules from 15.2 (secret `redis-key`, TLS on); or set `minReplicas: 1` |
+| A user gets *Too many sign-in attempts* | 5 failed sign-ins for that address in 15 minutes (or 20 attempts from one IP in a minute) | Wait for the time shown, or sign in successfully once it has passed. Repeated lockouts across many addresses: see the `fddt-login-lockouts` alert |
+| `document_requeued` rows in the audit log / `stuck_documents_requeued` alert | Redis lost queued tasks (restart, maintenance without HA, outage) | Nothing to do: the documents were queued again. After 3 attempts a document is marked failed with an explanation: re-upload it |
 | Database `permission denied` in logs | A migration added a table without a grant | Re-run the migration job; report as a bug |
 
 ---
@@ -1925,9 +1967,12 @@ Key Vault references are re-read when a revision starts, so **restart the apps a
 - [ ] Document Intelligence on pricing tier **S0** (not F0).
 - [ ] PostgreSQL 16, private access only, `sslmode=require`, 35-day backups; M/L: zone-redundant HA + PgBouncer on 6432.
 - [ ] Managed Redis **Non-clustered**, private endpoint, `rediss://…:10000/0?ssl_cert_reqs=required` for both Celery URLs.
+- [ ] HA decision for PostgreSQL and Redis recorded with the client (tier M launches without HA).
 - [ ] Storage: container private, anonymous access off, soft delete + versioning, CORS = app origin(s) only.
 - [ ] Only `fddt-web` has external ingress; `fddt-api` internal; workers/beat no ingress.
-- [ ] `fddt-beat` min = max = **1**.
+- [ ] `fddt-beat` min = max = **1**, running `start-beat.sh` (its log shows `housekeeping@… ready.`).
+- [ ] `fddt-worker-forensics` scales from 0 and back (upload a document after an idle period).
+- [ ] Log Analytics daily cap set (1 GB); Bastion deleted after use; NAT Gateway only if needed.
 - [ ] NSGs on `snet-aca`, `snet-pg`, `snet-pe` as in [2.4](#24-nsg-rules-created-in-step-4).
 - [ ] Custom domain bound, managed certificate valid; HTTP redirects to HTTPS.
 - [ ] Alerts created and the action group test reached on-call.
@@ -1943,7 +1988,7 @@ Key Vault references are re-read when a revision starts, so **restart the apps a
 
 **Governance**
 - [ ] Client's written acceptance of Global Azure OpenAI processing (or a regional deployment chosen).
-- [ ] Known gaps (step 23) accepted or scheduled; WAF login rate limit in place if Front Door is used.
+- [ ] Known gaps (step 23) accepted or scheduled; sign-in throttling tested (step 22, item 10).
 - [ ] Handover sheet completed and stored with the operations team.
 
 ---
@@ -1959,7 +2004,7 @@ Fill in and store with the operations team (no secrets here: those stay in Key V
 | App URL | `https://` |
 | Container Apps default FQDN (`fddt-web`) | |
 | **Inbound public IP** (environment static IP) | |
-| **Outbound public IP** (NAT Gateway) | |
+| **Outbound public IP** (NAT Gateway, only if `USE_NAT=yes`) | |
 | Front Door endpoint (if used) | |
 | VNet / subnets | `10.20.0.0/16` — aca `/23`, pg `/24`, pe `/24`, bastion `/26`, jump `/28` |
 | PostgreSQL FQDN / ports | `<pg>.postgres.database.azure.com` — 5432 direct, 6432 PgBouncer |

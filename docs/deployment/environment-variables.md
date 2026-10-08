@@ -55,9 +55,14 @@ not call Azure.
 | `FAIR_SHARE_BUCKET_SIZE` | `5` | A company's tasks drop one priority level per this many outstanding tasks on a queue |
 | `QUEUE_ALERT_OLDEST_WAITING_SECONDS` | `300` | The per-minute `queue_metrics` job logs a WARNING `queue_alert {json}` line when a queue's oldest waiting task is older than this; 0 = off |
 | `USAGE_RECONCILIATION_HOUR_UTC` | `2` | Hour (UTC) of the nightly usage-counter reconciliation (Celery beat) |
+| `STUCK_DOCUMENT_PENDING_MINUTES` / `STUCK_DOCUMENT_PROCESSING_MINUTES` | `10` / `30` | Stuck-document recovery (every 5 minutes, `app/tasks/stuck_documents_task.py`): a document still `pending` after this long, or `processing` with no update for this long, **while the extraction queue is empty and idle**, lost its tasks (Redis restart/outage) and is queued again. `0` disables that half |
+| `STUCK_DOCUMENT_MAX_REQUEUES` | `3` | Re-queues per document (counted from its `document_requeued` audit rows) before it is marked `failed` with an explanation |
+| `STUCK_DOCUMENT_BATCH_SIZE` | `200` | Most documents re-queued per run |
+| `LOGIN_MAX_FAILED_ATTEMPTS` / `LOGIN_LOCKOUT_MINUTES` | `5` / `15` | Sign-in throttling (`app/services/login_throttle.py`, Redis): after this many failed sign-ins for one email address, it is refused (HTTP 429 + `Retry-After`) for this many minutes. Counted per address (unknown addresses too), cleared by a successful sign-in. `0` disables |
+| `LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE` | `20` | Sign-in attempts of any outcome per client IP per minute (best effort: behind the proxy chain a client can influence `X-Forwarded-For`). `0` disables. Both limits fail open if Redis is unreachable |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@example.com` / `ChangeMe123!` | Read by `seed.py` (not by the app): the platform admin it creates — **and resets on every run** (`start-api.sh` runs it). Set both in production |
 | `CELERY_POOL` | per queue | Read by `start-worker.sh`: overrides the pool type (`threads` for extraction/vision, `prefork` for forensics) |
-| `CELERY_BEAT_SCHEDULE_FILE` | `/tmp/celerybeat-schedule` | Read by `start-beat.sh` |
+| `CELERY_BEAT_SCHEDULE_FILE` | `/tmp/celerybeat-schedule` | Read by `start-beat.sh` (beat + the one-slot worker for `housekeeping_queue`) |
 | `ISSUER_FUZZY_MATCH_THRESHOLD` | `85.0` | rapidfuzz WRatio score (0–100) an extracted issuer must reach to match the registry ([05](../pipeline/05-issuer-verification.md)) |
 | `METADATA_FORENSICS_MOD_DATE_THRESHOLD_SECONDS` | `1.0` | Jitter tolerance before "modified after created" flags ([06](../pipeline/06-metadata-forensics.md)) |
 | `METADATA_FORENSICS_EDITING_SOFTWARE_NAMES` | `photoshop,gimp,illustrator,affinity,coreldraw,paint.net,pixlr,canva,inkscape` | Comma-separated, case-insensitive substrings that mark a Producer/Creator as an editing tool |

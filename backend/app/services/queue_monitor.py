@@ -79,6 +79,17 @@ def queue_depth(client, queue: str) -> int:
     return sum(int(client.llen(name)) for name in priority_lists(queue))
 
 
+def queue_busy(queue: str) -> bool | None:
+    """True if `queue` has a task waiting (any priority level) or running;
+    None if the broker can't be reached (the caller can't tell either way)."""
+    try:
+        client = _redis()
+        client.ping()
+        return queue_depth(client, queue) > 0 or _running_counts(client).get(queue, 0) > 0
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _oldest_waiting_age(client, queue: str, now: float) -> float | None:
     # Celery's Redis transport LPUSHes and BRPOPs: each list's oldest message
     # is last. The oldest overall is the oldest across the priority lists.

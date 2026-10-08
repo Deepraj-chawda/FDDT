@@ -24,7 +24,7 @@ account, or a suspended company, takes effect on the next request.
 import uuid
 from dataclasses import dataclass
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -41,6 +41,7 @@ from app.schemas.auth import (
     TokenResponse,
     UploadLimitsResponse,
 )
+from app.services import login_throttle
 from app.services.audit_service import record_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -191,13 +192,28 @@ def require_platform_admin(current_user: User = Depends(get_current_user)) -> Us
         "JWT_ACCESS_TOKEN_EXPIRE_MINUTES). The token carries `role`, `company_id` (null for a "
         "platform admin) and `is_platform_admin`. An unknown email, a wrong password, a "
         "deactivated account and a suspended company all return the same 401 so accounts "
-        "cannot be enumerated."
+        "cannot be enumerated. Throttled (app/services/login_throttle.py): after "
+        "LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for LOGIN_LOCKOUT_MINUTES, "
+        "and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE attempts per minute; both "
+        "answer 429 with a Retry-After header."
     ),
     responses={
         401: {"description": "Incorrect email or password (or the account/company is inactive)."},
+        429: {"description": "Too many sign-in attempts for this email address or from this IP."},
     },
 )
-def login(payload: LoginRequest, system_db: Session = Depends(get_system_db)) -> TokenResponse:
+def login(
+    payload: LoginRequest, request: Request, system_db: Session = Depends(get_system_db)
+) -> TokenResponse:
+    email = str(payload.email)
+    blocked = login_throttle.check(email, request.client.host if request.client else None)
+    if blocked is not None:
+        minutes = max(1, -(-blocked.retry_after_seconds // 60))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many sign-in attempts. Try again in {minutes} minute{'s' if minutes != 1 else ''}.",
+            headers={"Retry-After": str(blocked.retry_after_seconds)},
+        )
     user = system_db.execute(
         select(User).where(func.lower(User.email) == str(payload.email).lower())
     ).scalar_one_or_none()
@@ -207,11 +223,13 @@ def login(payload: LoginRequest, system_db: Session = Depends(get_system_db)) ->
         or not verify_password(payload.password, user.hashed_password)
         or not _company_is_active(system_db, user.company_id)
     ):
+        login_throttle.record_failure(email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
+    login_throttle.record_success(email)
     access_token = create_access_token(subject=str(user.id), extra_claims=token_claims(user))
     return TokenResponse(access_token=access_token)
 

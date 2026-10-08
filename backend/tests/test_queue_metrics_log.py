@@ -68,3 +68,17 @@ def test_threshold_zero_disables_the_alert(snapshot, monkeypatch, caplog):
         usage_tasks.log_queue_metrics()
     assert len(_payloads(caplog, "queue_metrics")) == 1
     assert _payloads(caplog, "queue_alert") == []
+
+
+def test_fair_share_counters_reset_only_on_a_fully_idle_queue(monkeypatch):
+    # The job runs on housekeeping_queue now, so forensics is idle at running == 0.
+    resets = []
+    monkeypatch.setattr(fairshare, "reset_if_idle", lambda queue, idle: resets.append((queue, idle)))
+    idle = {**_queue("forensics_queue", None), "waiting": 0, "running": 0}
+    running = {**_queue("vision_queue", None), "waiting": 0, "running": 1}
+    monkeypatch.setattr(
+        "app.services.queue_monitor.snapshot",
+        lambda window_seconds: {"available": True, "window_seconds": 300, "queues": [idle, running]},
+    )
+    usage_tasks.log_queue_metrics()
+    assert resets == [("forensics_queue", True), ("vision_queue", False)]

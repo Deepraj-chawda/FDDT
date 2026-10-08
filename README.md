@@ -79,12 +79,15 @@ cd backend
 celery -A app.tasks.celery_app worker -Q extraction_queue -n extraction@%h --pool=threads -c 4 --loglevel=info
 celery -A app.tasks.celery_app worker -Q vision_queue     -n vision@%h     --pool=threads -c 4 --loglevel=info
 celery -A app.tasks.celery_app worker -Q forensics_queue,celery -n forensics@%h --pool=threads -c 4 --loglevel=info
-# optional: the scheduler (nightly usage reconciliation, queue metrics log line)
+# optional: the scheduler + the worker for its jobs (queue metrics every minute,
+# stuck-document recovery every 5 minutes, nightly usage reconciliation)
 celery -A app.tasks.celery_app beat --loglevel=info
+celery -A app.tasks.celery_app worker -Q housekeeping_queue -n housekeeping@%h --pool=solo --loglevel=info
 ```
 
 On Linux/macOS use `./start-worker.sh extraction|vision|forensics` and
-`./start-beat.sh` (pool sizes from `*_WORKER_CONCURRENCY`; forensics uses
+`./start-beat.sh` (beat and the housekeeping worker in one process — `--beat`
+does not work on Windows; pool sizes from `*_WORKER_CONCURRENCY`; forensics uses
 prefork, one process per core). On Windows use `--pool=threads` (prefork
 doesn't work there). Or run them in Docker:
 `docker compose --profile workers up -d --scale forensics-worker=3`.

@@ -65,9 +65,8 @@ def log_queue_metrics() -> None:
         return
     for q in snap["queues"]:
         # Self-heal fair-share counters: an empty queue has nothing outstanding.
-        # (This task itself runs on forensics_queue, so it counts as running.)
-        own = 1 if q["queue"] == "forensics_queue" else 0
-        fairshare.reset_if_idle(q["queue"], q["waiting"] == 0 and q["running"] <= own)
+        # (This task runs on housekeeping_queue, so it never counts itself.)
+        fairshare.reset_if_idle(q["queue"], q["waiting"] == 0 and q["running"] == 0)
         metrics = {
             "queue": q["queue"],
             "waiting": q["waiting"],

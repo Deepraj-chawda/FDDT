@@ -26,7 +26,7 @@ flowchart LR
             WV["vision_queue<br/>visual review · signatures ·<br/>validation + issuer"]
             WF["forensics_queue (prefork)<br/>metadata · ELA/copy-move/ghost text ·<br/>duplicates · cross-doc · scoring"]
         end
-        BEAT["Celery beat<br/>usage reconciliation ·<br/>queue metrics"]
+        BEAT["Celery beat + housekeeping worker<br/>queue metrics · stuck-document recovery ·<br/>usage reconciliation"]
     end
 
     PGB["PgBouncer<br/>(transaction pooling)"]
@@ -62,7 +62,7 @@ hosted** (a design rule of the platform).
 | Database | PostgreSQL 16, SQLAlchemy 2, Alembic, psycopg2 | Persistence, migrations (14), Row-Level Security per company |
 | Connection pooling | PgBouncer (transaction mode) | Multiplexes API + worker connections onto ≤ 60 server connections |
 | Queue | Celery 5.4 + Redis 7 | Three queues (extraction / vision / forensics), fair-share priorities, beat jobs |
-| Rate limiting | Redis sliding windows (`services/rate_limiter.py`) | Global caps on Azure calls across every worker |
+| Rate limiting | Redis sliding windows (`services/rate_limiter.py`, `services/login_throttle.py`) | Global caps on Azure calls across every worker; sign-in throttling per email address and per IP |
 | File store | Azure Blob Storage (`azure-storage-blob`) | Immutable originals, signature crops, report PDFs (company-prefixed paths) |
 | OCR | Azure Document Intelligence `prebuilt-layout` | Text, tables, key-values and word geometry |
 | LLM | Azure OpenAI (chat completions, strict JSON-schema output) | Classification, field extraction, issuer semantic match, visual review, signature detect/compare |

@@ -139,6 +139,27 @@ class Settings(BaseSettings):
     )
     # Nightly usage reconciliation (Celery beat), UTC.
     usage_reconciliation_hour_utc: int = Field(default=2, alias="USAGE_RECONCILIATION_HOUR_UTC")
+    # Stuck-document recovery (app/tasks/stuck_documents_task.py, every 5
+    # minutes): a document still `pending` after PENDING minutes, or still
+    # `processing` after PROCESSING minutes, while the extraction queue is
+    # empty and idle, lost its tasks (e.g. Redis restarted, or was down at
+    # upload) and its pipeline is queued again — at most MAX_REQUEUES times,
+    # then it is marked failed. 0 minutes disables that half of the check.
+    stuck_document_pending_minutes: int = Field(default=10, alias="STUCK_DOCUMENT_PENDING_MINUTES")
+    stuck_document_processing_minutes: int = Field(default=30, alias="STUCK_DOCUMENT_PROCESSING_MINUTES")
+    stuck_document_max_requeues: int = Field(default=3, alias="STUCK_DOCUMENT_MAX_REQUEUES")
+    stuck_document_batch_size: int = Field(default=200, alias="STUCK_DOCUMENT_BATCH_SIZE")
+
+    # --- Sign-in throttling (app/services/login_throttle.py, Redis) ---
+    # After this many failed sign-ins for one email address, that address is
+    # refused for LOGIN_LOCKOUT_MINUTES (counted per address, so it works
+    # whatever IP the attempts come from). 0 disables.
+    login_max_failed_attempts: int = Field(default=5, alias="LOGIN_MAX_FAILED_ATTEMPTS")
+    login_lockout_minutes: int = Field(default=15, alias="LOGIN_LOCKOUT_MINUTES")
+    # Sign-in attempts (any outcome) per client IP per minute. 0 disables.
+    login_max_attempts_per_ip_per_minute: int = Field(
+        default=20, alias="LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE"
+    )
 
     # --- Redis / Celery ---
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")

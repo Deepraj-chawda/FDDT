@@ -197,6 +197,47 @@ def _no_celery(monkeypatch):
     monkeypatch.setattr(ingest_bulk_upload, "delay", lambda *args, **kwargs: None)
 
 
+class FakeRedis:
+    """The few Redis commands the sign-in throttle uses, in memory. TTLs are
+    remembered, not enforced (tests read them back)."""
+
+    def __init__(self):
+        self.values: dict[str, int] = {}
+        self.ttls: dict[str, int] = {}
+
+    def get(self, key):
+        value = self.values.get(key)
+        return None if value is None else str(value).encode()
+
+    def incr(self, key):
+        self.values[key] = self.values.get(key, 0) + 1
+        return self.values[key]
+
+    def expire(self, key, seconds):
+        self.ttls[key] = int(seconds)
+        return True
+
+    def ttl(self, key):
+        return self.ttls.get(key, -1) if key in self.values else -2
+
+    def delete(self, *keys):
+        for key in keys:
+            self.values.pop(key, None)
+            self.ttls.pop(key, None)
+
+
+@pytest.fixture(autouse=True)
+def login_redis(monkeypatch):
+    """Sign-in throttling (app/services/login_throttle.py) runs against an
+    in-memory Redis per test: no real broker needed, no counts leaking
+    between tests that sign in with the same address."""
+    from app.services import login_throttle
+
+    fake = FakeRedis()
+    monkeypatch.setattr(login_throttle, "_redis", lambda: fake)
+    return fake
+
+
 @pytest.fixture()
 def client(db_session, fake_storage):
     # Production hands each request a fresh session; the suite shares one, so

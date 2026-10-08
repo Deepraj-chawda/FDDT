@@ -12,7 +12,7 @@
           "auth"
         ],
         "summary": "Log in and obtain a JWT",
-        "description": "Exchanges email + password for a bearer token (HS256; lifetime from JWT_ACCESS_TOKEN_EXPIRE_MINUTES). The token carries `role`, `company_id` (null for a platform admin) and `is_platform_admin`. An unknown email, a wrong password, a deactivated account and a suspended company all return the same 401 so accounts cannot be enumerated.",
+        "description": "Exchanges email + password for a bearer token (HS256; lifetime from JWT_ACCESS_TOKEN_EXPIRE_MINUTES). The token carries `role`, `company_id` (null for a platform admin) and `is_platform_admin`. An unknown email, a wrong password, a deactivated account and a suspended company all return the same 401 so accounts cannot be enumerated. Throttled (app/services/login_throttle.py): after LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for LOGIN_LOCKOUT_MINUTES, and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE attempts per minute; both answer 429 with a Retry-After header.",
         "operationId": "login_auth_login_post",
         "requestBody": {
           "content": {
@@ -37,6 +37,9 @@
           },
           "401": {
             "description": "Incorrect email or password (or the account/company is inactive)."
+          },
+          "429": {
+            "description": "Too many sign-in attempts for this email address or from this IP."
           },
           "422": {
             "description": "Validation Error",

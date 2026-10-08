@@ -103,14 +103,17 @@ or all of them in Linux containers: `docker compose --profile workers up -d` (ad
 `--scale forensics-worker=N`). The worker lists its tasks (`process_document`, `run_document_checks`,
 `run_cross_document_checks`, `run_metadata_forensics`, `run_tampering_checks`, `run_duplicate_check`,
 `run_visual_inconsistency_review`, `run_signature_detection`, `run_signature_comparison`, `score_case`,
-`reconcile_usage_stats`, `log_queue_metrics`) and then `ready`. **Without a worker, uploads succeed but
+`reconcile_usage_stats`, `log_queue_metrics`, `requeue_stuck_documents`) and then `ready`. **Without a worker, uploads succeed but
 every document stays `pending` forever** — the API only enqueues.
 
-Optionally run **beat** (third terminal) for the nightly usage reconciliation and the per-minute queue
-metrics line — run exactly one:
+Optionally run **beat** and the worker for its jobs (per-minute queue metrics line, stuck-document recovery
+every 5 minutes, nightly usage reconciliation). These jobs run on their own `housekeeping_queue`, so they
+need this worker; run exactly one of each:
 
 ```powershell
-celery -A app.tasks.celery_app beat --loglevel=info      # bash: sh start-beat.sh
+celery -A app.tasks.celery_app beat --loglevel=info
+celery -A app.tasks.celery_app worker -Q housekeeping_queue -n housekeeping@%h --pool=solo --loglevel=info
+# Linux/macOS/containers: both in one process with `sh start-beat.sh` (`--beat` does not work on Windows)
 ```
 
 > **Restart the workers after every backend code change.** Unlike `uvicorn --reload`, Celery does not

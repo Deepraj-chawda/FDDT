@@ -57,7 +57,7 @@ flowchart TB
 | SPA + reverse proxy | Container App `fddt-web` (frontend image), **public** ingress | One origin for the SPA and `/api`, so no CORS is needed; nginx caps request bodies (`UPLOAD_BODY_LIMIT` / `BULK_UPLOAD_BODY_LIMIT`, at least the largest per-company limit) |
 | API | Container App `fddt-api` (backend image), **internal** ingress only | Never exposed directly; reached only through `fddt-web` |
 | Workers | Container Apps `fddt-worker-extraction`, `-vision`, `-forensics` (backend image), no ingress | One per queue so each scales on its own ([processing-queues.md](../processing-queues.md)) |
-| Scheduler | Container App `fddt-beat`, no ingress, **min = max = 1** | Nightly usage reconciliation, per-minute queue metrics. Two beats would run every job twice |
+| Scheduler | Container App `fddt-beat`, no ingress, **min = max = 1** | Beat plus a one-slot worker for `housekeeping_queue`: per-minute queue metrics, stuck-document recovery every 5 minutes, nightly usage reconciliation. Two beats would run every job twice |
 | Migrations | Container Apps **job** `fddt-migrate` (manual trigger) | Runs `alembic upgrade head` + `seed.py` once per release, as the database owner — not on every API start |
 | Database | Azure Database for PostgreSQL **Flexible Server 16**, private access (VNet) | Row-Level Security, roles without superuser/BYPASSRLS (verified to work without superuser); built-in PgBouncer on General Purpose tiers |
 | Broker / limiter / fair-share | **Azure Managed Redis**, *Non-Clustered* policy | Azure Cache for Redis no longer accepts new customers (since 2026-04-01) and retires 2028-09-30 |
@@ -67,7 +67,7 @@ flowchart TB
 | Secrets | Key Vault, referenced as Container Apps secrets | No secret in images or the repo |
 | Images | Container Registry (Basic) | Backend and frontend images |
 | Observability | Log Analytics workspace (Container Apps logs) + Azure Monitor alerts | `queue_alert`, failed documents, database metrics |
-| Edge (optional) | Front Door Standard | Global edge, caching of static assets, managed certificate. Container Apps ingress already provides TLS and a free managed certificate, so this is optional; a WAF needs **Front Door Premium** ($330/month base) |
+| Edge (optional, not used by default) | Front Door Standard | Global edge, caching of static assets, managed certificate. Container Apps ingress already provides TLS and a free managed certificate, and sign-in throttling is built into the app, so this is optional. WAF custom rules work on Standard; the managed OWASP rule sets need **Front Door Premium** ($330/month base) |
 
 ### Region and data residency
 
@@ -91,29 +91,40 @@ SKUs differ, so moving between them is a scaling change, not a redeployment.
 |---|---|---|---|
 | Volume (2-page documents/month) | ≈ 3,000 | ≈ 20,000 | ≈ 100,000 |
 | Companies | 1–3 | up to ~20 | 20+ |
-| `fddt-web` | 1 × 0.25 vCPU / 0.5 GiB | 2 × 0.25 / 0.5 | 2 × 0.25 / 0.5 |
-| `fddt-api` | 1 × 0.5 / 1 | 2 × 1 / 2 | 3 × 1 / 2 |
+| `fddt-web` | 1 × 0.25 vCPU / 0.5 GiB | 2 × 0.25 / 0.5 (max 4) | 2 × 0.25 / 0.5 (max 6) |
+| `fddt-api` | 1 × 0.5 / 1 (max 2) | **1** × 1 / 2 (HTTP autoscale to 4) | 3 × 1 / 2 (max 6) |
 | `fddt-worker-extraction` | 1 × 0.5 / 1 | 1 × 1 / 2 | 2 × 1 / 2 |
 | `fddt-worker-vision` | 1 × 0.5 / 1 | 1 × 1 / 2 | 4 × 1 / 2 |
-| `fddt-worker-forensics` | 1 × 1 / 2 | 2 × 2 / 4 | 4 × 2 / 4 |
-| `fddt-beat` | 1 × 0.25 / 0.5 | 1 × 0.25 / 0.5 | 1 × 0.25 / 0.5 |
-| PostgreSQL | Burstable **B2s** (2 vCore, 4 GiB), 64 GB, no HA, direct connections | General Purpose **D2ds_v5** (2 vCore, 8 GiB), 128 GB, **zone-redundant HA**, built-in PgBouncer | General Purpose **D4ds_v5** (4 vCore, 16 GiB), 512 GB, zone-redundant HA, built-in PgBouncer |
-| Redis | Managed Redis **B0**, no HA | Managed Redis **B0**, HA | Managed Redis **B3**, HA |
+| `fddt-worker-forensics` | **0**–2 × 1 / 2 (scale to zero) | **0**–4 × 2 / 4 (scale to zero) | 1–10 × 2 / 4 |
+| `fddt-beat` (beat + housekeeping worker) | 1 × 0.5 / 1 | 1 × 0.5 / 1 | 1 × 0.5 / 1 |
+| PostgreSQL | Burstable **B2s** (2 vCore, 4 GiB), 64 GB, no HA, direct connections | General Purpose **D2ds_v5** (2 vCore, 8 GiB), 128 GB, **no HA at launch**, built-in PgBouncer | General Purpose **D4ds_v5** (4 vCore, 16 GiB), 512 GB, zone-redundant HA, built-in PgBouncer |
+| Redis | Managed Redis **B0**, no HA | Managed Redis **B0**, **no HA** | Managed Redis **B3**, HA |
 | Azure OpenAI gpt-4.1-mini Global Standard TPM (target; no quota is requested, the deployment uses the subscription's free capacity) | 100k | 150k | 500k |
-| Availability | single zone, no failover | zone-redundant DB + Redis, 2+ replicas for web/API | same as M |
+| Availability | single zone, no failover | single zone (99.9 % database SLA; a zone failure means a restore, ~1 hour); 2 web replicas | zone-redundant database + Redis (99.99 %) |
 
 Notes on sizing:
 
+- **High availability (HA) on tier M is a client decision.** Without it the database is one server in one
+  zone: Azure restarts it after a crash, and a whole-zone outage means a point-in-time restore (about an
+  hour). Turning HA on later is one command and roughly doubles the database cost (+$176/month):
+  `az postgres flexible-server update -g $RG -n $PG --high-availability ZoneRedundant`. Record the decision
+  with the client.
+- **Redis without HA is safe** because Redis holds no durable data, and the stuck-document job
+  ([processing-queues.md](../processing-queues.md#design)) re-queues any document whose tasks were lost
+  when Redis restarted. Tier L keeps HA so that a Redis restart doesn't pause a busy platform for minutes.
 - **Forensics memory:** pages are rendered at 200 DPI in memory; give each forensics *process* ~2 GiB
   (`start-worker.sh` runs one prefork process per vCPU of the container's limit).
+- **Forensics scales to zero** (tiers S/M): KEDA starts a replica as soon as a forensics task waits, and
+  stops it after ~5 idle minutes. The first document after a quiet period waits ~30–60 s longer for its
+  forensic checks. This works because the every-minute platform jobs run on their own
+  `housekeeping_queue` in the beat container, so nothing else wakes the forensics workers.
 - **Vision/extraction** pools are I/O-bound threads; their real ceiling is the Azure OpenAI quota.
   Throughput ≈ (TPM cap) ÷ ~32k tokens *reserved* per 2-page document — e.g. 80k TPM ≈ 2.5 documents/min,
   400k TPM ≈ 12/min. No quota is requested: the deployment uses the subscription's free capacity, which is then the ceiling
-  ([processing-queues.md](../processing-queues.md#azure-rate-limits)).
-- Workers keep `minReplicas ≥ 1` (they poll Redis). Autoscaling with KEDA on queue length must watch the
-  priority lists per queue (`<queue>`, `<queue>:1` … `<queue>:9`). It is worth it for the CPU-bound
-  forensics queue only ([runbook](azure-production-runbook.md#152-forensics-worker-cpu-bound-autoscaled-on-queue-backlog));
-  the two Azure queues are quota-bound, so fixed replica counts are the right choice there.
+  ([processing-queues.md](../processing-queues.md#azure-rate-limits)). They keep one replica each (no
+  scale-to-zero), so OCR of a new document starts at once; more replicas than the quota can feed don't help.
+- **The beat container** runs beat plus a one-slot worker for `housekeeping_queue` (queue metrics every
+  minute, stuck-document recovery every 5 minutes, nightly usage reconciliation). Always exactly one.
 
 ## 3. Costs
 
@@ -122,7 +133,7 @@ Notes on sizing:
 | Service | Meter | Price |
 |---|---|---|
 | Container Apps (Consumption) | vCPU active / idle | $0.000024 / $0.000003 per vCPU-second (≈ $63.07 / $7.88 per vCPU-month) |
-| | Memory | $0.000003 per GiB-second (≈ $7.88 per GiB-month) |
+| | Memory (**same rate active or idle**: there is no idle discount on memory) | $0.000003 per GiB-second (≈ $7.88 per GiB-month) |
 | | Free grant per subscription per month | 180,000 vCPU-s + 360,000 GiB-s + 2M requests (≈ $5.40) |
 | | Environment management (only if environment private endpoint or planned maintenance is enabled) | $0.143/hour (≈ $104/month) — **not used** in this design |
 | PostgreSQL Flexible Server | Burstable B2s | $0.079/hour |
@@ -131,12 +142,15 @@ Notes on sizing:
 | Azure Managed Redis (Balanced) | B0 / B3 per instance | $0.0726 / $0.09295 per hour (HA = 2 instances). *The UAE North AMR meters look inconsistent (B1 is listed above B3; West Europe lists B0 at $0.019) — confirm in the calculator; the figures here are the higher, conservative ones* |
 | Blob Storage | Hot LRS data / writes / reads | $0.0203 per GB-month / $0.06 per 10k / $0.0048 per 10k |
 | Document Intelligence S0 | Layout (pre-built) pages | **$10 per 1,000 pages**; commitment tiers from 20k pages for $190/month (overage $9.50/1k) and 100k pages for $900/month ($9/1k) |
+| | Font-style add-on (`styleFont`, requested on every page: `AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT=true`) | **≈ $6 per 1,000 pages — to confirm** on the Document Intelligence pricing page (add-on capabilities). It feeds the font consistency check on scanned pages |
 | Azure OpenAI gpt-4.1-mini (Global) | Input / cached input / output | **$0.40 / $0.10 / $1.60 per 1M tokens**; Batch API half price (not usable for this interactive pipeline) |
 | Container Registry | Basic | $0.1666/day (≈ $5/month) |
 | Key Vault | Standard operations | $0.0396 per 10,000 |
-| Log Analytics | Analytics Logs ingestion (first 5 GB/month free) | $3.29/GB; Basic Logs $0.66/GB |
+| Log Analytics | Analytics Logs ingestion (first 5 GB/month free) | $3.29/GB |
 | Azure Monitor alerts | Log alert at 5-minute frequency | $1.50/month each |
-| Front Door Standard (optional) | Base fee + requests/data | $35/month + usage |
+| Front Door Standard (optional, not in the estimate) | Base fee + requests/data | $35/month + usage |
+| NAT Gateway (optional, not in the estimate) | Gateway + static IP + data | ≈ $33/month + $0.045/GB |
+| Azure Bastion Standard (on demand only, not in the estimate) | Per hour while it exists | ≈ $0.29/hour (≈ $210/month if left running) |
 | Bandwidth | Internet egress | First 100 GB/month free, then $0.075–0.12/GB |
 
 ### AI cost per document (measured)
@@ -152,50 +166,84 @@ Arabic sample documents):
 | Issuer semantic match | document, only if fuzzy match fails (assumed always) | 400 | 126 |
 | Signature comparison | on demand only | 1,055 | 47 |
 
-| Document size | Azure OpenAI | Document Intelligence | **AI cost per document** |
-|---|---:|---:|---:|
-| 1 page | $0.0076 | $0.0100 | **$0.018** |
-| 2 pages | $0.0105 | $0.0200 | **$0.031** |
-| 3 pages | $0.0134 | $0.0300 | **$0.043** |
-| 5 pages | $0.0192 | $0.0500 | **$0.069** |
+| Document size | Azure OpenAI | Document Intelligence layout | Font add-on (to confirm) | **AI cost per document** |
+|---|---:|---:|---:|---:|
+| 1 page | $0.0076 | $0.0100 | $0.006 | **$0.024** |
+| 2 pages | $0.0105 | $0.0200 | $0.012 | **$0.043** |
+| 3 pages | $0.0134 | $0.0300 | $0.018 | **$0.061** |
+| 5 pages | $0.0192 | $0.0500 | $0.030 | **$0.099** |
 
-Document Intelligence (per page) is the larger part; Azure OpenAI is ~1 cent per document.
+Document Intelligence (per page) is the larger part; Azure OpenAI is ~1 cent per document. Without the font
+add-on (`AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT=false`) a 2-page document costs $0.031, but scanned pages then
+get no font consistency check (fonts on scans are left to the visual review).
 
 ### Monthly estimate per tier (2-page documents)
 
 | | **S — Pilot** | **M — Production** | **L — Scale** |
 |---|---:|---:|---:|
-| Container Apps (all apps, always-active rate) | $231 | $684 | $1,394 |
-| PostgreSQL | $67 | $352 | $775 |
-| Managed Redis | $53 | $106 | $136 |
+| Container Apps (range: see below) | $75–130 | $180–300 | $730–1,180 |
+| PostgreSQL | $67 | $176 (no HA) | $775 (HA) |
+| Managed Redis | $53 | $53 (no HA) | $136 (HA) |
 | Blob Storage | $1 | $4 | $19 |
 | Container Registry, Key Vault | $6 | $9 | $21 |
-| Log Analytics + alerts | $12 | $87 | $252 |
-| Front Door Standard (optional) | — | $40 | $40 |
-| **Infrastructure** | **≈ $369** | **≈ $1,283** | **≈ $2,636** |
-| Document Intelligence | $60 | $400 | $2,000 |
+| Log Analytics + alerts | $10 | $10–15 | $25–60 |
+| **Infrastructure** | **≈ $210–265** | **≈ $430–555** | **≈ $1,705–2,190** |
+| Document Intelligence layout | $60 | $400 | $2,000 |
+| Document Intelligence font add-on (to confirm) | $36 | $240 | $1,200 |
 | Azure OpenAI | $32 | $210 | $1,051 |
-| **AI (usage-based)** | **≈ $92** | **≈ $610** | **≈ $3,051** |
-| **Total per month** | **≈ $460** | **≈ $1,893** | **≈ $5,687** |
-| Per document | ≈ $0.15 | ≈ $0.095 | ≈ $0.057 |
+| **AI (usage-based)** | **≈ $128** | **≈ $850** | **≈ $4,251** |
+| **Total per month** | **≈ $340–395** | **≈ $1,280–1,405** | **≈ $5,955–6,440** |
+| Per document | ≈ $0.11–0.13 | ≈ $0.064–0.070 | ≈ $0.060–0.064 |
 
-How the figures were computed (`costs.py`-style model, 730 h/month): every container is billed at the
-**active** rate (an upper bound — a replica sitting at its minimum count with < 0.01 vCPU is billed the idle
-vCPU rate, which can cut a quiet pilot's Container Apps bill by half or more); Blob assumes ~0.5 MB per
-document retained plus ~4 writes and ~40 reads per document; log volume S 8 GB, M 30 GB, L 80 GB per
-month. Not included: VAT, support plans, Defender for Cloud, Front Door Premium/WAF, egress beyond 100 GB,
-signature comparisons, development/staging environments (a staging copy of tier S costs about the
-same as tier S).
+The previous design (always-active billing, HA on M, 2 forensics + 2 API replicas always on, Front Door,
+30 GB of logs) estimated infrastructure at $369 / $1,283 / $2,636. The changes above cut it by 28–43 % /
+57–66 % / 17–35 %. The AI line grew only because the font add-on is now counted.
 
-### Ways to reduce cost
+How the figures were computed (730 h/month):
 
-- **PostgreSQL reserved capacity:** 1-year reservation ≈ 40 % off compute (M: −$127/month, L: −$254).
+- **Container Apps, low end:** replicas sitting at their minimum with no work are billed the **idle** vCPU
+  rate (Azure applies it automatically when a replica uses < 0.01 vCPU and serves no requests; a Celery worker
+  waiting on Redis normally qualifies). Activity assumed: web/API active 30 % of the month (working hours),
+  extraction/vision active 15 % (M) / 60 % (L) of the time, forensics billed only while it has work (scale to
+  zero; tier L ~1 replica on average), beat idle. **Memory is always billed in full.**
+- **Container Apps, high end:** the same, but web, API, extraction, vision and beat billed at the active rate
+  all month (in case Azure does not treat the idle workers as idle).
+- **Logs:** the app's own log volume is small (a few lines per task, one metrics line per queue per minute),
+  so S/M most likely stay within the free 5 GB/month; the workspace gets a 1 GB/day cap as a guard. Alerts
+  ~$8/month.
+- Blob assumes ~0.5 MB per document retained plus ~4 writes and ~40 reads per document.
+- Not included: VAT, support plans, Defender for Cloud, Front Door, NAT Gateway, Bastion, egress beyond
+  100 GB, signature comparisons, staging (a staging copy of tier S, paused when unused, costs well under tier S).
+- **Check it after the first month** in Cost Management (filter by tag `app=fddt`), and adjust the
+  replica sizes to what the apps really use.
+
+### Cost levers
+
+**Already applied in this design**
+
+| Lever | Effect |
+|---|---|
+| Idle billing + forensics scale-to-zero (S/M), housekeeping jobs on their own queue | Most of the Container Apps saving |
+| `fddt-api` minimum 1 replica on M (autoscale to 4); rolling updates still cause no downtime | ≈ −$25–80/month |
+| PostgreSQL and Redis without HA on M at launch | −$176 and −$53/month (re-enable when the client needs 99.99 %) |
+| Sign-in throttling in the app (Redis) instead of a Front Door WAF | −$35+/month |
+| Logs kept in the normal (Analytics) tier but small, with a 1 GB/day cap. *Basic Logs* are not used: the alert rules read the same table, and Basic tables can't drive them | −$60–200/month vs. the old estimate |
+| NAT Gateway only if someone must allow-list our outbound IP; Bastion created only for admin sessions, then deleted | Avoids $33 and $210/month |
+
+**Later, once usage is known**
+
+- **PostgreSQL 1-year reservation** after 1–2 months on a stable size: ≈ 40 % off compute (M without HA:
+  −$63/month; L: −$254). It is a commitment, paid even if you resize or delete.
 - **Document Intelligence commitment tier** once volume is steady: at 200k pages/month (tier L), the
   100k-page commitment ($900) + 100k overage at $9/1k = $1,800 instead of $2,000.
-- **Logs:** send container console logs to **Basic Logs** ($0.66/GB) and keep only the alerting tables
-  (`queue_alert`, errors) in Analytics; set retention to 30 days.
-- **Pilot:** scale the web/API/beat apps to their minimum, let workers idle at the idle rate, and use
-  Managed Redis without HA.
+- **Font add-on:** confirm its price. If the font consistency check on scanned pages is not worth it, set
+  `AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT=false` (−$12 per 1,000 two-page documents).
+- **Right-size extraction/vision** after a few weeks of real metrics: 0.5 vCPU / 1 GiB each saves
+  ≈ $8–40/month per app.
+- **Azure savings plan for compute**: check whether it covers Container Apps consumption in the client's
+  agreement (≈ 15 % off).
+- **Staging:** stop its PostgreSQL server (`az postgres flexible-server stop`; not billed for compute while
+  stopped, up to 7 days at a time) and scale its apps to zero when unused.
 - Keep pages per document honest: the cost scales with pages, and every page is OCR'd and reviewed twice.
 
 ## 4. Deployment steps
@@ -254,10 +302,10 @@ The frontend image is built with the default `VITE_API_BASE_URL=/api`; nginx pro
 ```bash
 az postgres flexible-server create -g $RG -n $PREFIX-pg -l $LOC --version 16 \
   --tier GeneralPurpose --sku-name Standard_D2ds_v5 --storage-size 128 \
-  --high-availability ZoneRedundant \
   --vnet $PREFIX-vnet --subnet pg --private-dns-zone $PREFIX-pg.private.postgres.database.azure.com \
   --admin-user fddtowner --admin-password '<OWNER_PASSWORD>' --backup-retention 35
-# Tier S instead: --tier Burstable --sku-name Standard_B2s --storage-size 64 (no --high-availability)
+# Tier S instead: --tier Burstable --sku-name Standard_B2s --storage-size 64
+# Tier L (or M once the client wants 99.99 %): add --high-availability ZoneRedundant
 
 az postgres flexible-server db create -g $RG -s $PREFIX-pg -d fddt
 # Built-in PgBouncer (General Purpose / Memory Optimized only — NOT available on Burstable)
@@ -280,9 +328,9 @@ az postgres flexible-server parameter set -g $RG -s $PREFIX-pg -n metrics.pgboun
 
 ```bash
 az redisenterprise create -g $RG -n $PREFIX-redis -l $LOC --sku Balanced_B0 \
-  --clustering-policy NoCluster --high-availability Enabled \
+  --clustering-policy NoCluster --high-availability Disabled \
   --public-network-access Disabled --access-keys-authentication Enabled
-# Tier S: --high-availability Disabled. Tier L: --sku Balanced_B3
+# Tier L: --sku Balanced_B3 --high-availability Enabled
 az network private-endpoint create -g $RG -n $PREFIX-redis-pe --vnet-name $PREFIX-vnet --subnet pe \
   --private-connection-resource-id $(az redisenterprise show -g $RG -n $PREFIX-redis --query id -o tsv) \
   --group-id redisEnterprise --connection-name redis
@@ -434,10 +482,11 @@ az containerapp create -g $RG -n fddt-worker-extraction --environment $PREFIX-en
 az containerapp create -g $RG -n fddt-worker-vision --environment $PREFIX-env --image $IMG \
   --cpu 1 --memory 2Gi --min-replicas 1 --max-replicas 1 --command sh --args start-worker.sh vision --env-vars <…>
 az containerapp create -g $RG -n fddt-worker-forensics --environment $PREFIX-env --image $IMG \
-  --cpu 2 --memory 4Gi --min-replicas 2 --max-replicas 2 --command sh --args start-worker.sh forensics --env-vars <…>
+  --cpu 2 --memory 4Gi --min-replicas 0 --max-replicas 4 --command sh --args start-worker.sh forensics --env-vars <…>
+# (scale-to-zero needs the KEDA Redis rules on forensics_queue — see the runbook, step 15.2)
 # Beat — exactly one
 az containerapp create -g $RG -n fddt-beat --environment $PREFIX-env --image $IMG \
-  --cpu 0.25 --memory 0.5Gi --min-replicas 1 --max-replicas 1 --command sh --args start-beat.sh --env-vars <…>
+  --cpu 0.5 --memory 1Gi --min-replicas 1 --max-replicas 1 --command sh --args start-beat.sh --env-vars <…>
 # Web — the only public app
 az containerapp create -g $RG -n fddt-web --environment $PREFIX-env \
   --image ${PREFIX}acr.azurecr.io/fddt-web:<version> --ingress external --target-port 80 \
@@ -496,6 +545,8 @@ Or put Front Door Standard in front (managed certificate on Front Door, origin =
 | Worker errors | `ContainerAppConsoleLogs_CL \| where ContainerAppName_s startswith "fddt-worker" and Log_s has_any ("ERROR", "Traceback")` | > 5 in 15 min |
 | Database permission errors | `… Log_s has "permission denied"` | any (a write needs a grant the app role lacks) |
 | Azure throttling | `… Log_s has "429"` | > 10 in 15 min — raise TPM or lower the caps |
+| Stuck documents re-queued | `… Log_s has "stuck_documents_requeued"` | any — Redis lost queued tasks (restart/outage); the documents were queued again automatically |
+| Sign-in lockouts | `… Log_s has "login_lockout"` | > 10 in 15 min (password guessing) |
 | Failed documents | `audit_log` events `document_processing_failed` / `*_failed` (query through the platform audit log) | review daily |
 | PostgreSQL | CPU > 80 %, storage > 80 %, `client_connections_waiting` (PgBouncer) > 0 for 5 min | |
 | Redis | Used memory > 70 %, server load > 80 % | |
@@ -508,9 +559,9 @@ Or put Front Door Standard in front (managed certificate on Front Door, origin =
 
 | Data | Protection | Restore |
 |---|---|---|
-| PostgreSQL | Automatic backups, 35-day point-in-time restore; zone-redundant HA (M/L) fails over automatically | PITR to a new server, repoint `DATABASE_URL` / pooler host |
+| PostgreSQL | Automatic backups, 35-day point-in-time restore; zone-redundant HA (L; M once enabled) fails over automatically; without HA a zone outage means a restore | PITR to a new server, repoint `DATABASE_URL` / pooler host |
 | Blob Storage | ZRS; enable **soft delete** (14 days) and **versioning** for defence in depth (the app never deletes or overwrites) | Undelete / previous version |
-| Redis | Holds only queued tasks, fair-share counters and rate-limiter windows | A lost broker loses queued tasks: affected documents stay `pending` — re-upload them (there is no sweeper yet) |
+| Redis | Holds only queued tasks, fair-share counters, sign-in throttle and rate-limiter windows | A lost broker loses queued tasks; the stuck-document job queues the affected documents again within ~15 minutes (checks of documents whose extraction had already finished are not re-run) |
 | Configuration | Key Vault (soft delete + purge protection on) and the image tags | Redeploy |
 
 Recovery objectives with tier M as designed: RPO ≈ 5 minutes (PostgreSQL log backups), RTO ≈ 1 hour
@@ -536,7 +587,8 @@ Recovery objectives with tier M as designed: RPO ≈ 5 minutes (PostgreSQL log b
 - [ ] `DATABASE_URL` ends in `?sslmode=require`; tiers M/L connect through the built-in PgBouncer (6432).
 - [ ] Redis is Non-Clustered and both Celery URLs use `/0` over `rediss://`.
 - [ ] gpt-4.1-mini Global Standard deployment uses the free capacity (no quota request); the app caps at 80 % of it.
-- [ ] Exactly one `fddt-beat` replica.
+- [ ] Exactly one `fddt-beat` replica (beat + the `housekeeping_queue` worker).
+- [ ] HA decision for PostgreSQL and Redis recorded with the client (tier M launches without HA).
 - [ ] Blob container private, anonymous access off, CORS limited to the app origin, soft delete on.
 - [ ] Only `fddt-web` has public ingress.
 - [ ] Alerts from section 5 created and routed to an on-call address.
@@ -545,9 +597,11 @@ Recovery objectives with tier M as designed: RPO ≈ 5 minutes (PostgreSQL log b
 - [ ] A full browser walkthrough of every role (submitter, Reviewer L1, Reviewer L2, platform admin).
 
 **Known gaps to accept or schedule** (from [azure-migration-notes.md](azure-migration-notes.md))
-- No login rate limiting or lockout, no password reset, tokens in `localStorage`.
+- No forgot-password flow (users change their own password; admins reset others), tokens in `localStorage`.
+  Sign-in throttling exists (per address and per IP).
 - No malware scan and no page-count limit on uploads (type, size, corruption and password are checked).
-- No automatic retry of a failed Azure call and no sweeper for documents left `pending`.
+- No automatic retry of a failed Azure call. (Documents whose queued tasks were lost are re-queued by the
+  stuck-document job.)
 - Keys and connection strings, not managed identity, for Storage / Document Intelligence / OpenAI.
 
 ## Sources

@@ -48,8 +48,9 @@ These are pre-deployment blockers found while documenting, not deployment tasks 
    for the app origin (the PDF viewer reads SAS URLs directly).
 4. **JWT hardening.** Change `JWT_SECRET_KEY`; consider shorter lifetimes, refresh tokens, and server-side
    revocation (there is no logout or password reset endpoint). Tokens in `localStorage` are exposed to XSS.
-5. **Login abuse.** No rate limiting or lockout on `POST /auth/login`; no password policy beyond
-   "8+ characters" on admin-created accounts.
+5. ~~**Login abuse.** No rate limiting or lockout on `POST /auth/login`~~ — **fixed**: sign-in throttling
+   in Redis (`services/login_throttle.py`): 5 failed attempts lock an email address for 15 minutes, 20
+   attempts per IP per minute, both answering 429. Still: no password policy beyond 8+ characters.
 6. **Issuer registry.** Each company's registry starts empty (the migrated "Default Company" has fake test
    issuers); load the client's real data, or most documents will fail issuer verification.
 7. **Upload limits.** PDF only (by header bytes), per-company size limits (10 MB / 300 MB zip by default,
@@ -58,8 +59,11 @@ These are pre-deployment blockers found while documenting, not deployment tasks 
    must cover the largest limit any company is given. Still missing: a
    page-count limit, a malware scan (e.g. Defender for Storage malware scanning) and a Blob
    lifecycle/quarantine policy.
-8. **Stuck-work recovery.** If Redis is down at upload time the document stays `pending` forever; there
-   is no sweeper or retry. Add a periodic reconciliation task.
+8. ~~**Stuck-work recovery.**~~ — **fixed**: a failed publish no longer fails the upload, and the
+   `requeue_stuck_documents` job (every 5 minutes, `tasks/stuck_documents_task.py`) re-queues documents left
+   `pending`/`processing` while the extraction queue is idle, up to 3 times, then marks them failed. Not
+   covered: checks lost for a document whose extraction had already finished. Failed Azure calls are still
+   not retried automatically.
 9. **Observability.** Python `logging`, the audit log, the queue monitor and the per-minute
    `queue_metrics` / `queue_alert` log lines exist. Ship container logs to Log Analytics and create the
    alerts in [production-deployment.md](production-deployment.md#monitoring-and-alerts); Application
@@ -91,7 +95,7 @@ These are pre-deployment blockers found while documenting, not deployment tasks 
 
 1. Follow [production-deployment.md](production-deployment.md) section 4 (network, registry, PostgreSQL,
    Redis, Storage, AI resources, Key Vault, environment, migration job, apps, domain).
-2. Work through the blockers above that apply (login abuse, JWT hardening, stuck-work recovery).
+2. Work through the blockers above that still apply (JWT hardening, upload malware scan).
 3. Add CI/CD (suggested stages: `oxlint`, `tsc -b`, `pytest` incl. the Postgres RLS suite, build images,
    run the migration job, roll the apps) and infrastructure-as-code (Bicep/Terraform) for the resources.
 4. Load real issuer data, tune risk weights on real cases, and validate the weak signals (ELA, signature

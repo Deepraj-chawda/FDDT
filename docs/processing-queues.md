@@ -11,8 +11,27 @@
   |---|---|---|---|
   | `extraction_queue` | `process_document` (Document Intelligence layout **+ the Azure OpenAI classification call**) | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` (10; Azure allows 15) — and, for the classification call, the Azure OpenAI caps | threads |
   | `vision_queue` | visual review, signature detection/comparison, field validation + issuer check | `AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE`, `AZURE_OPENAI_MAX_TOKENS_PER_MINUTE` | threads |
-  | `forensics_queue` (+ legacy `celery`) | metadata forensics, ELA/copy-move/ghost text, duplicate hashing, cross-document check, risk scoring, housekeeping | **nothing** — local CPU (exception: when the ghost-content check finds a deleted text block — rare — it makes a few Document Intelligence Read and Azure OpenAI calls for the reviewer's hint, through the same global rate limiters) | **prefork**, one process per CPU of the container |
+  | `forensics_queue` (+ legacy `celery`) | metadata forensics, ELA/copy-move/ghost text, duplicate hashing, cross-document check, risk scoring, bulk-zip ingestion | **nothing** — local CPU (exception: when the ghost-content check finds a deleted text block — rare — it makes a few Document Intelligence Read and Azure OpenAI calls for the reviewer's hint, through the same global rate limiters) | **prefork**, one process per CPU of the container |
 
+  Platform jobs run on a fourth, separate **`housekeeping_queue`**: `log_queue_metrics` (every minute),
+  `requeue_stuck_documents` (every 5 minutes) and `reconcile_usage_stats` (nightly). Its only consumer is
+  the beat container (`start-beat.sh`: beat + one `solo` worker slot). Because the every-minute job no
+  longer lands on `forensics_queue`, the forensics workers see work only when documents arrive, so they can
+  **scale to zero** when idle (KEDA on the forensics lists, `minReplicas: 0`; a Redis list-length scaler
+  activates on the first waiting task). `housekeeping_queue` is not one of the three processing queues in
+  the monitor.
+- **Stuck-document recovery** (`app/tasks/stuck_documents_task.py`). Queued tasks live only in Redis. If
+  Redis restarts without its data, or is unreachable at upload time (`enqueue_document_pipeline` then logs
+  and returns instead of failing the upload; the document is already stored), a document would stay
+  `pending` (or `processing`) forever. Every 5 minutes, **only while the extraction queue is empty and
+  idle**, the job re-queues the whole pipeline for documents `pending` > `STUCK_DOCUMENT_PENDING_MINUTES`
+  (10) or `processing` with no update for > `STUCK_DOCUMENT_PROCESSING_MINUTES` (30). A document's first task
+  is `process_document` on the extraction queue, so an empty, idle extraction queue means that task is not
+  coming; a long backlog therefore never causes duplicate work. Each re-queue writes a `document_requeued`
+  audit row; after `STUCK_DOCUMENT_MAX_REQUEUES` (3) the document is marked `failed` with an explanation.
+  Re-running is safe because every step writes idempotently (below). The run logs a WARNING
+  `stuck_documents_requeued {json}` line when it acted. Not covered: a document whose extraction finished
+  but whose other queued checks were lost; those checks stay missing until the document is re-uploaded.
 - **Fair-share per company** (`app/tasks/fairshare.py`). Each task is published with a priority computed
   from how much work *its company* already has outstanding (queued + running) on that queue:
   `priority = min(9, outstanding // FAIR_SHARE_BUCKET_SIZE)` (bucket default 5). Celery's Redis transport

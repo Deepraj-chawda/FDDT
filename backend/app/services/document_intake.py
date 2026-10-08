@@ -17,6 +17,7 @@ never picks up a document id it can't see yet.
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -27,6 +28,8 @@ from app.models.document import Document
 from app.services.audit_service import record_event
 from app.services.storage_service import StorageService, document_blob_path
 from app.services.usage_service import record_document_uploaded
+
+logger = logging.getLogger("fddt.intake")
 
 
 @dataclass(frozen=True)
@@ -101,13 +104,32 @@ def record_document(
     return document
 
 
-def enqueue_document_pipeline(document_id: uuid.UUID, company_id: uuid.UUID) -> None:
+def enqueue_document_pipeline(document_id: uuid.UUID, company_id: uuid.UUID) -> bool:
     """One independent task per (document, step), each carrying the company
     so the worker opens a session confined to it and the publish gets a
     fair-share priority (app/tasks/fairshare.py). Every step lands on the
     queue for the service it depends on (extraction / vision / forensics —
     app/tasks/celery_app.py); nothing processes a whole case or batch inside
-    one task. Call only after the document row has been committed."""
+    one task. Call only after the document row has been committed.
+
+    Never raises: the document is already stored and recorded, so a broker
+    outage must not turn the upload into an error. Returns False when the
+    tasks could not be published; the document then stays `pending` and the
+    stuck-document job (app/tasks/stuck_documents_task.py) queues it again
+    once the broker is back."""
+    try:
+        _publish_pipeline(document_id, company_id)
+        return True
+    except Exception:  # noqa: BLE001 - broker unreachable / publish failed
+        logger.exception(
+            "could not queue the pipeline for document %s; it stays pending and is retried "
+            "by the stuck-document job",
+            document_id,
+        )
+        return False
+
+
+def _publish_pipeline(document_id: uuid.UUID, company_id: uuid.UUID) -> None:
     # Imported here: the task modules import services, and this module is
     # itself imported by a task (bulk ingestion).
     from app.tasks.document_processing import process_document
