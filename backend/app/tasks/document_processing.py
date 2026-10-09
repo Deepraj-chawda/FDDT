@@ -31,8 +31,9 @@ from app.services.extraction_service import classify_and_extract
 from app.services.multi_invoice import extract_invoices
 from app.services.field_locator_service import attach_field_locations
 from app.services.forensics.font_consistency import analyze_font_consistency
+from app.services.forensics.spelling import analyze_spelling
 from app.services.line_item_parsing import enrich_extracted_fields
-from app.services.llm_service import get_llm_service
+from app.services.llm_service import LLMConfigurationError, get_llm_service
 from app.services.ocr_service import OCRPage, get_ocr_service
 from app.services.risk_scoring_service import request_case_scoring
 from app.services.storage_service import get_storage_service_for_task
@@ -66,6 +67,33 @@ def _detected_signature_regions(db, document: Document) -> list[dict]:
     return list((details or {}).get("detected") or []) if isinstance(details, dict) else []
 
 
+def _store_outcome(
+    db, document: Document, check_type: DocumentCheckType, event: str, *,
+    result: dict | None = None, error: Exception | None = None, finding: str = "",
+) -> None:
+    """Store a best-effort check's row and audit event inside a SAVEPOINT: a
+    database error here (e.g. the check type not yet migrated into the enum)
+    rolls back only these writes and leaves the extraction's own transaction
+    usable. A failure to record even the failed row is dropped — the check is
+    best effort, the extraction must still complete."""
+    if error is None and result is not None:
+        status, kwargs = DocumentCheckStatus.completed, {"result": result}
+        findings = [d for d in result["details"] if d["finding"] == finding]
+        event_type, event_data = f"{event}_completed", {"result": result["result"], "finding_count": len(findings)}
+    else:
+        message = str(error)[:_ERROR_MESSAGE_MAX_LENGTH]
+        status, kwargs = DocumentCheckStatus.failed, {"error_message": message}
+        event_type, event_data = f"{event}_failed", {"error": message}
+    try:
+        with db.begin_nested():
+            save_check(db, document=document, check_type=check_type, status=status, **kwargs)
+            record_event(db, event_type, case_id=document.case_id, document_id=document.id, event_data=event_data)
+    except Exception as exc:  # noqa: BLE001
+        if error is not None:
+            return  # could not even record the failure; nothing more to do
+        _store_outcome(db, document, check_type, event, error=exc)
+
+
 def _run_font_consistency(db, document: Document, pdf_bytes: bytes | None, ocr_pages: list[OCRPage]) -> None:
     """The font consistency check (app/services/forensics/font_consistency.py).
     Runs here rather than as its own task because scanned pages need this
@@ -77,36 +105,42 @@ def _run_font_consistency(db, document: Document, pdf_bytes: bytes | None, ocr_p
         if pdf_bytes is None:
             raise RuntimeError("The PDF could not be downloaded for the font consistency check.")
         result = analyze_font_consistency(pdf_bytes, ocr_pages)
-        save_check(
-            db,
-            document=document,
-            check_type=DocumentCheckType.font_consistency,
-            status=DocumentCheckStatus.completed,
-            result=result,
-        )
-        findings = [d for d in result["details"] if d["finding"] == "font_inconsistency"]
-        record_event(
-            db,
-            "font_consistency_completed",
-            case_id=document.case_id,
-            document_id=document.id,
-            event_data={"result": result["result"], "finding_count": len(findings)},
+    except Exception as exc:  # noqa: BLE001
+        _store_outcome(db, document, DocumentCheckType.font_consistency, "font_consistency", error=exc)
+        return
+    _store_outcome(
+        db, document, DocumentCheckType.font_consistency, "font_consistency",
+        result=result, finding="font_inconsistency",
+    )
+
+
+def _run_spelling_check(
+    db, document: Document, pdf_bytes: bytes | None, ocr_pages: list[OCRPage], extracted_fields: dict
+) -> None:
+    """The spelling check (app/services/forensics/spelling.py), English and
+    Arabic. Runs here because it needs this task's OCR words and extracted
+    fields; for every document, PDF or image. Best effort: a failure is
+    stored as a failed check, never fails the extraction."""
+    try:
+        try:
+            judge = get_llm_service().judge_spelling
+        except LLMConfigurationError:
+            judge = None
+        result = analyze_spelling(
+            ocr_pages,
+            extracted_fields=extracted_fields,
+            document_type=document.document_type,
+            pdf_bytes=pdf_bytes,
+            signature_regions=_detected_signature_regions(db, document),
+            judge=judge,
         )
     except Exception as exc:  # noqa: BLE001
-        save_check(
-            db,
-            document=document,
-            check_type=DocumentCheckType.font_consistency,
-            status=DocumentCheckStatus.failed,
-            error_message=str(exc)[:_ERROR_MESSAGE_MAX_LENGTH],
-        )
-        record_event(
-            db,
-            "font_consistency_failed",
-            case_id=document.case_id,
-            document_id=document.id,
-            event_data={"error": str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]},
-        )
+        _store_outcome(db, document, DocumentCheckType.spelling_consistency, "spelling_check", error=exc)
+        return
+    _store_outcome(
+        db, document, DocumentCheckType.spelling_consistency, "spelling_check",
+        result=result, finding="spelling_error",
+    )
 
 
 @celery_app.task(name="process_document")
@@ -189,6 +223,7 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
             # Before the document is marked complete, so the case is never
             # scored without it.
             _run_font_consistency(db, document, pdf_bytes, ocr_result.pages)
+            _run_spelling_check(db, document, pdf_bytes, ocr_result.pages, extracted_fields)
             from app.services.check_store import sanitize_null_bytes
 
             document.extracted_fields = sanitize_null_bytes(extracted_fields)

@@ -39,6 +39,10 @@ transitions==0.9.3
 pikepdf==10.13.0.post1
 pymupdf==1.28.2
 
+# --- Spelling check, English + Arabic word-frequency dictionaries
+# (app/services/forensics/spelling.py) ---
+pyspellchecker==0.8.3
+
 # --- Image forensics (ELA + copy-move detection — app/services/
 # forensics/ela.py, copy_move.py, pdf_render.py). Headless build: this
 # runs on a server/worker with no display, and the regular opencv-python

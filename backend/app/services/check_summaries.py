@@ -302,6 +302,36 @@ def _ghost(findings: list[dict]) -> tuple[list[Item], list[str]]:
     return items, notes
 
 
+def _spelling(findings: list[dict]) -> tuple[list[Item], list[str]]:
+    """One item per misspelled word (its repeats grouped), with the correction."""
+    groups: dict[tuple, list[dict]] = {}
+    for f in findings:
+        if f.get("finding") == "spelling_error":
+            d = f.get("data") or {}
+            # "Recieved" and "recieved" are one word.
+            groups.setdefault((str(d.get("text")).casefold(), str(d.get("correction")).casefold()), []).append(f)
+    items = []
+    for group in groups.values():
+        text, correction = (group[0].get("data") or {}).get("text"), (group[0].get("data") or {}).get("correction")
+        pages = sorted({f.get("page") for f in group if f.get("page")})
+        language = "Arabic" if (group[0].get("data") or {}).get("language") == "ar" else "English"
+        where = f", {_pages(pages)}" if pages else ""
+        times = f" ×{len(group)}" if len(group) > 1 else ""
+        items.append(_item(_worst(group), "Misspelled word",
+                           f"{_quote(text)} → {_quote(correction)}{times} ({language}){where}", group))
+    notes = []
+    scope = next((f for f in findings if f.get("finding") == "spelling_scope"), None)
+    if scope is not None:
+        d = scope.get("data") or {}
+        set_aside = [s.get("word") for s in d.get("set_aside") or [] if isinstance(s, dict)]
+        if set_aside:
+            notes.append(f"Unknown to the dictionary but judged not misspelled (names, variants, terms): "
+                         f"{_values([_shorten(w, 20) for w in set_aside], 6)}")
+        if d.get("unconfirmed"):
+            notes.append(_clean(scope.get("description")))
+    return items, notes
+
+
 def _ela(check_type: str, findings: list[dict]) -> tuple[list[Item], list[str]]:
     items: list[Item] = []
     for f in findings:
@@ -570,6 +600,19 @@ def summarize_check(
                 headline = f"Not applicable — {why}"
             elif not items:
                 headline = f"Converted {_pages((scope.get('data') or {}).get('pages'))} searched — nothing deleted or shortened"
+        elif check_type == "spelling_consistency":
+            items, notes = _spelling(findings)
+            scope = next((f for f in findings if f.get("finding") == "spelling_scope"), {})
+            checked = (scope.get("data") or {}).get("words_checked", 0)
+            if items:
+                # Low severity, but scored (by a low-weight rule).
+                words = list(dict.fromkeys(i["text"].split(" → ")[0] for i in items))
+                headline = f"{len(items)} misspelled word{'s' if len(items) > 1 else ''}: " + ", ".join(words[:3]) + (
+                    f" +{len(words) - 3} more" if len(words) > 3 else "")
+            elif outcome == "limited":
+                headline = "Limited — unknown words could not be confirmed without the language model"
+            elif outcome == "pass":
+                headline = f"{checked} printed words checked — no misspellings"
         elif check_type in ("error_level_analysis", "copy_move_detection"):
             items, notes = _ela(check_type, findings)
             limited = next((f for f in findings if f.get("finding") == "pixel_analysis_limited"), None)
@@ -654,6 +697,7 @@ RULE_TITLES = {
     "font.inconsistency_scanned": "Fonts: odd font on the scan",
     "content.deleted_ghost_block": "Text deleted after conversion",
     "content.replaced_ghost_line": "Line shortened after conversion",
+    "content.spelling_error": "Misspelled words",
     "metadata.pdf_unreadable": "Unreadable PDF",
     "metadata.stripped": "Metadata stripped",
     "metadata.editing_software_detected": "Image editor used",

@@ -81,6 +81,7 @@ const OVERLAY_COLOR_BY_CHECK_TYPE: Partial<Record<DocumentCheck["check_type"], O
   visual_inconsistency_review: "ai",
   font_consistency: "font",
   ghost_content: "ghost",
+  spelling_consistency: "spelling",
 }
 
 // Ghost-content findings that are only notes (the pages searched, a trace

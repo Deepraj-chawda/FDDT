@@ -281,6 +281,24 @@ class ErasedContentGuess(BaseModel):
     confidence: str  # "low" | "medium" | "high"
 
 
+class SpellingVerdict(BaseModel):
+    """The model's judgment of one word the dictionary pass did not know
+    (app/services/forensics/spelling.py). Only `misspelling` is flagged."""
+
+    id: int
+    reasoning: str
+    verdict: Literal[
+        "misspelling", "valid_word", "valid_variant", "proper_noun", "abbreviation_or_code",
+        "transliteration_or_foreign", "ocr_misread", "unsure",
+    ]
+    correction: str
+    confidence: Literal["low", "medium", "high"]
+
+
+class SpellingJudgment(BaseModel):
+    verdicts: list[SpellingVerdict]
+
+
 class LLMConfigurationError(RuntimeError):
     """Raised when the LLM backend is missing required configuration."""
 
@@ -340,6 +358,13 @@ class LLMService(ABC):
         reviewer's hint only. Not abstract: a backend without vision simply
         has no guess."""
         raise LLMConfigurationError("This LLM backend cannot read images.")
+
+    def judge_spelling(self, document_type: str, candidates: list[dict[str, Any]]) -> "SpellingJudgment":
+        """Judge words a dictionary did not know — each {id, word, language,
+        context, suggestions} — as a real misspelling or not (a name, an
+        abbreviation, a valid variant, an OCR misread...). Not abstract: a
+        backend without it simply cannot confirm any misspelling."""
+        raise LLMConfigurationError("This LLM backend cannot judge spelling.")
 
     @abstractmethod
     def detect_signatures_stamps(self, image_data_uri: str) -> "PageSignatureDetection":
@@ -697,6 +722,42 @@ def _erased_content_json_schema() -> dict[str, Any]:
     }
 
 
+def _spelling_json_schema() -> dict[str, Any]:
+    """`reasoning` before `verdict` — same ordering discipline as
+    _entity_match_json_schema: the model thinks before it commits."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "verdicts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "id": {"type": "integer", "description": "The candidate's id, copied."},
+                        "reasoning": {"type": "string", "description": "One short sentence."},
+                        "verdict": {
+                            "type": "string",
+                            "enum": [
+                                "misspelling", "valid_word", "valid_variant", "proper_noun",
+                                "abbreviation_or_code", "transliteration_or_foreign", "ocr_misread", "unsure",
+                            ],
+                        },
+                        "correction": {
+                            "type": "string",
+                            "description": "The correctly spelled word for a misspelling; empty otherwise.",
+                        },
+                        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+                    },
+                    "required": ["id", "reasoning", "verdict", "correction", "confidence"],
+                },
+            },
+        },
+        "required": ["verdicts"],
+    }
+
+
 def _signature_detection_json_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -945,6 +1006,33 @@ _ERASED_CONTENT_SYSTEM_PROMPT = """You are assisting a human document reviewer. 
 
 Say what the block most likely was, from the trace's own shape (a heading, label/value rows, a paragraph) and its position (e.g. under a fee table, at the foot of the page). Heading and legible_words must come ONLY from image 1, the trace; the page's other text is not part of the block. Read only what is legible: never invent names, numbers or account details, and leave fields empty rather than guess. Confidence "high" only when words in the trace are clearly legible; "low" when the guess rests on layout alone."""
 
+_SPELLING_SYSTEM_PROMPT = """You check the spelling of words read (by OCR) from a business \
+document — an invoice, receipt, school certificate or similar, in English and/or Arabic — for a \
+document-fraud review. Genuine issuers print from proofread templates, so a real misspelling of an \
+ordinary word ("Certifcate", "Univeristy", "Recieved", "التعليمم") is a sign the document may have \
+been retyped or fabricated. A false alarm wrongly casts doubt on a genuine document, so be strict.
+
+Each candidate is a word a dictionary did not know, with the text around it and the dictionary's \
+nearest suggestions. For each, decide:
+- "misspelling": an ordinary word of the language, clearly misspelled (a letter missing, extra, \
+swapped or wrong). Give the correct spelling in `correction`.
+- "valid_word": correctly spelled (a rare, technical, educational or business word the dictionary lacks).
+- "valid_variant": an accepted variant — British vs American spelling (colour, organisation, \
+enrolment, programme, cheque), or in Arabic: hamza forms (ا / أ / إ / آ), ة vs ه at the end, \
+ى vs ي, a missing or added diacritic or tatweel, a letter joined to a prefix (و، ب، ل، ف، ك، ال).
+- "proper_noun": a person, school, company, street, city or brand name, in any spelling.
+- "abbreviation_or_code": an abbreviation, unit, currency, code, or part of an ID, email or URL.
+- "transliteration_or_foreign": an Arabic word written in Latin letters, an English word written \
+in Arabic letters, or a word of another language.
+- "ocr_misread": the printed word is most likely correct and OCR misread it (rn/m, l/1/I, O/0, \
+cl/d, broken or merged words, dots missing on Arabic letters).
+- "unsure": anything else.
+
+Use "misspelling" only when you are sure a person typed the word wrong — when in doubt, choose \
+another verdict. `confidence` is how sure you are of your verdict. Return one verdict per \
+candidate, with its id."""
+
+
 _SIGNATURE_DETECTION_SYSTEM_PROMPT = """\
 You are assisting a human document reviewer. Look at this business-document page image \
 and locate any handwritten signature and any stamp or seal (company stamp, round seal, \
@@ -1027,6 +1115,9 @@ MAX_TOKENS_VISUAL_REVIEW = 640
 MAX_TOKENS_SIGNATURE_DETECTION = 640
 MAX_TOKENS_SIGNATURE_COMPARISON = 320
 MAX_TOKENS_ERASED_CONTENT = 300
+# Per spelling candidate (a verdict with a one-sentence reason), plus the wrapper.
+MAX_TOKENS_SPELLING_PER_CANDIDATE = 70
+MAX_TOKENS_SPELLING_BASE = 100
 
 _MAX_PATCHES = 1536
 _PATCH = 32
@@ -1402,6 +1493,22 @@ class AzureOpenAILLMService(LLMService):
         )
         try:
             return ErasedContentGuess.model_validate(parsed)
+        except ValueError as exc:
+            raise LLMOperationError(
+                f"Azure OpenAI response did not match the expected schema: {exc}"
+            ) from exc
+
+    def judge_spelling(self, document_type: str, candidates: list[dict[str, Any]]) -> SpellingJudgment:
+        if not candidates:
+            return SpellingJudgment(verdicts=[])
+        user_content = json.dumps({"document_type": document_type, "candidates": candidates}, ensure_ascii=False)
+        parsed = self._chat_json(
+            _SPELLING_SYSTEM_PROMPT, user_content, "spelling_judgment", _spelling_json_schema(),
+            max_tokens=MAX_TOKENS_SPELLING_BASE + MAX_TOKENS_SPELLING_PER_CANDIDATE * len(candidates),
+            temperature=0,
+        )
+        try:
+            return SpellingJudgment.model_validate(parsed)
         except ValueError as exc:
             raise LLMOperationError(
                 f"Azure OpenAI response did not match the expected schema: {exc}"

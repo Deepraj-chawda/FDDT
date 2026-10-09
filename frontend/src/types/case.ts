@@ -229,6 +229,7 @@ export type DocumentCheckType =
   | "visual_inconsistency_review"
   | "font_consistency"
   | "ghost_content"
+  | "spelling_consistency"
   // Not a real backend/app/models/document_check.py row — synthesized in
   // frontend/src/components/case/DocumentChecksPanel.tsx from the case's
   // cross_document_findings (case-level, not per-document) so it reads
@@ -265,6 +266,7 @@ export const DOCUMENT_CHECK_TYPE_LABELS: Record<DocumentCheckType, string> = {
   visual_inconsistency_review: "Visual inconsistency review (experimental)",
   font_consistency: "Font consistency",
   ghost_content: "Deleted / replaced content (ghost text)",
+  spelling_consistency: "Spelling (English)",
   cross_document_consistency: "Cross-document consistency",
 }
 
@@ -492,6 +494,8 @@ export type AuditEventType =
   | "visual_inconsistency_review_failed"
   | "font_consistency_completed"
   | "font_consistency_failed"
+  | "spelling_check_completed"
+  | "spelling_check_failed"
   | "cross_document_check_completed"
 
 // Event labels live in lib/audit.ts (shared with the system Audit History page).

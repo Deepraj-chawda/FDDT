@@ -59,7 +59,7 @@ limitations and the risk rules it feeds.
 3. [Field validation](pipeline/03-field-validation.md)
 4. [Cross-document consistency](pipeline/04-cross-document-consistency.md)
 5. [Issuer verification](pipeline/05-issuer-verification.md)
-6. [Metadata forensics](pipeline/06-metadata-forensics.md) · [6a. Font consistency](pipeline/06a-font-consistency.md)
+6. [Metadata forensics](pipeline/06-metadata-forensics.md) · [6a. Font consistency](pipeline/06a-font-consistency.md) · [6b. Spelling (English)](pipeline/06b-spelling.md)
 7. [ELA & copy-move](pipeline/07-ela-copy-move.md) · [7a. Deleted / replaced content (ghost text)](pipeline/07a-ghost-content.md)
 8. [Visual review & AI-generation](pipeline/08-visual-review-ai-generation.md)
 9. [Signature verification](pipeline/09-signature-verification.md)

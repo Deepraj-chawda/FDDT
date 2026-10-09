@@ -179,7 +179,7 @@ One row per (document, check type) — the latest run of each automated check (e
 - **Index** `ix_document_checks_company_id` on (company_id)
 - **Index** `ix_document_checks_document_id` on (document_id)
 - **Index** `uq_document_checks_document_check_type` on (document_id, check_type) — unique
-- **Enum** `document_check_type`: `ocr_layout`, `classification`, `field_extraction`, `issuer_verification`, `signature_stamp_detection`, `metadata_forensics`, `error_level_analysis`, `copy_move_detection`, `duplicate_detection`, `ai_content_detection`, `field_validation`, `visual_inconsistency_review`, `font_consistency`, `ghost_content`
+- **Enum** `document_check_type`: `ocr_layout`, `classification`, `field_extraction`, `issuer_verification`, `signature_stamp_detection`, `metadata_forensics`, `error_level_analysis`, `copy_move_detection`, `duplicate_detection`, `ai_content_detection`, `field_validation`, `visual_inconsistency_review`, `font_consistency`, `ghost_content`, `spelling_consistency`
 - **Enum** `document_check_status`: `pending`, `running`, `completed`, `failed`
 - **Row-Level Security** on: `platform_all` (ALL to fddt_platform); `tenant_isolation` (ALL to fddt_app)
 - **Grants** `fddt_app`: SELECT, INSERT, UPDATE · `fddt_platform`: SELECT, INSERT, UPDATE, DELETE
@@ -557,7 +557,7 @@ Result of comparing one reference against the signature region of another docume
 | `case_type` | `school_document`, `vendor_invoice`, `commercial_invoice`, `procurement_documentation`, `quotation`, `travel_reimbursement`, `other` |
 | `comparison_scope` | `in_case`, `library` |
 | `document_check_status` | `pending`, `running`, `completed`, `failed` |
-| `document_check_type` | `ocr_layout`, `classification`, `field_extraction`, `issuer_verification`, `signature_stamp_detection`, `metadata_forensics`, `error_level_analysis`, `copy_move_detection`, `duplicate_detection`, `ai_content_detection`, `field_validation`, `visual_inconsistency_review`, `font_consistency`, `ghost_content` |
+| `document_check_type` | `ocr_layout`, `classification`, `field_extraction`, `issuer_verification`, `signature_stamp_detection`, `metadata_forensics`, `error_level_analysis`, `copy_move_detection`, `duplicate_detection`, `ai_content_detection`, `field_validation`, `visual_inconsistency_review`, `font_consistency`, `ghost_content`, `spelling_consistency` |
 | `document_processing_status` | `pending`, `processing`, `complete`, `failed` |
 | `finding_severity` | `info`, `low`, `medium`, `high` |
 | `issuer_registry_type` | `vendor`, `school`, `government`, `other` |

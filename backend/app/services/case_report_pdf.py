@@ -60,12 +60,13 @@ RENDER_DPI = 144  # crisp enough to read, small enough to keep the report light
 
 # Live-UI colours (frontend/src/index.css: --destructive #DC2626, --warning
 # #D97706, --info #2563EB) plus violet for field exceptions, fuchsia for
-# text-layer font mismatches and teal for ghost content (deleted text).
+# text-layer font mismatches, teal for ghost content (deleted text) and sky
+# blue for misspelled words.
 _HEX = {
     "ela": "#DC2626", "copy_move": "#D97706", "model": "#2563EB",
-    "field": "#7C3AED", "font": "#C026D3", "ghost": "#0D9488", "page_level": "#64748B",
+    "field": "#7C3AED", "font": "#C026D3", "ghost": "#0D9488", "spelling": "#0284C7", "page_level": "#64748B",
 }
-_KIND_ORDER = ("ela", "copy_move", "font", "ghost", "field", "model", "page_level")
+_KIND_ORDER = ("ela", "copy_move", "font", "ghost", "spelling", "field", "model", "page_level")
 
 
 def _rgb(hex_colour: str) -> tuple[float, float, float]:
@@ -81,6 +82,7 @@ _STYLE = {
     "field": (_rgb(_HEX["field"]), False),
     "font": (_rgb(_HEX["font"]), False),
     "ghost": (_rgb(_HEX["ghost"]), False),
+    "spelling": (_rgb(_HEX["spelling"]), False),
     "page_level": (_rgb(_HEX["page_level"]), False),
 }
 _KIND_LEGEND = {
@@ -90,6 +92,7 @@ _KIND_LEGEND = {
     "field": "Field exception (solid purple)",
     "font": "Font mismatch in the text layer (solid fuchsia)",
     "ghost": "Ghost text: deleted or shortened content (solid teal)",
+    "spelling": "Misspelled word (solid sky blue)",
     "page_level": "Page-level finding (not localized)",
 }
 

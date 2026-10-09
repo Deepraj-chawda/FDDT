@@ -77,6 +77,7 @@ _FINDING_CHECK_TYPES = {
     "duplicate_detection",
     "visual_inconsistency_review",
     "font_consistency",
+    "spelling_consistency",
 }
 
 # Findings that are deliberately never scored: they are notes DERIVED from

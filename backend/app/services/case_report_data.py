@@ -69,7 +69,8 @@ DASH = "—"
 #   text set in an out-of-place font.
 #   Ghost content (deleted / replaced content check) -> solid teal box around
 #   the faint trace of erased text, shown with the enhanced crop of it.
-AnnotationKind = Literal["ela", "copy_move", "model", "field", "font", "ghost", "page_level"]
+#   Spelling (spelling check) -> solid sky-blue box around a misspelled word.
+AnnotationKind = Literal["ela", "copy_move", "model", "field", "font", "ghost", "spelling", "page_level"]
 
 _MATERIAL_SEVERITIES = ("medium", "high")
 # Notes derived from other checks / explanatory notices — never findings in
@@ -77,6 +78,7 @@ _MATERIAL_SEVERITIES = ("medium", "high")
 _NOTE_FINDINGS = {
     "metadata_forensics_correlation", "experimental_signal_notice", "pixel_analysis_limited",
     "ghost_content_scope", "ghost_show_through", "ghost_near_signature",
+    "spelling_scope",
 }
 
 # Ordered as they appear in each document's checks-summary table:
@@ -107,6 +109,12 @@ CHECK_CATALOG: list[tuple[DocumentCheckType, str, str]] = [
         "Deleted / replaced content (ghost text)",
         "On a scan converted to editable text: faint traces of the original text left in the scanned background, "
         "with no live text on top (deleted) or running on past it (shortened).",
+    ),
+    (
+        DocumentCheckType.spelling_consistency,
+        "Spelling (English)",
+        "Misspelled ordinary words in the printed text: dictionary pass, then a language-model judgment that "
+        "sets aside names, accepted variants, abbreviations and OCR misreads.",
     ),
     (
         DocumentCheckType.visual_inconsistency_review,
@@ -164,6 +172,8 @@ _EVENT_LABELS = {
     "visual_inconsistency_review_completed": "Visual inconsistency review completed",
     "font_consistency_completed": "Font consistency check completed",
     "font_consistency_failed": "Font consistency check failed",
+    "spelling_check_completed": "Spelling check completed",
+    "spelling_check_failed": "Spelling check failed",
     "signature_stamp_detection_completed": "Signature / stamp detection completed",
     "signature_reference_created": "Signature reference set by reviewer",
     "signature_comparison_completed": "Signature comparison completed",
@@ -487,6 +497,13 @@ def _describe_finding(
             f"Ghost text {DASH} deleted content",
             "Deleted / replaced content: text deleted after the scan was converted to editable text",
         )
+    if check_type == DocumentCheckType.spelling_consistency:
+        data = item.get("data") or {}
+        return (
+            "spelling" if located else "page_level",
+            f"Spelling {DASH} '{data.get('text')}' for '{data.get('correction')}'",
+            f"Spelling: '{data.get('text')}' looks misspelled ('{data.get('correction')}')",
+        )
     if check_type == DocumentCheckType.error_level_analysis:
         if located:
             return "ela", f"ELA {DASH} possible tamper region", "ELA: possible tamper region"
@@ -756,6 +773,19 @@ def _summarize_check(check_type: DocumentCheckType, check: DocumentCheck) -> tup
     details = _details(check)
     if result == "not_applicable":
         return "not_applicable", "Not applicable to this document."
+    if check_type == DocumentCheckType.spelling_consistency and isinstance(details, list):
+        found = [d for d in details if isinstance(d, dict)]
+        errors = [d for d in found if d.get("finding") == "spelling_error"]
+        scope = next((d for d in found if d.get("finding") == "spelling_scope"), {})
+        if errors:
+            words = list(dict.fromkeys(
+                f"'{(d.get('data') or {}).get('text')}' ('{(d.get('data') or {}).get('correction')}')" for d in errors
+            ))
+            return "flag", _shorten(f"{len(words)} misspelled word(s): " + ", ".join(words[:5]) + ".", 260)
+        if result == "limited":
+            return "limited", _shorten(str(scope.get("description") or "Unknown words could not be confirmed."), 260)
+        return "pass", f"{(scope.get('data') or {}).get('words_checked', 0)} printed words checked: no misspellings."
+
     if result == "limited" and isinstance(details, list):
         note = next((d for d in details if isinstance(d, dict) and d.get("finding") == "pixel_analysis_limited"), {})
         return "limited", _shorten(str(note.get("description") or "Limited: this check could not see the page's text."), 260)

@@ -54,6 +54,9 @@ class OCRWord:
     font_confidence: float | None = None
     # Also from styleFont: italic, or handwritten (signatures are usually one or the other).
     italic_or_handwritten: bool = False
+    # Layout's own recognition confidence (0-1) for a word; None for a line
+    # (lines carry none) or when it was not returned.
+    confidence: float | None = None
 
 
 @dataclass
@@ -129,6 +132,8 @@ def pages_from_result(result) -> list[OCRPage]:
                 box = _normalized_box(getattr(item, "polygon", None), page.width, page.height)
                 if text and box:
                     word = OCRWord(text, *box)
+                    if target is ocr_page.words and getattr(item, "confidence", None) is not None:
+                        word.confidence = float(item.confidence)
                     span = getattr(item, "span", None)
                     if target is ocr_page.words and span is not None:
                         if span.offset in fonts:

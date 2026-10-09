@@ -31,6 +31,7 @@ class DocumentCheckType(str, enum.Enum):
     visual_inconsistency_review = "visual_inconsistency_review"
     font_consistency = "font_consistency"
     ghost_content = "ghost_content"
+    spelling_consistency = "spelling_consistency"
 
 
 class DocumentCheckStatus(str, enum.Enum):

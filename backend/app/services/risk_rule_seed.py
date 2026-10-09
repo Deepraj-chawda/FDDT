@@ -347,6 +347,21 @@ SEED_RULES: list[dict[str, Any]] = [
         "severity": "medium",
         "reason_template": "'{document}': {count} line(s) were shortened or rewritten after the scan was converted to editable text — the trace of the original runs on past the text. {description}",
     },
+    # ---------------------------------------------------------------- spelling
+    {
+        "rule_id": "content.spelling_error",
+        "category": FORENSICS,
+        "check_type": "spelling_consistency",
+        # A misspelled ordinary word in the printed text (English or Arabic),
+        # confirmed by the language model after the dictionary pass
+        # (app/services/forensics/spelling.py). Genuine documents are printed
+        # from proofread templates, but small issuers make typos too: a weak
+        # signal, fired once per document however many words.
+        "condition": _finding("spelling_consistency", finding="spelling_error"),
+        "weight": 5,
+        "severity": "low",
+        "reason_template": "'{document}': {count} misspelled word(s) in the printed text, e.g. '{text}' for '{correction}' — a sign the text may have been retyped.",
+    },
     # -------------------------------------------- visual review (vision model)
     {
         "rule_id": "visual.font_inconsistency",

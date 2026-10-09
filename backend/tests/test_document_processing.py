@@ -164,7 +164,9 @@ def test_process_document_success_stores_type_fields_and_ocr_text(
     assert document.extracted_fields["additional_fields"][0]["field_name"] == "vendor"
 
     events = session.query(AuditLog).filter_by(document_id=seeded_document_id).all()
-    assert {e.event_type for e in events} == {"document_processing_completed", "font_consistency_completed"}
+    assert {e.event_type for e in events} == {
+        "document_processing_completed", "font_consistency_completed", "spelling_check_completed",
+    }
 
     # The font consistency check runs here, on the document's own bytes.
     font = session.query(DocumentCheck).filter_by(
@@ -206,7 +208,93 @@ def test_font_check_failure_never_fails_the_extraction(
     ).one()
     assert font.status == DocumentCheckStatus.failed and font.error_message
     events = {e.event_type for e in session.query(AuditLog).filter_by(document_id=seeded_document_id)}
-    assert events == {"document_processing_completed", "font_consistency_failed"}
+    assert events == {"document_processing_completed", "font_consistency_failed", "spelling_check_completed"}
+
+
+def test_spelling_check_failure_never_fails_the_extraction(
+    task_session_factory, seeded_document_id, monkeypatch
+):
+    from app.services.ocr_service import OCRPage, OCRWord
+
+    _patch_storage(monkeypatch, pdf_bytes=b"not a pdf")
+    page = OCRPage(page_number=1, words=[
+        OCRWord(w, 0.1 * i, 0.1, 0.08, 0.02, confidence=0.99)
+        for i, w in enumerate("This Certifcate is awarded".split())
+    ])
+    fake_ocr = MagicMock()
+    fake_ocr.analyze_url.return_value = OCRResult(text="This Certifcate is awarded", pages=[page])
+    monkeypatch.setattr(document_processing_module, "get_ocr_service", lambda: fake_ocr)
+    fake_llm = MagicMock()
+    fake_llm.classify_and_extract.return_value = DocumentAnalysis(
+        document_type="school_certificate",
+        document_type_confidence=0.9,
+        issuer=FieldValue(value=None, confidence=0.0, uncertain=True),
+        reference_number=FieldValue(value=None, confidence=0.0, uncertain=True),
+        date=DateFieldValue(value=None, raw_text=None, confidence=0.0, uncertain=True),
+        amount=_empty_amount(),
+        subtotal=_empty_amount(),
+        tax_amount=_empty_amount(),
+        tax_rate=_empty_numeric(),
+        additional_fields=[],
+    )
+    fake_llm.judge_spelling.side_effect = RuntimeError("model unavailable")
+    monkeypatch.setattr(document_processing_module, "get_llm_service", lambda: fake_llm)
+
+    document_processing_module.process_document(str(seeded_document_id))
+
+    session = task_session_factory()
+    assert session.get(Document, seeded_document_id).processing_status == DocumentProcessingStatus.complete
+    spelling = session.query(DocumentCheck).filter_by(
+        document_id=seeded_document_id, check_type=DocumentCheckType.spelling_consistency
+    ).one()
+    assert spelling.status == DocumentCheckStatus.failed and "model unavailable" in spelling.error_message
+
+
+def test_a_check_row_that_cannot_be_written_never_fails_the_extraction(
+    task_session_factory, seeded_document_id, monkeypatch
+):
+    # E.g. the check type not yet migrated into the database enum: neither the
+    # completed row nor the failed one can be written.
+    real_save_check = document_processing_module.save_check
+
+    def save_check(db, *, check_type, **kwargs):
+        if check_type == DocumentCheckType.spelling_consistency:
+            raise RuntimeError('invalid input value for enum document_check_type: "spelling_consistency"')
+        return real_save_check(db, check_type=check_type, **kwargs)
+
+    monkeypatch.setattr(document_processing_module, "save_check", save_check)
+    _patch_storage(monkeypatch, pdf_bytes=b"not a pdf")
+    fake_ocr = MagicMock()
+    fake_ocr.analyze_url.return_value = OCRResult(text="text")
+    monkeypatch.setattr(document_processing_module, "get_ocr_service", lambda: fake_ocr)
+    fake_llm = MagicMock()
+    fake_llm.classify_and_extract.return_value = DocumentAnalysis(
+        document_type="vendor_invoice",
+        document_type_confidence=0.9,
+        issuer=FieldValue(value="Acme", confidence=0.9, uncertain=False),
+        reference_number=FieldValue(value=None, confidence=0.0, uncertain=True),
+        date=DateFieldValue(value=None, raw_text=None, confidence=0.0, uncertain=True),
+        amount=_empty_amount(),
+        subtotal=_empty_amount(),
+        tax_amount=_empty_amount(),
+        tax_rate=_empty_numeric(),
+        additional_fields=[],
+    )
+    monkeypatch.setattr(document_processing_module, "get_llm_service", lambda: fake_llm)
+
+    document_processing_module.process_document(str(seeded_document_id))
+
+    session = task_session_factory()
+    document = session.get(Document, seeded_document_id)
+    assert document.processing_status == DocumentProcessingStatus.complete
+    assert document.extracted_fields["core_fields"]["issuer"]["value"] == "Acme"
+    assert session.query(DocumentCheck).filter_by(
+        document_id=seeded_document_id, check_type=DocumentCheckType.spelling_consistency
+    ).count() == 0
+    font = session.query(DocumentCheck).filter_by(
+        document_id=seeded_document_id, check_type=DocumentCheckType.font_consistency
+    ).one()
+    assert font.status == DocumentCheckStatus.failed  # "not a pdf" — written normally
 
 
 def test_process_document_failure_marks_failed_with_reason(
