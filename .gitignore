@@ -115,3 +115,9 @@ id_rsa*
 
 # Regression harness input cache (client PDFs, OCR results) — never committed
 backend/tests/regression/_cache/
+
+# Sample and test documents (may include client files) — local only
+/sample-documents/
+# Generated case reports and the design-tool export — local only
+/report/
+/stitch_docauth_document_review_platform/
