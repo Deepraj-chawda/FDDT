@@ -165,6 +165,7 @@ Arabic sample documents):
 | Signature/stamp detection | document (~3 calls) | 3 × 1,418 | 3 × 84 |
 | Issuer semantic match | document, only if fuzzy match fails (assumed always) | 400 | 126 |
 | Signature comparison | on demand only | 1,055 | 47 |
+| Spelling judgment (English) — *estimate, not yet measured* | document, only if the dictionary pass leaves candidates (most clean documents: none or 1–3) | ~600 + ~60 per candidate | ~70 per candidate |
 
 | Document size | Azure OpenAI | Document Intelligence layout | Font add-on (to confirm) | **AI cost per document** |
 |---|---:|---:|---:|---:|
@@ -173,7 +174,9 @@ Arabic sample documents):
 | 3 pages | $0.0134 | $0.0300 | $0.018 | **$0.061** |
 | 5 pages | $0.0192 | $0.0500 | $0.030 | **$0.099** |
 
-Document Intelligence (per page) is the larger part; Azure OpenAI is ~1 cent per document. Without the font
+Document Intelligence (per page) is the larger part; Azure OpenAI is ~1 cent per document. The spelling
+judgment (added after these measurements) adds well under a tenth of a cent for a typical document, so it
+is not in the totals above. Without the font
 add-on (`AZURE_DOCUMENT_INTELLIGENCE_STYLE_FONT=false`) a 2-page document costs $0.031, but scanned pages then
 get no font consistency check (fonts on scans are left to the visual review).
 

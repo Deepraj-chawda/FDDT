@@ -87,14 +87,14 @@ A rule fires **once per hit, regardless of how many findings a document has** â€
 `{field}`, plus any key in a finding's `data`. A placeholder with no value renders as an **empty string**
 (never an error). The **rendered** text is what is stored and shown.
 
-### The default rules (63)
+### The default rules (64)
 
 These are the rules in the platform template, i.e. what a new company starts with. Full tables of
 `rule_id`, condition and default weight are in each stage's doc: field (`field.*`, 15) in
 [03](03-field-validation.md), [04](04-cross-document-consistency.md) (3),
 [05](05-issuer-verification.md) (1), [06](06-metadata-forensics.md) (`metadata.*`, 22),
-[06a](06a-font-consistency.md) (2), [07](07-ela-copy-move.md) (3), [07a](07a-ghost-content.md)
-(`content.*`, 2), [08](08-visual-review-ai-generation.md) (6), [09](09-signature-verification.md) (8),
+[06a](06a-font-consistency.md) (2), [06b](06b-spelling.md) (`content.spelling_error`, 1),
+[07](07-ela-copy-move.md) (3), [07a](07a-ghost-content.md) (`content.*` ghost text, 2), [08](08-visual-review-ai-generation.md) (6), [09](09-signature-verification.md) (8),
 [10](10-duplicate-detection.md) (1). Heaviest single rules: `duplicate.cross_case_match` (40),
 `copy_move.cluster_detected` / `cross_doc.amount_mismatch` / `signature.reused_different_signer` (35).
 Because weights sum, a case with an amount mismatch (35) plus a duplicate page (40) reaches 75 â†’ **high**.

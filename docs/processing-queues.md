@@ -9,7 +9,7 @@
 
   | Queue | Tasks | Limited by | Pool |
   |---|---|---|---|
-  | `extraction_queue` | `process_document` (Document Intelligence layout **+ the Azure OpenAI classification call**) | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` (10; Azure allows 15) — and, for the classification call, the Azure OpenAI caps | threads |
+  | `extraction_queue` | `process_document` (Document Intelligence layout **+ the Azure OpenAI classification call**, and the spelling check's one call when it has candidates) | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` (10; Azure allows 15) — and, for the classification call, the Azure OpenAI caps | threads |
   | `vision_queue` | visual review, signature detection/comparison, field validation + issuer check | `AZURE_OPENAI_MAX_REQUESTS_PER_MINUTE`, `AZURE_OPENAI_MAX_TOKENS_PER_MINUTE` | threads |
   | `forensics_queue` (+ legacy `celery`) | metadata forensics, ELA/copy-move/ghost text, duplicate hashing, cross-document check, risk scoring, bulk-zip ingestion | **nothing** — local CPU (exception: when the ghost-content check finds a deleted text block — rare — it makes a few Document Intelligence Read and Azure OpenAI calls for the reviewer's hint, through the same global rate limiters) | **prefork**, one process per CPU of the container |
 

@@ -33,7 +33,7 @@ chain-of-custody starting point.
 
 | Task | Queue | Module | Depends on | Notes |
 |---|---|---|---|---|
-| `process_document` | `extraction_queue` | `tasks/document_processing.py` | — | OCR + classify + extract; chains into `run_document_checks` |
+| `process_document` | `extraction_queue` | `tasks/document_processing.py` | — | OCR + classify + extract, then the font and spelling checks (they need its OCR words); chains into `run_document_checks` |
 | `run_metadata_forensics` | `forensics_queue` | `tasks/metadata_forensics_task.py` | file only | |
 | `run_tampering_checks` | `forensics_queue` | `tasks/tampering_checks_task.py` | file only | ELA + copy-move share one render |
 | `run_duplicate_check_task` | `forensics_queue` | `tasks/duplicate_check_task.py` | file only | compares within the company only |

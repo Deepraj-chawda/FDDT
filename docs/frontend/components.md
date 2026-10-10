@@ -34,6 +34,7 @@ The colours are **fixed per source**, so a reviewer learns the legend once:
 | `field` | solid purple | Rule-based field exception (failed field validation, cross-document mismatch) |
 | `font` | solid fuchsia | Text set in an out-of-place font, or in a second embedded copy of a font (font consistency) |
 | `ghost` | solid teal | Deleted / shortened content: the faint trace of erased text in a converted scan (ghost content) — only `ghost_deleted_block` / `ghost_replaced_line`, not its info notes |
+| `spelling` | solid sky blue | A misspelled English word (spelling check, `spelling_error`) |
 
 Because boxes are page fractions, they are resolution-independent and land correctly regardless of the
 rendered size. **Used in:** `CaseDetailPage` (middle column).
@@ -41,7 +42,7 @@ rendered size. **Used in:** `CaseDetailPage` (middle column).
 ### `getCheckOverlays(checks, crossDocumentFindings?, documentId?) → OverlayBox[]` — `DocumentChecksPanel.tsx`
 The **single function that turns stored check rows into boxes**, shared by the viewer and the findings
 list so the highlighted regions and the listed findings can never disagree (both read the same
-`document_checks` rows). It reads ELA/copy-move/font/ghost-content findings' `bounding_box`, flagged field-validation
+`document_checks` rows). It reads ELA/copy-move/font/ghost-content/spelling findings' `bounding_box`, flagged field-validation
 sub-checks' `regions`, visual-review boxes, and cross-document regions (only those belonging to
 `documentId`, so each document shows its own side of a mismatch).
 

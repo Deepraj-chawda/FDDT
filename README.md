@@ -19,7 +19,7 @@ classifies it and extracts its fields (Azure OpenAI, behind the `LLMService`
 abstraction — see `app/services/llm_service.py`). It then runs field
 validation, issuer verification, cross-document consistency checks, and PDF
 forensics (metadata, Error Level Analysis, copy-move, ghost text on converted
-scans, font consistency, duplicate detection, visual-inconsistency review,
+scans, font consistency, spelling (English), duplicate detection, visual-inconsistency review,
 signature/stamp detection). A transparent,
 weighted rules engine turns the results into an explainable risk score,
 and the case goes to a Reviewer L1 who approves, rejects or escalates it; an

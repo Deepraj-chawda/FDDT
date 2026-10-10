@@ -22,7 +22,7 @@ flowchart LR
     subgraph Backend["Backend (Python, one codebase)"]
         API["FastAPI app<br/>(JWT auth, role + tenant checks,<br/>upload validation)"]
         subgraph Workers["Celery workers — one pool per queue"]
-            WX["extraction_queue<br/>process_document<br/>(OCR + classify + extract)"]
+            WX["extraction_queue<br/>process_document<br/>(OCR + classify + extract ·<br/>font + spelling checks)"]
             WV["vision_queue<br/>visual review · signatures ·<br/>validation + issuer"]
             WF["forensics_queue (prefork)<br/>metadata · ELA/copy-move/ghost text ·<br/>duplicates · cross-doc · scoring"]
         end
@@ -59,16 +59,17 @@ hosted** (a design rule of the platform).
 |---|---|---|
 | API | FastAPI 0.121, Pydantic 2, Uvicorn | REST endpoints, validation, OpenAPI |
 | Auth | PyJWT (HS256), bcrypt | Email/password login, 8 h bearer tokens carrying `role`, `company_id`, `is_platform_admin` |
-| Database | PostgreSQL 16, SQLAlchemy 2, Alembic, psycopg2 | Persistence, migrations (14), Row-Level Security per company |
+| Database | PostgreSQL 16, SQLAlchemy 2, Alembic, psycopg2 | Persistence, migrations (25), Row-Level Security per company |
 | Connection pooling | PgBouncer (transaction mode) | Multiplexes API + worker connections onto ≤ 60 server connections |
 | Queue | Celery 5.4 + Redis 7 | Three queues (extraction / vision / forensics), fair-share priorities, beat jobs |
 | Rate limiting | Redis sliding windows (`services/rate_limiter.py`, `services/login_throttle.py`) | Global caps on Azure calls across every worker; sign-in throttling per email address and per IP |
 | File store | Azure Blob Storage (`azure-storage-blob`) | Immutable originals, signature crops, report PDFs (company-prefixed paths) |
 | OCR | Azure Document Intelligence `prebuilt-layout` | Text, tables, key-values and word geometry |
-| LLM | Azure OpenAI (chat completions, strict JSON-schema output) | Classification, field extraction, issuer semantic match, visual review, signature detect/compare |
+| LLM | Azure OpenAI (chat completions, strict JSON-schema output) | Classification, field extraction, issuer semantic match, spelling judgment, visual review, signature detect/compare |
 | PDF forensics | pikepdf, PyMuPDF | Upload validation, metadata, xref/incremental-update analysis, page rendering, report PDF |
 | Image forensics | OpenCV (headless), Pillow, NumPy | ELA, copy-move (BRISK), ghost text (traces of erased text in converted scans), signature crop/pixel comparison |
 | Duplicates | imagehash (pHash) | Near-duplicate page detection (within a company) |
+| Spelling | pyspellchecker (bundled word-frequency lists) | Dictionary pass of the English spelling check, before the LLM judgment |
 | Fuzzy match | rapidfuzz | Issuer registry lookup, signer-name comparison |
 | Workflow | `transitions` | Case state machine |
 | Frontend | React 19, TypeScript 6, Vite 8, React Router 7 | SPA, route-level code splitting |

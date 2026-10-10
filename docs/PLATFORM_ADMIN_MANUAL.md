@@ -279,5 +279,7 @@ When a Platform Administrator inspects a tenant company's cases or documents for
 | `case_approved` / `case_rejected` | Review Decision | Reviewer completed adjudication with notes and reasoning. |
 | `case_escalated` | Review Decision | Reviewer L1 escalated a case to the L2 supervisor tier. |
 | `document_processing_completed` | Pipeline | OCR extraction, classification, and field parsing succeeded. |
+| `font_consistency_completed` / `font_consistency_failed` | Pipeline | Font consistency check finished (or failed — the extraction still completes). |
+| `spelling_check_completed` / `spelling_check_failed` | Pipeline | Spelling check (English) finished (or failed — the extraction still completes). |
 | `tampering_checks_completed` | Pipeline | ELA, copy-move detection and the ghost-content check completed. |
 | `risk_assessment_completed` | Pipeline | Composite risk score calculated and tier assigned. |

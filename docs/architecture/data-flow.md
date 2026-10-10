@@ -34,6 +34,8 @@ sequenceDiagram
     par Extraction chain
         Q->>DI: process_document [extraction_queue] → prebuilt-layout on a SAS URL
         Q->>AI: classify_and_extract (one strict-JSON call)
+        Q->>AI: judge_spelling (only if the dictionary pass leaves candidates)
+        Q->>DB: document_checks: font_consistency, spelling_consistency
         Q->>DB: documents.document_type / extracted_fields / ocr_text = complete
         Q->>Q: run_document_checks [vision_queue]
         Q->>DB: document_checks: field_validation, issuer_verification
@@ -109,6 +111,12 @@ and — best effort — a bounding box) and marks the document `complete` (or `f
 `document_checks` rows: `field_validation` and `issuer_verification`. See
 [02](../pipeline/02-extraction-normalization.md), [03](../pipeline/03-field-validation.md),
 [05](../pipeline/05-issuer-verification.md).
+
+Two checks run **inside** `process_document`, before the document is marked complete, because they need
+its OCR words: font consistency ([06a](../pipeline/06a-font-consistency.md)) and spelling
+([06b](../pipeline/06b-spelling.md) — English words only, confirmed by one LLM call when the dictionary
+pass leaves candidates). Both are best effort: each writes its row inside a savepoint, so a failure is
+stored as a failed check and never fails the extraction.
 
 ### 4. Cross-document check (case level)
 After each `run_document_checks` — and also after a failed extraction — the task checks whether

@@ -28,6 +28,7 @@ a database transaction across an Azure call ([processing-queues.md](../processin
        key_value_pairs: dict[str, str]
        pages: list[OCRPage]                   # page_number, words[], lines[]
    @dataclass OCRWord: text, x, y, width, height   # normalized 0-1 page fractions
+                       font_family, font_confidence, italic_or_handwritten, confidence  # word-level extras
    ```
 3. **Classify + extract in one call.** `extraction_service.classify_and_extract(llm, ocr_text)` →
    `LLMService.classify_and_extract`, an Azure OpenAI chat completion at `temperature=0` with
@@ -64,10 +65,14 @@ a database transaction across an Azure call ([processing-queues.md](../processin
      the PDF's own text layer, else OCR (a free-tier OCR reads only the first two pages) — are sent to
      the extraction model separately and kept in `extracted_fields.invoices` (`page`, `pages`,
      `invoice_number`, `core_fields`, `line_items`). The document-level fields stay the first invoice's.
-5. **Persist.** `document_type`, `ocr_text`, `extracted_fields`; `processing_status = complete`;
+5. **Checks that need the OCR words** run here, before the document is marked complete, each best
+   effort (its row is written inside a savepoint; a failure is stored as a failed check and never fails
+   the extraction): font consistency ([06a](06a-font-consistency.md), PDFs only) and spelling
+   ([06b](06b-spelling.md), English words, every document).
+6. **Persist.** `document_type`, `ocr_text`, `extracted_fields`; `processing_status = complete`;
    audit `document_processing_completed` `{document_type, document_type_confidence, fields_located}`;
    then `run_document_checks.delay(document_id, company_id)` (on `vision_queue`).
-6. **On any exception:** `processing_status = failed`, `processing_error` (≤ 4000 chars), audit
+7. **On any exception:** `processing_status = failed`, `processing_error` (≤ 4000 chars), audit
    `document_processing_failed`, and the case-level completion check and scoring are still triggered
    so a failed document cannot block the case forever.
 
