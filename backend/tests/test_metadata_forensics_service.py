@@ -618,6 +618,8 @@ def test_reference_mfp_scans_openaction_is_not_flagged():
     from pathlib import Path
 
     samples = Path(__file__).resolve().parents[2] / "sample-documents" / "tampered_test_samples"
+    if not samples.is_dir():  # not in git (CI has no copy)
+        pytest.skip(f"{samples} not found")
     for name in ("case1.pdf", "case2.pdf"):
         result = analyze_pdf_metadata((samples / name).read_bytes())
         findings = {f["finding"]: f for f in result["details"]}

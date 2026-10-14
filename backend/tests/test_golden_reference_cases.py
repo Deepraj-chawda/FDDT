@@ -69,6 +69,8 @@ import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from app.models.risk_rule import RiskRule
 from app.services.field_validation_service import validate_fields
 from app.services.forensics.copy_move import run_copy_move_check
@@ -102,6 +104,8 @@ def _rules() -> list[RiskRule]:
 def _run(case: str, db) -> dict:
     stored = json.loads((FIXTURES / case / "stored.json").read_text(encoding="utf-8"))
     ocr = ocr_from_json(json.loads((FIXTURES / case / "ocr.json").read_text(encoding="utf-8")))
+    if not (ROOT / stored["pdf"]).is_file():  # sample-documents/ is not in git (CI has no copy)
+        pytest.skip(f"{stored['pdf']} not found")
     pdf = (ROOT / stored["pdf"]).read_bytes()
     pages = render_pdf_pages(pdf)
     company = db.info["test_company_id"]

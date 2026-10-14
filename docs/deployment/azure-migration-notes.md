@@ -23,7 +23,7 @@
 
 | Component today | Local form | Azure target (proposed) | Notes |
 |---|---|---|---|
-| PostgreSQL | Docker `postgres:16-alpine` + PgBouncer container | **Azure Database for PostgreSQL – Flexible Server** (v16) with the **built-in PgBouncer** (General Purpose tier) | `DATABASE_URL` with `?sslmode=require`; private access; PITR backups. Run migrations as a one-off job per release. Set `SEED_ADMIN_PASSWORD` (the seed resets it) |
+| PostgreSQL | Docker `postgres:16-alpine` + PgBouncer container | **Azure Database for PostgreSQL – Flexible Server** (v16) with the **built-in PgBouncer** (General Purpose tier) | `DATABASE_URL` with `?sslmode=require`; private access; PITR backups. Run migrations as a one-off job per release. Set `SEED_ADMIN_PASSWORD` (the initial admin password; the seed only creates the account) |
 | Redis (broker, fair-share counters, rate limiter) | Docker `redis:7-alpine`, no auth | **Azure Managed Redis**, *Non-Clustered* policy | Azure Cache for Redis no longer accepts new customers and retires 2028-09-30. Use `rediss://…:10000/0` for **both** Celery URLs (database 0 only) |
 | FastAPI app | `uvicorn --reload` on the host | Container App with internal ingress (`backend/Dockerfile`) | `uvicorn … --workers 2`; not `start-api.sh` (it migrates and re-seeds on every start) |
 | Celery workers | one local worker | Three Container Apps (`start-worker.sh extraction|vision|forensics`) + one beat | Forensics runs prefork, one process per vCPU of its container; the Azure queues run threads, sized to the rate caps |
@@ -33,7 +33,7 @@
 | Health/readiness | `GET /health` (does not touch dependencies) | Probe target | Consider a readiness probe that checks Postgres and Redis |
 | Auth | Email/password JWT, in `localStorage` | Same for v1; **Entra ID SSO** is a possible later upgrade | Not started |
 | Email/notifications | Not built | Azure Communication Services (planned) | `EMAIL_*` settings are declared but unused |
-| CI/CD | None | GitHub Actions or Azure DevOps | Suggested stages: lint (`oxlint`), `tsc -b`, `pytest`, build images, migrate, deploy |
+| CI/CD | None | Azure DevOps Pipelines (`azure-pipelines.yml`) | lint (`oxlint`), `tsc -b`, `pytest`, build images, approval, migrate, deploy. Setup: [azure-devops-cicd.md](azure-devops-cicd.md) |
 
 ## Things that must change before any production exposure
 

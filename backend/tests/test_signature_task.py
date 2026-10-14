@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import MagicMock
 import pytest
 
-from tests.conftest import tenant_task_factory
+from tests.conftest import FakeStorageService, tenant_task_factory
 
 from app.models.signature_reference import SignatureReference
 from app.models.signature_match import SignatureMatch, ComparisonScope, SignatureMatchResult
@@ -124,7 +124,8 @@ def test_signature_comparison_task_flow(monkeypatch, signature_task_session_fact
     finally:
         session.close()
 
-    # Mock crop and download functions
+    # Mock storage, crop and download functions (never the real Azure account from backend/.env)
+    monkeypatch.setattr(signature_task_module, "get_storage_service_for_task", FakeStorageService)
     monkeypatch.setattr(
         signature_task_module,
         "download_and_encode_signature",

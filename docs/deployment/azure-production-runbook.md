@@ -145,12 +145,17 @@ Do not change settings by hand in the portal unless a step says so: if the porta
 later steps break in confusing ways.
 
 **Before the session (on your side)**
-- **Push the exact version to deploy** to GitHub (`main`). Cloud Shell downloads the code from there, not from
-  your PC. Uncommitted changes on your PC will not be deployed.
-- The repository is private, so create a **GitHub personal access token** for the clone: github.com → your
-  avatar → **Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new
-  token** → *Repository access*: only `FDDT` → *Permissions › Contents*: **Read-only** → expiry **1 day**.
-  Keep it private; delete it after the deployment.
+- **Push the exact version to deploy** to the Azure DevOps repository (`main`): `git push azure main` (the
+  remote is set up in [azure-devops-cicd.md](azure-devops-cicd.md), step 1). Cloud Shell downloads the code
+  from there, not from your PC. Uncommitted changes on your PC will not be deployed.
+- **Copy the clone URL:** in **https://dev.azure.com/&lt;org&gt;/&lt;project&gt;** → **Repos › Files** → **Clone**
+  (top right) → *HTTPS* → copy. It looks like `https://<org>@dev.azure.com/<org>/<project>/_git/FDDT`.
+- The repository is private, so create an **Azure DevOps personal access token** for the clone: in Azure DevOps,
+  click **User settings** (the person icon, top right) → **Personal access tokens** → **+ New Token** →
+  *Organization*: the client's → *Expiration*: **Custom defined**, tomorrow → *Scopes*: **Custom defined** →
+  **Code: Read** → **Create**, and copy the token (it is shown only once). Keep it private; revoke it after the
+  deployment. If the organization blocks personal tokens, use **Generate Git Credentials** in the same
+  *Clone* dialog instead; its password works the same way.
 - **The runbook must be readable on the client's screen.** With remote control, *your* clipboard usually
   does **not** reach *their* computer, so you cannot copy from your own PDF and paste into their Cloud Shell.
   Once the code is cloned (step 4 below), open this file **inside Cloud Shell** and copy the commands from
@@ -167,10 +172,16 @@ later steps break in confusing ways.
    month, in a resource group named like `cloud-shell-storage-<region>`) that **keeps your files** between
    sessions. **Do not** choose *No storage account required*: your files (`deploy.env`, `reload.sh`, the YAML)
    would be deleted every time the session ends.
-4. **Get the code** (paste your token when asked for the *password*; the screen shows nothing while you
-   type or paste it):
+
+   > **If mounting is blocked** (a region policy can answer `RequestDisallowedByAzure`), choose *No storage
+   > account required* anyway. Then your home folder is **ephemeral** (it is wiped after ~20 minutes idle):
+   > keep `deploy.env` and `reload.sh` in your own notes, re-create them with `cat > file <<'EOF'` blocks when a
+   > session resets, and never rely on files surviving. **Paste only commands into the terminal**, never
+   > prose, notes or screenshots' text: a pasted sentence runs as a command and can leave variables empty.
+4. **Get the code** with the clone URL copied above (paste your token when asked for the *password*; the
+   screen shows nothing while you type or paste it):
    ```bash
-   git clone https://github.com/Deepraj-chawda/FDDT.git ~/FDDT
+   git clone https://<org>@dev.azure.com/<org>/<project>/_git/FDDT ~/FDDT
    cd ~/FDDT
    git checkout main && git log --oneline -1      # the commit you are deploying
    ```
@@ -430,7 +441,7 @@ export ACR="${PREFIX}acr"
 export ACR_SERVER="${PREFIX}acr.azurecr.io"
 export PG="$PREFIX-pg"
 export PG_HOST="$PREFIX-pg.postgres.database.azure.com"
-export PG_DNS_ZONE="$PREFIX-pg.private.postgres.database.azure.com"
+export PG_DNS_ZONE="$PREFIX-db.postgres.database.azure.com"   # must end in postgres.database.azure.com; see step 7
 export PG_DB="fddt"
 export PG_OWNER="fddtowner"
 export REDIS="$PREFIX-redis"
@@ -565,6 +576,16 @@ az group create -n $RG -l $LOC --tags app=fddt env=prod tier=$TIER
 
 ✅ **Verify:** `az provider show -n Microsoft.App --query registrationState` → `"Registered"` (may take a
 few minutes).
+
+> **If `Microsoft.App` (or another provider) stays on `Registering` for more than ~30 minutes:**
+> 1. Ask the **subscription owner** to open the portal → **Subscriptions › your subscription › Settings ›
+>    Resource providers › Microsoft.App** → **Unregister**, wait for *NotRegistered*, then **Register** again.
+>    (A Contributor often cannot do this.)
+> 2. If it is still stuck after a few hours, the owner opens an Azure support ticket (*Subscription
+>    management › Resource provider registration stuck*). Do not wait silently: it can take a day.
+> 3. Meanwhile a *region-level* registration is enough for the actual deployment, but the `az containerapp`
+>    CLI waits for the whole provider and times out (*Timed out while waiting for the Microsoft.App resource
+>    provider to be registered*). Step 12.1 gives an `az rest` workaround that bypasses that check.
 
 ---
 
@@ -732,18 +753,22 @@ export WEB_IMAGE=$ACR_SERVER/fddt-web:$VERSION
 > - **fddtprod-pg › Settings › Databases**: `fddt` is listed.
 
 ```bash
-export PG_OWNER_PW=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)   # alphanumeric: no URL-encoding needed
-# Save it in Key Vault BEFORE the long create, so a disconnect can't lose it (reload.sh reads it back)
+export PG_OWNER_PW=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
 az keyvault secret set --vault-name $KV -n pg-owner-password --value "$PG_OWNER_PW" -o none
+
+# Pre-create the private DNS zone and link it to the VNet. Passing a zone *name* to the create command is
+# often rejected (PrivateDnsZoneNameNotValid); passing the zone's resource ID always works.
+az network private-dns zone create -g $RG -n $PG_DNS_ZONE -o none
+az network private-dns link vnet create -g $RG -z $PG_DNS_ZONE -n pg-link -v $VNET -e false -o none
+ZONE_ID=$(az network private-dns zone show -g $RG -n $PG_DNS_ZONE --query id -o tsv)
 
 HA_ARGS=""; [ "$PG_HA" = "ZoneRedundant" ] && HA_ARGS="--high-availability ZoneRedundant"
 az postgres flexible-server create -g $RG -n $PG -l $LOC --version 16 \
   --tier $PG_TIER --sku-name $PG_SKU --storage-size $PG_STORAGE --storage-auto-grow Enabled \
   $HA_ARGS --backup-retention 35 \
-  --vnet $VNET --subnet snet-pg --private-dns-zone $PG_DNS_ZONE \
+  --vnet $VNET --subnet snet-pg --private-dns-zone "$ZONE_ID" \
   --admin-user $PG_OWNER --admin-password "$PG_OWNER_PW" --yes
-
-az postgres flexible-server db create -g $RG -s $PG -d $PG_DB
+az postgres flexible-server db create -g $RG -s $PG -n $PG_DB
 
 # Built-in PgBouncer: General Purpose / Memory Optimized only (tiers M and L). NOT on Burstable (tier S).
 if [ "$TIER" != "S" ]; then
@@ -906,6 +931,7 @@ echo "free: ${AOAI_CAPACITY_K}k TPM (tier $TIER was sized for ${AOAI_TPM_K}k)"
 # set a smaller number here by hand, e.g.: export AOAI_CAPACITY_K=150
 
 # The deployment: model gpt-4.1-mini, deployment type Global Standard
+[ -n "$AOAI_CAPACITY_K" ] && [ "$AOAI_CAPACITY_K" -gt 0 ] || { echo "STOP: AOAI_CAPACITY_K is empty/0 - set it by hand, e.g. export AOAI_CAPACITY_K=150"; }
 az cognitiveservices account deployment create -g $RG -n $AOAI --deployment-name $AOAI_DEPLOYMENT \
   --model-name gpt-4.1-mini --model-version 2025-04-14 --model-format OpenAI \
   --sku-name GlobalStandard --sku-capacity $AOAI_CAPACITY_K
@@ -979,7 +1005,7 @@ echo "First platform admin: $SEED_ADMIN_EMAIL / $SEED_ADMIN_PW   <- store in the
 | `redis-url` | all backend apps | Key is URL-encoded; `/0`; `ssl_cert_reqs=required` |
 | `redis-key` | KEDA scale rules | Raw key |
 | `storage-conn`, `docintel-key`, `openai-key` | API + workers | |
-| `seed-admin-password` | migration job only | `seed.py` **resets** the admin's password to this value on every run |
+| `seed-admin-password` | migration job only | The first platform admin's initial password. `seed.py` uses it only to **create** the account; later releases leave it alone. A password changed in the app is kept |
 
 ✅ **Verify:** `az keyvault secret list --vault-name $KV --query "[].name" -o tsv | sort` lists 11 names (the
 10 above + `pg-owner-password` from step 7).
@@ -1007,6 +1033,16 @@ export ENV_DOMAIN=$(az containerapp env show -g $RG -n $ENV --query properties.d
 export ENV_IP=$(az containerapp env show -g $RG -n $ENV --query properties.staticIp -o tsv)
 echo "Inbound IP: $ENV_IP   default domain: $ENV_DOMAIN"
 ```
+
+> **If this fails with "Timed out while waiting for the Microsoft.App resource provider to be registered"** but
+> the provider shows `Registered` for your region (or is stuck at `Registering`), create the environment
+> through the REST API instead, which skips the CLI's wait:
+> ```bash
+> az rest --method put \
+>   --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.App/managedEnvironments/$ENV?api-version=2024-03-01" \
+>   --body "{\"location\":\"$LOC\",\"properties\":{\"vnetConfiguration\":{\"infrastructureSubnetId\":\"$ACA_SUBNET_ID\",\"internal\":false},\"workloadProfiles\":[{\"name\":\"Consumption\",\"workloadProfileType\":\"Consumption\"}],\"appLogsConfiguration\":{\"destination\":\"log-analytics\",\"logAnalyticsConfiguration\":{\"customerId\":\"$(az monitor log-analytics workspace show -g $RG -n $LA --query customerId -o tsv)\",\"sharedKey\":\"$LA_KEY\"}}}}"
+> ```
+> If it still fails, the provider registration must be fixed first (step 2 note).
 
 - `--internal-only false` makes the environment **external**: it gets one public static IP, but only apps
   with `external: true` ingress (just `fddt-web`) are reachable on it.
@@ -1104,7 +1140,8 @@ source ~/fddt-deploy/helpers.sh
 > the newest row's *Status* is **Succeeded** (click **Refresh** at the top; it takes 1–3 minutes) → click the
 > execution → **Console logs** (opens a log query; logs arrive 2–5 minutes late).
 
-Runs `alembic upgrade head`, creates/refreshes the first platform admin (`seed.py`), and prints the revision.
+Runs `alembic upgrade head`, creates the first platform admin if it does not exist yet (`seed.py`; an existing
+account is never changed), and prints the revision.
 It runs **once per release, before the apps are updated**, and never on API start (several API replicas would
 race).
 
@@ -1134,6 +1171,14 @@ $(env_s SEED_ADMIN_PASSWORD seed-admin-password)
 EOF
 } > $WORK/fddt-yaml/migrate.yaml
 
+# Pre-flight: a new Cloud Shell session may have lost variables. Run `source ~/fddt-deploy/reload.sh` first;
+# these must all be non-empty, otherwise the YAML is broken (ContainerAppImageRequired / YAML parse error).
+echo "VERSION=$VERSION"; echo "BACKEND_IMAGE=$BACKEND_IMAGE"
+[ -n "$VERSION" ] && [ -n "$BACKEND_IMAGE" ] || { echo "STOP: set VERSION and BACKEND_IMAGE, regenerate the YAML"; }
+grep -n "image:" $WORK/fddt-yaml/migrate.yaml            # must end in :<version>, not a bare colon
+grep -n 'value: ""' $WORK/fddt-yaml/migrate.yaml          # must print nothing
+python3 -c "import yaml,sys; yaml.safe_load(open('$WORK/fddt-yaml/migrate.yaml')); print('YAML ok')"
+
 az containerapp job create -g $RG -n fddt-migrate --yaml $WORK/fddt-yaml/migrate.yaml
 az containerapp job start -g $RG -n fddt-migrate
 # Poll until Succeeded (typically 1–2 minutes)
@@ -1150,6 +1195,21 @@ az containerapp job execution list -g $RG -n fddt-migrate \
 az monitor log-analytics query -w $LA_ID --analytics-query \
  "ContainerAppConsoleLogs_CL | where ContainerGroupName_s startswith 'fddt-migrate' | project TimeGenerated, Log_s | order by TimeGenerated asc" -o table
 ```
+
+> The same pre-flight (variables set, `grep image:`, YAML loads) applies to every YAML-generated app in
+> steps 14-16. The helper functions expand variables when the file is **generated**, so after fixing a
+> variable you must **regenerate** the file, not just re-run `create`.
+
+**Platform admin locked out** (password forgotten, account deactivated): run `seed.py --reset` once. It sets
+the `SEED_ADMIN_EMAIL` account back to the `seed-admin-password` value from Key Vault, as an active platform
+admin, and changes nothing else. The override applies to this one execution only:
+
+```bash
+az containerapp job start -g $RG -n fddt-migrate --container-name migrate \
+  --command "sh" --args "-c" "python seed.py --reset"
+```
+
+Its log prints `Reset platform admin …`. Sign in with that password, then change it in the app.
 
 If it fails: *password authentication failed* means the owner URL is wrong. *could not translate host name*
 means the private DNS zone is not linked (step 7). *permission denied to create role* means the server's admin
@@ -1481,13 +1541,16 @@ but they expire quickly.
 The PDF viewer fetches files from Blob Storage directly, so the storage account must allow the app's origin(s).
 
 ```bash
+[ -n "$SA_CONN" ] || export SA_CONN=$(az keyvault secret show --vault-name $KV -n storage-conn --query value -o tsv)
+[ -n "$SA_CONN" ] && echo "SA_CONN loaded" || echo "STOP: SA_CONN is empty"
 az storage cors clear --services b --connection-string "$SA_CONN"
 az storage cors add --services b --methods GET HEAD OPTIONS \
   --origins "https://$APP_DOMAIN" "https://$WEB_FQDN" \
   --allowed-headers '*' --exposed-headers '*' --max-age 3600 --connection-string "$SA_CONN"
 ```
 
-Add the Front Door endpoint hostname here too if you use step 19. **Re-run this step whenever an app hostname
+If `APP_DOMAIN` is still a placeholder (for example `app.example.com`, sandbox without a custom domain), use
+only `https://$WEB_FQDN` as the origin. Add the Front Door endpoint hostname here too if you use step 19. **Re-run this step whenever an app hostname
 changes.**
 
 ✅ **Verify:** `az storage cors list --services b --connection-string "$SA_CONN" -o table`.
@@ -1495,6 +1558,9 @@ changes.**
 ---
 
 ## Step 18 — Custom domain and TLS
+
+> **Sandbox / no custom domain:** skip steps 18 and 19. The app works on its `*.azurecontainerapps.io` address
+> (`https://$WEB_FQDN`); set Blob CORS (step 17) to that origin only.
 
 > 📍 **Who:** **you** run the commands (Cloud Shell). The **client's DNS administrator** creates the two DNS
 > records, wherever their domain is managed (Azure DNS, GoDaddy, Cloudflare, …). Send them the table in 18.1.
@@ -1580,6 +1646,10 @@ Then:
 ---
 
 ## Step 20 — Monitoring and alerts
+
+> **Before you start:** `ALERT_EMAIL` must be a real, monitored operations mailbox (not a personal or
+> placeholder address). Make sure the provider and extension exist:
+> `az provider register --namespace Microsoft.Insights` and `az extension add --name scheduled-query --yes`.
 
 > 📍 **Who:** you · **Type in:** Cloud Shell, then the portal for the extra alerts · **Check in the portal:**
 > search **Monitor** → **Alerts › Alert rules**: filter by resource group `rg-fddtprod` → 7 log alerts + 3
@@ -1707,13 +1777,8 @@ az vm deallocate -g $RG -n $PREFIX-jump
 11. Check the logs: no `ERROR` / `Traceback` / `429` from the Azure services in the last hour (the Log
     Analytics queries from step 20).
 
-Then **remove the seed step** from the migration job, so later releases do not reset the admin password:
-
-```bash
-export MIGRATE_CMD="alembic upgrade head && alembic current"
-sed -i 's|args: \[".*"\]|args: ["alembic upgrade head \&\& alembic current"]|' $WORK/fddt-yaml/migrate.yaml
-az containerapp job update -g $RG -n fddt-migrate --yaml $WORK/fddt-yaml/migrate.yaml
-```
+The seed step can stay in the migration job: it only creates the platform admin when the account is missing,
+so later releases never reset a password changed in the app. Change the admin's password in the app now.
 
 ---
 
@@ -1851,12 +1916,15 @@ and PgBouncer (step 7), then switching every backend app from `DB_POOL_SIZE`/`DB
 
 ### Release (every deployment after the first)
 
-> 📍 **Who:** you, in the client's Cloud Shell session (push the release to GitHub `main` first) · **Type
+Once the Azure DevOps pipeline is set up ([CI/CD](#cicd-azure-devops) below), merging to `main` and approving
+the *Deploy* stage does all of this. Use the manual steps only when the pipeline is not available.
+
+> 📍 **Who:** you, in the client's Cloud Shell session (push the release to the Azure DevOps repo, `main`, first) · **Type
 > in:** Cloud Shell · **Check in the portal:** each app's **Application › Revisions and replicas**: the new
 > revision is *Running* / *Healthy* and receives 100 % of traffic.
 
 ```bash
-cd ~/FDDT && git checkout main && git pull        # asks for the GitHub token again
+cd ~/FDDT && git checkout main && git pull        # asks for an Azure DevOps token again (create a new one if it expired)
 source ~/fddt-deploy/reload.sh
 export VERSION=$(git rev-parse --short HEAD)
 az acr build -r $ACR -t fddt-backend:$VERSION ./backend
@@ -1896,11 +1964,14 @@ Run the same runbook with `PREFIX=fddtstg`, `TIER=S`, its own resource group, it
 (`staging.<client-domain>`) and a **different VNet range** (e.g. `10.21.0.0/16`). Deploy every release to
 staging first. It costs about the same as tier S.
 
-### CI/CD (when added)
+### CI/CD (Azure DevOps)
 
-Suggested pipeline: `oxlint` + `tsc -b` (frontend) → `pytest` incl. the Postgres RLS suite → `az acr build` both
-images → staging release (as above) → manual approval → production release. Authenticate the pipeline with a
-federated (OIDC) service principal holding *Contributor* on the RG and *AcrPush* on the registry.
+`azure-pipelines.yml` runs the release above automatically on every merge to `main`: `oxlint` + `tsc -b`
+(frontend) → `pytest` incl. the Postgres RLS suite → `az acr build` both images → manual approval → migration
+job → apps → `/api/health`. It authenticates with workload identity federation (*Contributor* on the RG). The
+one-time setup (service connection, variable group, environment) is in
+[azure-devops-cicd.md](azure-devops-cicd.md). The pipeline only updates existing apps, so the first
+deployment still follows steps 1–22.
 
 ---
 
@@ -1955,6 +2026,12 @@ Key Vault references are re-read when a revision starts, so **restart the apps a
 | Forensics checks never start | `fddt-worker-forensics` has `minReplicas: 0` but no Redis scale rules, or the rules can't reach Redis | Add the rules from 15.2 (secret `redis-key`, TLS on); or set `minReplicas: 1` |
 | A user gets *Too many sign-in attempts* | 5 failed sign-ins for that address in 15 minutes (or 20 attempts from one IP in a minute) | Wait for the time shown, or sign in successfully once it has passed. Repeated lockouts across many addresses: see the `fddt-login-lockouts` alert |
 | `document_requeued` rows in the audit log / `stuck_documents_requeued` alert | Redis lost queued tasks (restart, maintenance without HA, outage) | Nothing to do: the documents were queued again. After 3 attempts a document is marked failed with an explanation: re-upload it |
+| `PrivateDnsZoneNameNotValid` creating PostgreSQL | Zone passed as a name | Pre-create the zone + VNet link and pass its resource ID (step 7) |
+| `ContainerAppImageRequired` / YAML parse error on `image:` | `VERSION` / `BACKEND_IMAGE` empty in this session | `source ~/fddt-deploy/reload.sh`, export `VERSION`, regenerate the YAML (step 13 pre-flight) |
+| `az storage cors` asks for account name or connection string | `SA_CONN` empty | Reload it from Key Vault secret `storage-conn` (step 17) |
+| `--sku-capacity` has no value / empty variable errors | Prose pasted into the terminal, or variables lost | Paste commands only; `source ~/fddt-deploy/reload.sh`; `echo` the variable before using it |
+| `Microsoft.App` stuck on *Registering*, `containerapp env create` times out | Provider registration | Step 2 note and step 12.1 `az rest` workaround |
+| Cloud Shell files disappeared | No persistent storage mounted | Step 0.4: re-create `deploy.env` / `reload.sh` |
 | Database `permission denied` in logs | A migration added a table without a grant | Re-run the migration job; report as a bug |
 
 ---

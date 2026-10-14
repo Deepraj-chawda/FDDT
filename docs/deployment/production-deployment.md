@@ -464,9 +464,9 @@ az containerapp job execution list -g $RG -n $PREFIX-migrate -o table     # wait
 
 - **Take a database backup/point-in-time marker before migrating** (Flexible Server keeps automatic
   backups; note the time so a PITR restore target is known).
-- `seed.py` creates the platform admin and **resets that account's password to `SEED_ADMIN_PASSWORD` on
-  every run**. Remove `&& python seed.py` from the job after the first release (or keep the variable at
-  the real password).
+- `seed.py` creates the platform admin (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`) if it does not exist and
+  leaves an existing account unchanged, so it is safe on every release. `python seed.py --reset` restores
+  the seeded password to recover a locked-out admin.
 - Do **not** use `start-api.sh` as the API command in production: it migrates and re-seeds on every start,
   and several API replicas would race.
 

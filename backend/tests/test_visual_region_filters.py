@@ -161,6 +161,8 @@ def test_offset_findings_are_never_judged_by_skew(text):
 
 
 def test_reference_cases_visual_findings_are_explained():
+    if not SAMPLES.is_dir():  # not in git (CI has no copy)
+        pytest.skip(f"{SAMPLES} not found")
     headstart = render_pdf_pages((SAMPLES / "case1.pdf").read_bytes())
     tilt = _finding("text_alignment", {"x": 0.23, "y": 0.16, "width": 0.54, "height": 0.07},
                     "The text in the boxed section with student name and ID is slightly rotated.")

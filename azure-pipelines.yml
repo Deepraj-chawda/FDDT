@@ -1,0 +1,198 @@
+# FDDT CI/CD on Azure DevOps.
+#
+#   CI      every push and pull request: frontend lint + type-check + build, backend pytest
+#           (including the PostgreSQL RLS suite and the Redis rate-limiter tests).
+#   Build   main only: `az acr build` both images, tagged with the short commit SHA.
+#   Deploy  main only, after the approval on the `fddt-production` environment:
+#           migration job -> API -> workers + beat -> web -> smoke test.
+#           Same order as "Release" in docs/deployment/azure-production-runbook.md.
+#
+# One-time setup (service connection, variable group, environment, approvals):
+# docs/deployment/azure-devops-cicd.md
+
+trigger:
+  branches:
+    include: [main]
+  paths:
+    exclude: [docs/**, docs-pdf/**, '*.md']
+
+# Pull requests: Azure Repos ignores a `pr:` block. PR builds come from the Build validation branch policy
+# on main (docs/deployment/azure-devops-cicd.md, step 6).
+
+variables:
+  # Name of the Azure Resource Manager service connection. It must be a literal here (not in the variable
+  # group): Azure DevOps resolves it before the run starts.
+  serviceConnection: fddt-azure
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  # ---------------------------------------------------------------------------
+  - stage: CI
+    displayName: Lint and test
+    jobs:
+      - job: frontend
+        displayName: Frontend (oxlint, tsc, vite build)
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '22.x'
+          - script: npm ci
+            workingDirectory: frontend
+            displayName: npm ci
+          - script: npm run lint
+            workingDirectory: frontend
+            displayName: oxlint
+          - script: npm run build
+            workingDirectory: frontend
+            displayName: tsc -b && vite build
+
+      - job: backend
+        displayName: Backend (pytest)
+        timeoutInMinutes: 30
+        services:
+          postgres: postgres
+          redis: redis
+        variables:
+          DATABASE_URL: postgresql+psycopg2://docauth:docauth@localhost:5432/docauth
+          FDDT_RLS_TEST_DATABASE_URL: postgresql+psycopg2://docauth:docauth@localhost:5432/docauth
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/1
+          PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.12'          # same as backend/Dockerfile
+          - task: Cache@2
+            inputs:
+              key: 'pip | "$(Agent.OS)" | backend/requirements.txt'
+              path: $(PIP_CACHE_DIR)
+            displayName: Cache pip
+          - script: |
+              sudo apt-get update -qq && sudo apt-get install -y -qq libglib2.0-0
+              pip install -r requirements.txt
+            workingDirectory: backend
+            displayName: Install dependencies
+          - script: |
+              for i in $(seq 1 30); do pg_isready -h localhost -p 5432 -q && break; sleep 2; done
+              alembic upgrade head && alembic current
+            workingDirectory: backend
+            displayName: Migrate the test database
+          - script: pytest -q --junitxml=$(Common.TestResultsDirectory)/pytest.xml
+            workingDirectory: backend
+            displayName: pytest
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: $(Common.TestResultsDirectory)/pytest.xml
+              testRunTitle: Backend pytest
+
+  # ---------------------------------------------------------------------------
+  - stage: Build
+    displayName: Build images
+    dependsOn: CI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: fddt-production        # RG, ACR, APP_HOST
+    jobs:
+      - job: images
+        displayName: az acr build
+        timeoutInMinutes: 45
+        steps:
+          - task: AzureCLI@2
+            displayName: Build fddt-backend and fddt-web in ACR
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                TAG=${BUILD_SOURCEVERSION:0:7}
+                az acr build -r "$ACR" -t fddt-backend:$TAG ./backend
+                az acr build -r "$ACR" -t fddt-web:$TAG ./frontend
+
+  # ---------------------------------------------------------------------------
+  - stage: Deploy
+    displayName: Deploy to production
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: fddt-production
+    jobs:
+      - deployment: release
+        displayName: Migrate and roll out
+        environment: fddt-production      # approvals and the exclusive lock are set on this environment
+        timeoutInMinutes: 60
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: none
+                - task: AzureCLI@2
+                  displayName: Migrate, then update every app
+                  inputs:
+                    azureSubscription: $(serviceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az extension add --name containerapp --upgrade -y --only-show-errors
+                      TAG=${BUILD_SOURCEVERSION:0:7}
+                      BACKEND=$ACR.azurecr.io/fddt-backend:$TAG
+                      WEB=$ACR.azurecr.io/fddt-web:$TAG
+
+                      # Point-in-time-restore target if the migration goes wrong (runbook: Rollback)
+                      echo "PITR target (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                      echo "Previous API image: $(az containerapp show -g "$RG" -n fddt-api \
+                        --query 'properties.template.containers[0].image' -o tsv)"
+
+                      # 1. Migrate first. Migrations are additive, so the old apps keep working meanwhile.
+                      az containerapp job update -g "$RG" -n fddt-migrate --image "$BACKEND" -o none
+                      EXEC=$(az containerapp job start -g "$RG" -n fddt-migrate --query name -o tsv)
+                      echo "Migration execution: $EXEC"
+                      for i in $(seq 1 60); do
+                        STATUS=$(az containerapp job execution show -g "$RG" -n fddt-migrate \
+                          --job-execution-name "$EXEC" --query properties.status -o tsv)
+                        echo "  $STATUS"
+                        [ "$STATUS" = "Succeeded" ] && break
+                        if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Stopped" ]; then
+                          echo "##vso[task.logissue type=error]Migration $STATUS. Apps were NOT updated. Logs: portal > fddt-migrate > Execution history > $EXEC"
+                          exit 1
+                        fi
+                        sleep 20
+                      done
+                      [ "$STATUS" = "Succeeded" ] || { echo "##vso[task.logissue type=error]Migration still $STATUS after 20 minutes"; exit 1; }
+
+                      # 2. API, then workers + beat, then web
+                      az containerapp update -g "$RG" -n fddt-api --image "$BACKEND" -o none
+                      for a in fddt-worker-extraction fddt-worker-vision fddt-worker-forensics fddt-beat; do
+                        az containerapp update -g "$RG" -n "$a" --image "$BACKEND" -o none
+                      done
+                      az containerapp update -g "$RG" -n fddt-web --image "$WEB" -o none
+                      echo "Deployed $TAG"
+
+                - script: |
+                    set -u
+                    for i in $(seq 1 18); do
+                      if curl -fsS --max-time 10 "https://$APP_HOST/api/health"; then echo; echo "Healthy"; exit 0; fi
+                      sleep 10
+                    done
+                    echo "##vso[task.logissue type=error]https://$APP_HOST/api/health did not answer within 3 minutes"
+                    exit 1
+                  displayName: Smoke test /api/health
+
+# Service containers for the backend tests (Microsoft-hosted Ubuntu agents run Docker).
+resources:
+  containers:
+    - container: postgres
+      image: postgres:16-alpine
+      ports: ['5432:5432']
+      env:
+        POSTGRES_USER: docauth
+        POSTGRES_PASSWORD: docauth
+        POSTGRES_DB: docauth
+    - container: redis
+      image: redis:7-alpine
+      ports: ['6379:6379']

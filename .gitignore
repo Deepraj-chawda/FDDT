@@ -121,3 +121,6 @@ backend/tests/regression/_cache/
 # Generated case reports and the design-tool export — local only
 /report/
 /stitch_docauth_document_review_platform/
+
+# Celery beat runtime state
+celerybeat-schedule*

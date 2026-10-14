@@ -50,8 +50,8 @@ alembic upgrade head        # 14 migrations → 19 tables, RLS policies, the app
                             # fddt_platform (passwords from DATABASE_APP_PASSWORD / DATABASE_PLATFORM_PASSWORD),
                             # the "Default Company" with 38 rules, thresholds 30/60 and a few FAKE test
                             # issuers, and the platform rule template
-python seed.py              # creates the PLATFORM ADMIN admin@example.com / ChangeMe123! (idempotent;
-                            # re-running resets that password — set SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD)
+python seed.py              # creates the PLATFORM ADMIN admin@example.com / ChangeMe123! if missing
+                            # (idempotent; `python seed.py --reset` restores that password)
 ```
 
 The migrations run as the **owner** (`DATABASE_URL`), which needs CREATEROLE but not superuser. The app

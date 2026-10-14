@@ -60,7 +60,7 @@ not call Azure.
 | `STUCK_DOCUMENT_BATCH_SIZE` | `200` | Most documents re-queued per run |
 | `LOGIN_MAX_FAILED_ATTEMPTS` / `LOGIN_LOCKOUT_MINUTES` | `5` / `15` | Sign-in throttling (`app/services/login_throttle.py`, Redis): after this many failed sign-ins for one email address, it is refused (HTTP 429 + `Retry-After`) for this many minutes. Counted per address (unknown addresses too), cleared by a successful sign-in. `0` disables |
 | `LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE` | `20` | Sign-in attempts of any outcome per client IP per minute (best effort: behind the proxy chain a client can influence `X-Forwarded-For`). `0` disables. Both limits fail open if Redis is unreachable |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@example.com` / `ChangeMe123!` | Read by `seed.py` (not by the app): the platform admin it creates — **and resets on every run** (`start-api.sh` runs it). Set both in production |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@example.com` / `ChangeMe123!` | Read by `seed.py` (not by the app): the platform admin it creates when the account does not exist. An existing account is left unchanged unless `seed.py --reset` is run. Set both in production |
 | `CELERY_POOL` | per queue | Read by `start-worker.sh`: overrides the pool type (`threads` for extraction/vision, `prefork` for forensics) |
 | `CELERY_BEAT_SCHEDULE_FILE` | `/tmp/celerybeat-schedule` | Read by `start-beat.sh` (beat + the one-slot worker for `housekeeping_queue`) |
 | `ISSUER_FUZZY_MATCH_THRESHOLD` | `85.0` | rapidfuzz WRatio score (0–100) an extracted issuer must reach to match the registry ([05](../pipeline/05-issuer-verification.md)) |
