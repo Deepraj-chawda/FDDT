@@ -13,8 +13,9 @@ from every company session, and the company-facing queries also exclude
 anything flagged `platform_admin`. A platform admin passes `company_id` to
 read one company's log, which then INCLUDES the platform-only rows about that
 company (that read is itself audited), or omits it to read the platform-level
-log (companies and users created, usage reconciliations, and every
-platform-admin action).
+log (companies and users created, usage reconciliations, every platform-admin
+action, and every company's own settings changes — issuer registry, risk
+rules, risk thresholds — so one view shows who changed what, in which company).
 
 (A submitter sees their own case's timeline through GET /cases/{id}/audit-log.)
 """
@@ -36,9 +37,23 @@ from app.db import tenancy
 from app.db.session import get_system_db
 from app.models.audit_log import AuditLog
 from app.models.case import Case
+from app.models.company import Company
 from app.models.document import Document
 from app.models.user import User, UserRole
 from app.schemas.settings import AuditEventResponse, AuditPage
+
+# A company's own settings changes (a reviewer_l2 editing the issuer registry,
+# risk rules or thresholds — app/api/settings.py). They sit in the company's
+# log and are also listed in the platform-level log.
+COMPANY_SETTINGS_EVENTS = (
+    "issuer_created",
+    "issuer_updated",
+    "issuer_deactivated",
+    "issuer_reactivated",
+    "risk_rule_created",
+    "risk_rule_updated",
+    "risk_thresholds_updated",
+)
 
 router = APIRouter(
     prefix="/audit-log",
@@ -85,7 +100,7 @@ def _scope_filter(ctx: AuthContext, scope_company: uuid.UUID | None):
     if scope_company is None:
         return or_(
             AuditLog.company_id.is_(None),
-            AuditLog.event_type.in_(("case_deleted", "case_restored")),
+            AuditLog.event_type.in_(("case_deleted", "case_restored", *COMPANY_SETTINGS_EVENTS)),
         )
     # Platform-only rows about this company (support access, user and
     # settings changes) sit at company_id NULL with the company in event_data.
@@ -105,10 +120,11 @@ def _events_query(
 ):
     """The filtered event query shared by the paged list and the export."""
     base = (
-        select(AuditLog, Case.case_number, Case.deleted_at, User, Document.original_filename)
+        select(AuditLog, Case.case_number, Case.deleted_at, User, Document.original_filename, Company.name)
         .outerjoin(Case, Case.id == AuditLog.case_id)
         .outerjoin(User, User.id == AuditLog.actor_user_id)
         .outerjoin(Document, Document.id == AuditLog.document_id)
+        .outerjoin(Company, Company.id == AuditLog.company_id)
     )
     base = base.where(_scope_filter(ctx, scope_company))
     if event_type:
@@ -150,6 +166,14 @@ def _actor_name(entry: AuditLog, actor: User | None, is_platform_admin: bool = F
     # Platform-only rows carry the admin's identity themselves; only a
     # platform admin's session ever reads those.
     return data.get("admin_name") or data.get("admin_email")
+
+
+def _company_name(entry: AuditLog, company_name: str | None, is_platform_admin: bool) -> str | None:
+    """Which company an event belongs to — platform admins only (a company
+    user only ever reads their own company's log)."""
+    if not is_platform_admin:
+        return None
+    return company_name or (entry.event_data or {}).get("company_name")
 
 
 def _actor_email(entry: AuditLog, actor: User | None, is_platform_admin: bool = False) -> str | None:
@@ -211,8 +235,9 @@ def list_audit_events(
                 document_filename=filename,
                 event_data=_clean_event_data(entry, is_platform_admin=ctx.is_platform_admin),
                 case_deleted=bool(case_deleted_at is not None),
+                company_name=_company_name(entry, company_name, ctx.is_platform_admin),
             )
-            for entry, case_number, case_deleted_at, actor, filename in rows
+            for entry, case_number, case_deleted_at, actor, filename, company_name in rows
         ],
     )
 
@@ -284,8 +309,11 @@ def export_audit_events(
     def rows() -> Iterator[str]:
         yield "\ufeff" + _csv_line(_EXPORT_HEADER)
         result = session.execute(stmt.execution_options(yield_per=1000))
-        for entry, case_number, case_deleted_at, actor, filename in result:
+        for entry, case_number, case_deleted_at, actor, filename, company_name in result:
             data = _clean_event_data(entry, is_platform_admin=ctx.is_platform_admin) or {}
+            company = _company_name(entry, company_name, ctx.is_platform_admin)
+            if company and "company_name" not in data:
+                data["company_name"] = company
             case_num = case_number or (entry.event_data or {}).get("case_number")
             case_display = f"{case_num} (Deleted)" if (case_num and case_deleted_at is not None) else (case_num or "")
             yield _csv_line([

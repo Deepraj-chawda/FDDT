@@ -136,7 +136,9 @@ the rest of the request is confined by both layers), and writes a `platform_admi
 - company users have no indication that platform access happened.
 
 Platform admins see every row — in the platform-level log, and in a company's log view (which shows the
-company's own events plus the platform-access rows about it). **Every access is recorded individually**:
+company's own events plus the platform-access rows about it). The platform-level log also lists every
+company's own settings changes (issuer registry, risk rules, risk thresholds — `COMPANY_SETTINGS_EVENTS`
+in `app/api/audit.py`) with the company's name, so a platform admin sees who changed what in one view. **Every access is recorded individually**:
 `PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS` defaults to `0` (a value > 0 would collapse identical reads).
 
 Rows written before this change were moved to `company_id = NULL` by migration `c9e3a1b5d7f4` (no row

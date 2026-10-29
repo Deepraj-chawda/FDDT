@@ -254,6 +254,7 @@ class AuditEventResponse(BaseModel):
     document_filename: str | None
     event_data: dict | None
     case_deleted: bool = False
+    company_name: str | None = None  # platform admins only
 
 
 class AuditPage(BaseModel):

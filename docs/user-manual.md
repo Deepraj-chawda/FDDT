@@ -233,7 +233,8 @@ Once a case is approved or rejected, the decision panel becomes read-only.
 **append-only** audit log — every automated check result and every human action, across every case of the
 company, written in plain sentences. Nothing in this log is ever edited or deleted; a case's own timeline
 (on its detail page) is the same log filtered to that case. Platform admins can read a company's log (and
-a separate platform-level log); their own support views are recorded only in the platform log.
+a separate platform-level log, which also lists every company's settings changes); their own support views
+are recorded only in the platform log.
 
 ![The system-wide, append-only audit log with filters and search](images/user-manual/07-audit-history.jpg)
 

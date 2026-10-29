@@ -138,7 +138,7 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 ### Audit — tag `audit`
 | Method & path | Summary | Access |
 |---|---|---|
-| `GET /audit-log` | Search the company's audit log (`event_type`, `case_id`, `q`, `limit`, `offset`); never shows platform-access rows to a company user | reviewer; PA with `company_id` (that company's log incl. platform-access rows about it) or without (the platform-level log) |
+| `GET /audit-log` | Search the company's audit log (`event_type`, `case_id`, `q`, `limit`, `offset`); never shows platform-access rows to a company user | reviewer; PA with `company_id` (that company's log incl. platform-access rows about it) or without (the platform-level log, which also lists every company's settings changes; each item carries `company_name` for PAs) |
 | `GET /audit-log/event-types` | List distinct audit event types | reviewer; PA |
 
 ### Settings — tag `settings`

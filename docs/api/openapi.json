@@ -3769,6 +3769,17 @@
             "type": "boolean",
             "title": "Case Deleted",
             "default": false
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
           }
         },
         "type": "object",

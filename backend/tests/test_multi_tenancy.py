@@ -334,6 +334,34 @@ def test_platform_admin_settings_changes_are_platform_only(client, db_session, t
     assert {"issuer_created", "risk_thresholds_updated"} <= {i["event_type"] for i in admin_view["items"]}
 
 
+def test_company_settings_changes_show_in_the_platform_log(client, tenants, platform_admin_headers):
+    """A reviewer_l2 changing their company's settings: the row stays in the
+    company's own log and is also listed in the platform-level log, with the
+    company's name. Another company never sees it."""
+    a, b = tenants["a"], tenants["b"]
+    a_l2 = a["headers"]["reviewer_l2"]
+    assert client.post("/settings/issuers", headers=a_l2, json={"name": "A Vendor"}).status_code == 201
+    res = client.put("/settings/risk-thresholds", headers=a_l2, json={"medium_threshold": 25, "high_threshold": 55})
+    assert res.status_code == 200, res.text
+    settings_events = {"issuer_created", "risk_thresholds_updated"}
+
+    own = client.get("/audit-log", headers=a_l2).json()["items"]
+    assert settings_events <= {i["event_type"] for i in own}
+    assert all(i["company_name"] is None for i in own)  # only platform admins get it
+
+    platform = client.get("/audit-log", headers=platform_admin_headers).json()["items"]
+    rows = [i for i in platform if i["event_type"] in settings_events]
+    assert {i["event_type"] for i in rows} == settings_events
+    assert all(i["company_name"] == a["name"] and i["actor_email"] == "reviewer_l2.a@example.com" for i in rows)
+    assert settings_events <= set(client.get("/audit-log/event-types", headers=platform_admin_headers).json())
+    exported = client.get("/audit-log/export?event_type=issuer_created", headers=platform_admin_headers).text
+    assert "A Vendor" in exported and a["name"] in exported
+
+    assert not settings_events & {
+        i["event_type"] for i in client.get("/audit-log", headers=b["headers"]["reviewer_l2"]).json()["items"]
+    }
+
+
 def test_platform_admin_access_is_read_only(client, tenants, platform_admin_headers):
     b = tenants["b"]
     b_case, _ = _case_with_document(client, b["headers"]["user"])

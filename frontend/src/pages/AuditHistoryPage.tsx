@@ -140,7 +140,7 @@ export function AuditHistoryPage() {
                   setPage(0)
                 }}
               />
-              Show the platform-level log instead (companies, users, usage reconciliation)
+              Show the platform-level log instead (companies, users, usage reconciliation, every company's settings changes)
             </label>
           </div>
         )}
@@ -270,6 +270,9 @@ export function AuditHistoryPage() {
                             <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`}></span>
                             {auditLabel(evt.event_type)}
                           </span>
+                          {platformLog && evt.company_name && (
+                            <div className="mt-1 text-[11px] text-slate-500">{evt.company_name}</div>
+                          )}
                         </td>
                         <td className="py-3.5 sm:py-4 px-3 sm:px-4 whitespace-nowrap">
                           {evt.case_id ? (

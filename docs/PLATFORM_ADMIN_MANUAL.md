@@ -268,6 +268,9 @@ FDDT maintains an **append-only** audit log in the database. Audit rows cannot b
 ### Audited Platform Support Access
 When a Platform Administrator inspects a tenant company's cases or documents for technical support, the system automatically records a `platform_admin_access` event. Support access and user management actions remain recorded **platform-only** so internal operator sessions are kept confidential.
 
+### Company Settings Changes
+When a company's Reviewer L2 changes the company's settings (issuer registry, risk rules or risk thresholds), the change is written to that company's own log **and** listed in the **platform-level log** (tick *Show the platform-level log instead*). Each row shows the company name under the event, who made the change, and the old → new values. The CSV export includes the company name in the details column. A change a platform admin makes to a company's settings is a platform-only row and appears in the platform-level log too.
+
 ### Deleting & Restoring Cases
 Open the case (choose the company first), then **Delete case**. An optional reason goes to the audit log. The case is soft-deleted and removed from active company queues, dashboards, and case pages. Its historical audit trail remains recorded in the company's **Audit History** along with a `case_deleted` ("Case deleted (admin)") event attributed to **Platform Administrator** (hiding operator personal email), so company reviewers understand why the case was removed. Nothing is erased: documents, results and files are kept. In the admin's case list the case shows a **Deleted** badge; open it and choose **Restore case** to bring it back.
 
@@ -279,6 +282,8 @@ Open the case (choose the company first), then **Delete case**. An optional reas
 | `user_password_changed` | Security & Admin | A user changed their own password (with their current password). |
 | `user_created` / `user_updated` | User Admin | New user account created or role/status modified. |
 | `company_created` / `company_updated` | Tenant Admin | New company provisioned or limits adjusted. |
+| `issuer_created` / `issuer_updated` / `issuer_deactivated` / `issuer_reactivated` | Company Settings | Issuer registry changed by the company's Reviewer L2 (or a platform admin). Also listed in the platform-level log. |
+| `risk_rule_created` / `risk_rule_updated` / `risk_thresholds_updated` | Company Settings | Risk rules or tier thresholds changed by the company's Reviewer L2 (or a platform admin). Also listed in the platform-level log. |
 | `case_deleted` / `case_restored` | Tenant Admin | Platform admin deleted (soft) or restored a case. Platform-only. |
 | `case_created` / `case_submitted` | Case Lifecycle | Submitter uploaded a new case and supporting documents. |
 | `case_approved` / `case_rejected` | Review Decision | Reviewer completed adjudication with notes and reasoning. |

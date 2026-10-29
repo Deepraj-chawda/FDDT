@@ -11,6 +11,7 @@ import { Link, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 
 import { getCase, getCaseAuditLog, getDocumentFileUrl, getSignatureMatches } from "@/api/cases"
+import { ApiError } from "@/api/client"
 import { useAuth } from "@/hooks/useAuth"
 import { Nav } from "@/design-system/Nav"
 import { InfoChip } from "@/design-system/InfoChip"
@@ -91,6 +92,9 @@ export function CaseDetailPage() {
     data: caseDetail,
     isLoading: isCaseLoading,
     isError: isCaseError,
+    error: caseError,
+    refetch: refetchCase,
+    isFetching: isCaseFetching,
   } = useQuery({
     queryKey: ["case", caseId, token],
     queryFn: () => getCase(caseId!, token!),
@@ -196,14 +200,33 @@ export function CaseDetailPage() {
   )
 
   if (isCaseError) {
+    // Only a 404 (or 422: the id in the URL isn't a valid case id) means the
+    // case is missing or not visible to this user, which the API reports the
+    // same way. Anything else — a server error, a dropped
+    // connection — is a failed load, and retrying may succeed.
+    const status = caseError instanceof ApiError ? caseError.status : null
+    const notFound = status === 404 || status === 422
     return (
       <div className="min-h-screen flex flex-col font-sans bg-[#F1F5FA] text-slate-900">
         <Nav active="cases" />
         <main className="max-w-2xl w-full mx-auto px-6 py-16 text-center">
-          <h1 className="text-lg font-bold text-slate-800">Case not found</h1>
+          <h1 className="text-lg font-bold text-slate-800">{notFound ? "Case not found" : "Couldn't load this case"}</h1>
           <p className="text-sm text-slate-500 mt-2">
-            This case doesn't exist, or you don't have access to it.
+            {notFound
+              ? "This case doesn't exist, or you don't have access to it."
+              : `Something went wrong while loading the case (${status ? `error ${status}` : "network error"}). Try again; if it keeps failing, contact your administrator.`}
           </p>
+          {!notFound && (
+            <button
+              type="button"
+              onClick={() => void refetchCase()}
+              disabled={isCaseFetching}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 mt-4"
+            >
+              {isCaseFetching ? "Retrying…" : "Retry"}
+            </button>
+          )}
+          <br />
           <Link to="/cases" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline mt-4">
             <ChevronLeftIcon className="w-4 h-4" />
             Back to queue
