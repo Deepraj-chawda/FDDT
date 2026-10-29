@@ -5,7 +5,7 @@ steps of the runbook automatically:
 
 | Stage | Runs on | What it does |
 |---|---|---|
-| **CI** | every push to `main` and every pull request into `main` | Frontend: `npm ci`, `oxlint`, `tsc -b && vite build`. Backend: `alembic upgrade head` on a throwaway Postgres 16, then the whole `pytest` suite, including the PostgreSQL RLS tests and the Redis tests. Test results appear on the run's **Tests** tab |
+| **CI** | every push to `main` and every pull request into `main` | Frontend: `npm ci`, `oxlint`, `vitest` (unit tests), `tsc -b && vite build`. Backend: `alembic upgrade head` on a throwaway Postgres 16, then the whole `pytest` suite, including the PostgreSQL RLS tests and the Redis tests. Test results appear on the run's **Tests** tab |
 | **Build** | `main` only | `az acr build` for `fddt-backend` and `fddt-web`, tagged with the first 7 characters of the commit SHA |
 | **Deploy** | `main` only, **after approval** | Prints the PITR target time and the previous image, runs the `fddt-migrate` job and waits for *Succeeded*, updates `fddt-api`, the three workers, `fddt-beat` and `fddt-web`, then checks `https://<APP_HOST>/api/health` |
 
@@ -15,6 +15,88 @@ pipeline. You no longer need Cloud Shell for releases.
 
 Nothing secret goes into Azure DevOps. The apps keep reading their secrets from Key Vault, and the pipeline
 signs in to Azure without a password, through workload identity federation.
+
+**Setting this up for the first time, with production already running?** Follow the steps in order:
+[0](#0-before-you-start-production-is-already-running) (check production and protect its data) →
+1–6 (set up Azure DevOps) → [7](#7-the-first-release-through-the-pipeline) (the first release). The
+[checklist](#first-time-checklist) at the end lists every step on one page. No step deletes data: the
+pipeline only **updates** the apps and runs migrations, which add to the database.
+
+---
+
+## 0. Before you start: production is already running
+
+Do this once, in **Cloud Shell** (portal → the `>_` icon at the top), before touching Azure DevOps. It takes
+about 15 minutes. Run `source ~/fddt-deploy/reload.sh` first if you deployed with the runbook; otherwise set
+the two names by hand:
+
+```bash
+export RG=<your resource group>          # e.g. rg-fddtprod
+export PG=<your PostgreSQL server name>  # e.g. fddtprod-pg
+```
+
+### 0.1 Check that production has the names the pipeline expects
+
+The Deploy stage updates apps **by name**. List what exists:
+
+```bash
+az containerapp list -g $RG --query "[].name" -o tsv
+az containerapp job list -g $RG --query "[].name" -o tsv
+az acr list -g $RG --query "[].name" -o tsv
+```
+
+✅ You must see these apps: `fddt-api`, `fddt-worker-extraction`, `fddt-worker-vision`,
+`fddt-worker-forensics`, `fddt-beat`, `fddt-web`; the job `fddt-migrate`; and one registry (its name is your
+`ACR` value).
+
+❌ **If any is missing or named differently, stop.** Production was not set up with the
+[runbook](azure-production-runbook.md) (e.g. it is the single-app
+[demo deployment](azure-demo-deployment.md)) and the pipeline would fail at Deploy. Either rename the
+pipeline's app names in `azure-pipelines.yml` (Deploy stage) to yours, or move production to the runbook
+layout first. Ask before guessing: a wrong name fails the run, it does not damage anything.
+
+### 0.2 Note which database version production is on
+
+The migration job can print it without changing anything (`alembic current` only reads):
+
+```bash
+az containerapp job start -g $RG -n fddt-migrate --container-name migrate \
+  --command "sh" --args "-c" "alembic current"
+```
+
+Wait 1–2 minutes, then open **portal › fddt-migrate › Execution history** → the newest execution →
+**Console logs** (logs arrive 2–5 minutes late). The last line is a revision id, e.g. `a2d6f9c3e7b4 (head)`.
+**Write it down.** The first pipeline release migrates from there to the newest version (step 7 lists what
+changes). If the log shows an error instead, fix that first (runbook step 13 lists the usual errors).
+
+### 0.3 Take a backup you can name
+
+Azure PostgreSQL already keeps automatic backups (point-in-time restore, 7+ days). Take an extra on-demand
+backup now, so there is a named restore point from before the first pipeline run:
+
+```bash
+az postgres flexible-server backup create -g $RG -n $PG --backup-name before-first-cicd
+az postgres flexible-server backup list -g $RG -n $PG -o table      # the new backup is listed
+```
+
+If your CLI says the command does not exist, update it (`az upgrade`) or skip it: the automatic backups and
+the **PITR target** time the pipeline prints before migrating (step 7) are enough to restore from.
+
+Check how long backups are kept: **portal › your PostgreSQL server › Settings › Backup and restore** →
+*Backup retention period*. Keep at least 7 days.
+
+### 0.4 Check the admin settings the migration job uses
+
+The migration job also runs `seed.py`. It never changes an existing admin account, but if
+`SEED_ADMIN_EMAIL` names an account that does **not** exist yet, it creates it, and outside local/test it
+now refuses a password shorter than 12 characters or the default `ChangeMe123!`. If you rotate secrets,
+keep `seed-admin-password` in Key Vault at least 12 characters long.
+
+### 0.5 Rotate keys that were ever on a laptop
+
+If Azure Storage, Document Intelligence or Azure OpenAI keys, or the JWT secret, were ever in a local
+`backend/.env`, rotate them in Azure and update Key Vault (runbook step 11) before go-live. Rotating the JWT
+secret signs everyone out once.
 
 ---
 
@@ -139,6 +221,57 @@ Azure Repos ignores the `pr:` block in the YAML. Pull requests are validated by 
 Automatic, *Policy requirement*: **Required** → **Save**. A PR can then merge only if CI passed. Build and
 Deploy are skipped for PRs.
 
+## 7. The first release through the pipeline
+
+1. **Pick a quiet time** (evening or weekend). This release signs everyone out once and briefly locks the
+   documents table (below).
+2. Push `main` to the Azure DevOps repo (step 1) or click **Run pipeline**. Wait for **CI** and **Build** to go
+   green. Nothing in production has changed yet.
+3. The approvers get an email. Before approving, check that the time is right and step 0 is done.
+   **Review › Approve**.
+4. Watch the **Deploy** log. In order it prints:
+   - `PITR target (UTC): …`: **write this time down.** It is the moment to restore to if anything goes
+     wrong.
+   - `Previous API image: …`: write this down too (the image to go back to).
+   - The migration execution name, then `Running` … `Succeeded`. If it says `Failed`, the apps were **not**
+     updated and production keeps running the old version: see [Troubleshooting](#troubleshooting).
+   - `Deployed <tag>`, then `Healthy` from the smoke test.
+5. **Check the result** (5 minutes):
+   - Sign in (everyone has to sign in again once, expected).
+   - Open the Case Queue: old cases are all there, 50 per page with Previous / Next.
+   - Open an existing case: its documents and PDF preview load.
+   - Upload a test PDF: it processes, and its checks include **Analysis integrity**.
+   - Platform admin › Companies › Edit: the **Max pages per PDF** field shows 100.
+   - Confirm the database moved to the new version: run step 0.2 again; the last log line is
+     `a9c4e2f7b1d8 (head)`.
+
+### What this release's migrations change
+
+Production on `a2d6f9c3e7b4` gets these six, in this order. **None deletes data**: each adds columns, a table
+or rows, or moves rows.
+
+| Migration | Change | What you notice |
+|---|---|---|
+| `b3e6d9a2f4c7` | Platform-admin audit rows become platform-only (`company_id` set to NULL, the company kept inside the row) | Companies no longer see platform-admin actions in their Audit History |
+| `c6f1a8e3d9b5` | `cases.deleted_at`, `cases.deleted_by_user_id` (soft delete) | Nothing |
+| `d7a2c4e9f1b6` | `refresh_tokens` table, `users.token_version` | **Everyone is signed out once** |
+| `e1f4b7a2c9d3` | `documents.file_size_bytes` INTEGER → BIGINT | Values unchanged. The documents table is **locked while it is rewritten** (seconds for thousands of rows; uploads wait meanwhile) |
+| `f5a8c3e1b7d2` | `companies.max_file_pages`, 100 for existing companies | PDFs over 100 pages are rejected |
+| `a9c4e2f7b1d8` | Check type `analysis_integrity` + rules `integrity.prompt_injection` (60) and `integrity.analysis_incomplete` (30) for every company | Cases scored from now on: a document that addresses the AI → high; a document whose extraction failed → medium (was low). Existing scores do not change |
+
+If step 0.2 showed a revision **other than** `a2d6f9c3e7b4`, the list is longer or shorter. Run
+`alembic history` locally to see every migration between that revision and the newest one.
+
+### If something goes wrong
+
+| Situation | What to do | Data |
+|---|---|---|
+| Migration `Failed` | Nothing to roll back: the apps were not updated. Read the job's console logs, fix, run the pipeline again | Untouched (a failed migration is rolled back by PostgreSQL) |
+| Migrated, but the new version misbehaves | Fix forward if you can (a new commit). Otherwise restore the database to the **PITR target** time and redeploy the **previous image**: runbook [Rollback](azure-production-runbook.md#rollback) | Anything written **after** the PITR time is lost (uploads, reviews), so only restore if the release is unusable |
+| Apps fine, smoke test failed | Usually `APP_HOST` is wrong ([Troubleshooting](#troubleshooting)). The release itself is live | Untouched |
+
+Don't rerun an older pipeline run after a migration: the old code does not know the new columns.
+
 ---
 
 ## Day-to-day
@@ -165,3 +298,25 @@ Deploy are skipped for PRs.
 | Migration `Failed` | The apps were not touched. Open **fddt-migrate › Execution history** → the execution → **Console logs**. Runbook step 13 lists the usual errors |
 | Smoke test fails but the apps are *Running* | `APP_HOST` is wrong (it must have no `https://`), or the custom domain/TLS isn't bound yet: use the `*.azurecontainerapps.io` FQDN |
 | CI `pytest` fails only in the pipeline | Run the same suite locally against Postgres and Redis: [local-setup.md › Tests](local-setup.md#tests) |
+| CI `vitest` fails | A frontend unit test failed. Run `npm test` in `frontend/` locally |
+| Migration log: *seed.py: refusing to set the platform admin password* | `SEED_ADMIN_EMAIL` names an account that doesn't exist, and `seed-admin-password` is shorter than 12 characters or the default. Set a strong value in Key Vault, or set `SEED_ADMIN_EMAIL` to the existing admin (step 0.4) |
+| Apps start but crash with *Permission denied* writing a file | The image now runs as a non-root user (uid 10001). The app writes only to `/tmp`; a custom volume mount or start script that writes elsewhere needs that path to be writable |
+
+---
+
+## First-time checklist
+
+| # | Step | Done |
+|---|---|---|
+| 0.1 | Production has `fddt-api`, the 3 workers, `fddt-beat`, `fddt-web`, job `fddt-migrate`, a registry | ☐ |
+| 0.2 | Current database revision written down: `__________` | ☐ |
+| 0.3 | On-demand backup `before-first-cicd` taken; retention ≥ 7 days | ☐ |
+| 0.4 | `seed-admin-password` ≥ 12 characters | ☐ |
+| 0.5 | Keys that were ever on a laptop rotated | ☐ |
+| 1 | Azure DevOps project, repo imported, ≥ 1 parallel job | ☐ |
+| 2 | Service connection `fddt-azure` verified | ☐ |
+| 3 | Variable group `fddt-production`: `RG`, `ACR`, `APP_HOST` | ☐ |
+| 4 | Environment `fddt-production` with approvers + exclusive lock | ☐ |
+| 5 | Pipeline created from `/azure-pipelines.yml`, permissions granted | ☐ |
+| 6 | Build validation policy on `main` | ☐ |
+| 7 | First release: PITR target `__________`, previous image `__________`, smoke checks passed, revision `a9c4e2f7b1d8` | ☐ |

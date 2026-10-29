@@ -1,8 +1,9 @@
 # Frontend screens
 
 React 19 + TypeScript SPA (`frontend/src`), routed with React Router 7 (`App.tsx`). Server state is
-TanStack Query (`retry: false`, `refetchOnWindowFocus: false`); the auth token lives in `localStorage`
-(`hooks/useAuth.tsx`). In development the Vite server proxies `/api/*` to `127.0.0.1:8000` and strips the
+TanStack Query (`retry: false`, `refetchOnWindowFocus: false`); the access token lives in memory only and
+the session in an httpOnly refresh cookie (`lib/session.ts`, `hooks/useAuth.tsx`;
+[authentication.md](../architecture/authentication.md)). In development the Vite server proxies `/api/*` to `127.0.0.1:8000` and strips the
 prefix (`vite.config.ts`), so `API_BASE_URL` defaults to `/api` (override with `VITE_API_BASE_URL`).
 Every page except Login is loaded on demand (`React.lazy` in `App.tsx`), so the first download is the
 ~360 kB main bundle plus the page being opened.
@@ -50,7 +51,9 @@ The top `Nav` (`design-system/Nav.tsx`) shows each item only to who may use it (
 ## LoginPage — `/login`
 **Purpose:** email/password sign-in.
 **Endpoints:** `POST /auth/login`, then `GET /auth/me` (via `useAuth`).
-**Notes:** stores the JWT in `localStorage`. Deliberately has no "trust this device", SSO button or
+**Notes:** keeps the access token in memory and the session in an httpOnly cookie. After sign-in it
+returns to the page the user was sent away from (in-app paths only), else the home page. Deliberately has
+no "trust this device", SSO button or
 compliance badges.
 
 ## CaseQueuePage — `/`, `/cases`, `/review-queue`
@@ -58,8 +61,10 @@ compliance badges.
 a table with case number, type, status, flag (risk tier), escalation badge, document count and submitter.
 Reviewer L1 gets tabs *My queue* (`can_act`) / *Escalated to L2 · view only*; Reviewer L2 gets *All cases* /
 *Escalated queue (L2)*; rows the user can't act on show a "View only" pill.
-**Endpoints:** `GET /cases` (once; refetched by other screens via the `["cases", token]` query key).
-**Behaviour:** search box + status / case-type / flag filters applied **in the browser**. The status
+**Endpoints:** `GET /cases/page` (50 per page, `limit`/`offset`) and `GET /cases/summary` (the counts and
+tab badges). Export CSV reads every page (`listAllCases`).
+**Behaviour:** search (debounced 300 ms; case number, submitter name or email) and the status / case-type /
+flag filters run **on the server**, over every case; Previous / Next pages through the result. The status
 column is a UI mapping of `CaseStatus` → `Analyzing` (`submitted`, `under_automated_review`),
 `Awaiting Review` (`pending_manual_review` and any other open status), `Approved`
 (`approved`, `auto_approved`, `closed`), `Rejected`. **"Escalated" is a tier filter (L2), not a status.**
@@ -112,7 +117,8 @@ through child components, the decision endpoints and report endpoints.
 **Contents:**
 - *Left:* the case flag card and the document list (type and processing status).
 - *Middle:* `PdfOverlayViewer` showing the selected PDF with live overlays from that document's checks
-  and cross-document findings; the document's **core** extracted fields (issuer — the only one with an
+  and cross-document findings (it keeps the first signed URL per document while the page is open; on a load
+  failure **Retry** asks `GET /cases/{id}/documents/{doc}/file-url` for a fresh one); the document's **core** extracted fields (issuer — the only one with an
   "(uncertain)" marker — reference number, date, amounts; `additional_fields` are not listed here);
   `DocumentChecksPanel` (one expandable card per check — its one-line headline always visible, the
   short problem lines with **Why?** when expanded — plus a cross-document card and the signature
@@ -129,9 +135,9 @@ with Reviewer L2, while the report export stays available.
 
 ## DashboardPage — `/dashboard`
 **Purpose:** at-a-glance operational summary.
-**Endpoints:** `GET /cases` only. **Everything is computed in the browser** from that list: KPI cards
-(counts by flag: high/medium/low/pending, escalated open cases, cleared), a risk-distribution panel, the
-top-5 open cases the user can act on (`can_act`; escalated first, then highest risk score, then newest), and a "Case Summary" strip
+**Endpoints:** `GET /cases/summary` (KPI cards: counts by flag high/medium/low/pending, escalated open
+cases, cleared; the risk-distribution panel) and `GET /cases/page?actionable=true&status_group=open&sort=priority&limit=5`
+(the top-5 open cases the user can act on: escalated first, then highest risk score, then newest), and a "Case Summary" strip
 (total cases, documents analyzed, escalated, cleared).
 **Notes:** this is *not* an MIS/compliance dashboard (no fraud rate, resolution time,
 volumes over time, export). It contains no charts library.
@@ -139,7 +145,8 @@ volumes over time, export). It contains no charts library.
 ## MyCasesPage — `/my-cases`
 **Purpose:** the signed-in user's own cases, with status filters (Under review / Cleared /
 Action required) and search.
-**Endpoints:** `GET /cases`; client filters to cases the user submitted.
+**Endpoints:** `GET /cases/page?mine=true` (50 per page, status filter and case-number search on the
+server) and `GET /cases/summary?mine=true` (the counts).
 **Notes:** a submitter sees decision outcomes here but not risk detail.
 
 ## AuditHistoryPage — `/audit-history`
@@ -185,8 +192,8 @@ deactivate themselves.
 **Endpoints:** `GET/POST /platform/companies`, `PATCH /platform/companies/{id}`.
 **Notes:** creating a company seeds its risk rules from the platform template and default thresholds;
 its issuer registry starts empty. Suspending blocks sign-in and existing tokens for all its users. The table
-shows each company's limits ("10 MB / file · 300 MB / zip"). **Edit** opens a form with the name, **Max file
-size (MB)** and **Max zip size (MB)**, pre-filled; only changed values are sent, each change is platform-audited
+shows each company's limits ("10 MB / file · 300 MB / zip · 100 pages / file"). **Edit** opens a form with the
+name, **Max file size (MB)**, **Max zip size (MB)** and **Max pages per PDF**, pre-filled; only changed values are sent, each change is platform-audited
 (`company_updated`, old → new), and it applies to the company's next upload without a new sign-in.
 
 **Form validation (every form):** a problem is shown in red directly under the field (`FieldError` + red

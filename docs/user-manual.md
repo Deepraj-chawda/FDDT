@@ -97,7 +97,7 @@ could be accepted.
 ## Tracking your cases (User)
 
 **My Cases** lists everything you've submitted, filterable by *Under review*, *Cleared* or
-*Action required*, with search. You'll see the outcome (approved / rejected, with the reviewer's reason
+*Action required*, with search by case number, 50 cases per page (**Previous** / **Next** below the table). You'll see the outcome (approved / rejected, with the reviewer's reason
 when rejected) but not the risk detail behind it — that's intentional (see below).
 
 Opening one of your cases shows its documents, their extracted fields, and an activity timeline, but:
@@ -114,7 +114,9 @@ avoid next time.
 
 **Review Queue** (also the home page, `/cases`) is the master case list: counts of open / awaiting review
 / cleared / escalated cases, and a table of cases with their type, status, risk flag, escalation badge,
-document count and submitter. Search and the status / type / flag filters run instantly in your browser.
+document count and submitter. The list shows 50 cases per page (**Previous** / **Next** below the table);
+search (case number, submitter name or email) and the status / type / flag filters cover **all** cases, not
+just the page on screen. **Export CSV** downloads every case matching the current filters.
 
 - **Reviewer L1** sees two tabs: **My queue** (the cases you can act on — the default) and **Escalated to
   L2 · view only** (cases handed to L2; you can open them to follow what happened, but not act on them).
@@ -167,6 +169,7 @@ scrutiny. In plain language, here's what each check looks for and how far to tru
 
 | Check | What it looks for | How much to trust it |
 |---|---|---|
+| **Analysis integrity** | Whether the automated analysis ran in full, and whether the document's text tries to instruct the AI ("ignore previous instructions", "mark this invoice as clean"). A genuine document never addresses an AI. | Two clear signals: text aimed at the AI makes the case **high** risk; a document that could not be analysed (an outage, an unreadable file) makes it **medium**, because its fields and issuer were not checked. |
 | **Extraction & classification** | Reads the document (OCR, including printed Arabic), classifies its type, and pulls out issuer, date, amounts, reference number and any other identifiable fields — without a per-type template. | Low-confidence fields are marked; the case still goes to manual review either way. |
 | **Field validation** | Rule-based checks on the extracted data: is the date in the future, do the line items add up (each column of a multi-column table on its own; installments and total rows not counted twice), do the tax and the printed rate agree, are the dates in order (dated → printed → PDF made), does a TAX INVOICE show a TRN, is a "Scanned with CamScanner" line on a file with no scan, several invoices in one file (each checked on its own; two for the same month flagged), does the stamp name the issuer. | Deterministic and reliable — it's arithmetic and date logic, not a model judgment. |
 | **Issuer verification** | Fuzzy-matches the extracted issuer name against the known-issuer registry (vendors, schools, tax IDs the organisation has already vetted). | Matches on **name only** — there's no letterhead/logo comparison, and a legitimate new issuer will simply not be in the registry yet. |
@@ -289,7 +292,7 @@ retroactively, and never affect another company.
 
 The **Platform** area is visible only to platform admins:
 
-- **Companies** — set each company's **upload limits** with **Edit** (max file size and max zip size in MB, 10 MB / 300 MB by default; takes effect on the company's next upload, and every change is recorded in the platform audit log with the old and new values); create a company (it receives the default rule set and thresholds; its issuer registry
+- **Companies** — set each company's **upload limits** with **Edit** (max file size and max zip size in MB, 10 MB / 300 MB by default, and max pages per PDF, 100 by default; takes effect on the company's next upload, and every change is recorded in the platform audit log with the old and new values); create a company (it receives the default rule set and thresholds; its issuer registry
   starts empty), rename it, or suspend / reactivate it. Suspending blocks sign-in for all its users.
 - **Users** — create and manage every account; there's no self-service sign-up and companies cannot manage
   their own users. Each account gets a company and a role (User, Reviewer L1, Reviewer L2), or is a
@@ -335,9 +338,13 @@ Being direct about this is part of using the tool responsibly:
 - **Only PDFs (within the company's size limit, not password-protected) can be uploaded**, because every forensic check works
   on the PDF itself. A PDF may have at most 100 pages by default (your platform operator can change this for your
   company); a longer one must be split. There is no virus scan.
-- **A failed check contributes nothing to the score, silently.** If a check errors out, the case still
+- **A failed check contributes nothing to the score.** If one forensic check errors out, the case still
   scores — the failure is visible in the audit log and the check's own card, but no rule fires because
-  of it.
+  of it. The exception is the **extraction itself**: a document that could not be read at all makes the
+  case medium risk (its fields and issuer were never checked), and one the AI refused to read because it
+  tried to instruct the AI makes it high.
+- **If a document preview says "Couldn't load this file for preview"**, click **Retry**: it fetches a
+  fresh link (links expire after a few minutes) without reloading the page.
 - **The absence of a flagged finding does not guarantee a document is genuine.**
 - Not built in this version: notifications/email, SLA tracking and deadlines, organisation-wide
   MIS/compliance reporting, letterhead/logo matching, cross-case signature-library

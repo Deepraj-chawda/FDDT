@@ -1,6 +1,6 @@
 # Entity-relationship diagram
 
-<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head a2d6f9c3e7b4).
+<!-- Generated from the live database's foreign keys by `docs/tools/gen_db_docs.py` (Alembic head a9c4e2f7b1d8).
      Only key columns are drawn to stay readable; the full column list is in schema.md. -->
 
 Every tenant-owned table also references `companies` through `company_id`. Those edges are left out of
@@ -23,12 +23,14 @@ erDiagram
     case_risk_assessments |o--o{ case_reports : "risk_assessment_id"
     cases ||--o{ case_risk_assessments : "case_id"
     bulk_uploads |o--o{ cases : "bulk_upload_id"
+    users |o--o{ cases : "deleted_by_user_id"
     users ||--o{ cases : "submitted_by_user_id"
     cases ||--o{ cross_document_findings : "case_id"
     documents ||--o{ document_checks : "document_id"
     documents ||--o{ document_page_hashes : "document_id"
     cases ||--o{ documents : "case_id"
     users ||--o{ documents : "uploaded_by_user_id"
+    users ||--o{ refresh_tokens : "user_id"
     users |o--o{ risk_rule_templates : "updated_by"
     users |o--o{ risk_rules : "updated_by"
     cases ||--o{ risk_scores : "case_id"
@@ -46,6 +48,7 @@ erDiagram
         uuid id PK
         uuid submitted_by_user_id FK
         uuid bulk_upload_id FK
+        uuid deleted_by_user_id FK
     }
     documents {
         uuid id PK
@@ -124,6 +127,10 @@ erDiagram
     bulk_uploads {
         uuid id PK
         uuid uploaded_by_user_id FK
+    }
+    refresh_tokens {
+        uuid id PK
+        uuid user_id FK
     }
 ```
 

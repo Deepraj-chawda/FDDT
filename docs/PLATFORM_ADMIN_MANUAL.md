@@ -81,6 +81,7 @@ The Companies dashboard displays all onboarded client organizations:
    - **Company Name**: Official legal or operational entity name.
    - **Max File Size (MB)**: Maximum size per uploaded PDF (defaults to 10 MB).
    - **Max Zip Size (MB)**: Maximum batch zip upload size (defaults to 300 MB).
+   - The page limit starts at 100 pages per PDF (`DEFAULT_MAX_FILE_PAGES`); change it afterwards with **Edit**.
 3. Click **Create Company**.
    - The platform creates the tenant record, initializes company storage containers, and automatically seeds the default baseline Risk Rules from the master template.
 
@@ -285,5 +286,6 @@ Open the case (choose the company first), then **Delete case**. An optional reas
 | `document_processing_completed` | Pipeline | OCR extraction, classification, and field parsing succeeded. |
 | `font_consistency_completed` / `font_consistency_failed` | Pipeline | Font consistency check finished (or failed — the extraction still completes). |
 | `spelling_check_completed` / `spelling_check_failed` | Pipeline | Spelling check (English) finished (or failed — the extraction still completes). |
+| `analysis_integrity_completed` / `analysis_integrity_failed` | Pipeline | Analysis integrity check finished: text aimed at the AI, or why a failed extraction left the analysis incomplete. |
 | `tampering_checks_completed` | Pipeline | ELA, copy-move detection and the ghost-content check completed. |
 | `risk_assessment_completed` | Pipeline | Composite risk score calculated and tier assigned. |

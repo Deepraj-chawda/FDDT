@@ -35,7 +35,7 @@ sequenceDiagram
         Q->>DI: process_document [extraction_queue] → prebuilt-layout on a SAS URL
         Q->>AI: classify_and_extract (one strict-JSON call)
         Q->>AI: judge_spelling (only if the dictionary pass leaves candidates)
-        Q->>DB: document_checks: font_consistency, spelling_consistency
+        Q->>DB: document_checks: font_consistency, spelling_consistency, analysis_integrity
         Q->>DB: documents.document_type / extracted_fields / ocr_text = complete
         Q->>Q: run_document_checks [vision_queue]
         Q->>DB: document_checks: field_validation, issuer_verification
@@ -117,6 +117,11 @@ its OCR words: font consistency ([06a](../pipeline/06a-font-consistency.md)) and
 ([06b](../pipeline/06b-spelling.md) — English words only, confirmed by one LLM call when the dictionary
 pass leaves candidates). Both are best effort: each writes its row inside a savepoint, so a failure is
 stored as a failed check and never fails the extraction.
+
+The analysis integrity check ([02a](../pipeline/02a-analysis-integrity.md)) runs there too: it flags OCR
+text that tries to instruct the AI. It also runs when the extraction **fails**, before scoring is
+requested: a refusal by Azure's jailbreak filter is recorded as a suspected prompt injection (high), any
+other failure as incomplete analysis (medium), so a failed document never scores as clean.
 
 ### 4. Cross-document check (case level)
 After each `run_document_checks` — and also after a failed extraction — the task checks whether

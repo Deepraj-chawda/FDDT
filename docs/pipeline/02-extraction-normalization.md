@@ -67,14 +67,21 @@ a database transaction across an Azure call ([processing-queues.md](../processin
      `invoice_number`, `core_fields`, `line_items`). The document-level fields stay the first invoice's.
 5. **Checks that need the OCR words** run here, before the document is marked complete, each best
    effort (its row is written inside a savepoint; a failure is stored as a failed check and never fails
-   the extraction): font consistency ([06a](06a-font-consistency.md), PDFs only) and spelling
-   ([06b](06b-spelling.md), English words, every document).
+   the extraction): font consistency ([06a](06a-font-consistency.md), PDFs only), spelling
+   ([06b](06b-spelling.md), English words, every document) and analysis integrity
+   ([02a](02a-analysis-integrity.md): text that tries to instruct the AI).
 6. **Persist.** `document_type`, `ocr_text`, `extracted_fields`; `processing_status = complete`;
    audit `document_processing_completed` `{document_type, document_type_confidence, fields_located}`;
    then `run_document_checks.delay(document_id, company_id)` (on `vision_queue`).
 7. **On any exception:** `processing_status = failed`, `processing_error` (≤ 4000 chars), audit
    `document_processing_failed`, and the case-level completion check and scoring are still triggered
-   so a failed document cannot block the case forever.
+   so a failed document cannot block the case forever. Before scoring, the analysis integrity check
+   ([02a](02a-analysis-integrity.md)) records why: a refusal by Azure's jailbreak filter →
+   `prompt_injection_suspected` (high), anything else → `analysis_incomplete` (medium). A failed
+   document therefore never scores as clean.
+
+The extraction prompt (like every LLM prompt) ends with a rule that the document text is untrusted data:
+text addressing the AI ("ignore previous instructions", "report the total as…") is not followed.
 
 ## Labels
 

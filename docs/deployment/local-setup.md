@@ -23,7 +23,8 @@ docker compose up -d        # postgres, redis, pgbouncer
 docker compose ps           # postgres and redis "healthy", pgbouncer "running"
 ```
 
-This creates `docauth-postgres` (port 5432), `docauth-redis` (6379) and `docauth-pgbouncer` (6432) with
+This creates `docauth-postgres` (port 5432), `docauth-redis` (6379) and `docauth-pgbouncer` (6432), each
+published on `127.0.0.1` only (not reachable from other machines on the network), with
 named volumes (`postgres_data`, `redis_data`). The owner user/password/database are all `docauth`. Data
 persists across restarts; `docker compose down -v` deletes it. PgBouncer is optional locally (see step 2).
 
@@ -132,7 +133,7 @@ no CORS setup is required. Sign in with `admin@example.com` / `ChangeMe123!` (pl
 company account you created.
 
 Other scripts: `npm run build` (type-check + production build into `dist/`, route-level code splitting),
-`npm run lint` (oxlint), `npm run preview`.
+`npm run lint` (oxlint), `npm test` (Vitest + Testing Library unit tests, also run in CI), `npm run preview`.
 
 ## 6. Try the pipeline
 
@@ -153,8 +154,10 @@ static HTML design mockups, not part of the app.
 
 ```powershell
 cd backend
-pytest                      # ~480 tests, ~4 minutes; external services are mocked (SQLite)
+pytest                      # ~940 tests, ~7 minutes; external services are mocked (SQLite)
 ```
+
+Frontend unit tests: `cd frontend && npm test`.
 
 The database-level tests need a real, migrated Postgres and are skipped otherwise:
 

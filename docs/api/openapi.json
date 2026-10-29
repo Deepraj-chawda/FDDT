@@ -414,6 +414,300 @@
         }
       }
     },
+    "/cases/page": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "List cases, one page at a time",
+        "description": "The same cases, visibility and order as `GET /cases`, filtered and paginated on the server. `status_group`: analyzing, awaiting_review, approved, rejected, open, escalated (open and assigned to L2), in_progress / action_required / pending_review (My Cases), or deleted (platform admins: their soft-deleted cases; every other group lists live cases only). `risk`: the latest risk tier, `pending` = not scored (for a submitter every case is `pending`). `q` matches the case number or the submitter's name or email. `mine=true`: only the caller's own submissions. `sort=priority`: open L2 cases first, then the highest latest risk score, then newest.",
+        "operationId": "list_cases_page_cases_page_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "status_group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "analyzing",
+                    "awaiting_review",
+                    "approved",
+                    "rejected",
+                    "open",
+                    "escalated",
+                    "deleted",
+                    "in_progress",
+                    "action_required",
+                    "pending_review"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Group"
+            }
+          },
+          {
+            "name": "risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low",
+                    "pending"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Risk"
+            }
+          },
+          {
+            "name": "case_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Type"
+            }
+          },
+          {
+            "name": "assigned_tier",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseTier"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assigned Tier"
+            }
+          },
+          {
+            "name": "actionable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Actionable"
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Mine"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "default",
+                "priority"
+              ],
+              "type": "string",
+              "default": "default",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "company_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company.",
+              "title": "Company Id"
+            },
+            "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseListPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "400": {
+            "description": "A platform admin did not pass `company_id`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/summary": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Case counts for the queue, dashboard and My Cases cards",
+        "description": "Counts over every live case the caller can see (`mine=true`: only their own submissions), in the `status_group` terms of `GET /cases/page`. A submitter's risk counts are all `pending` and `high_risk_open` is 0: tiers are never disclosed to them.",
+        "operationId": "case_list_summary_cases_summary_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Mine"
+            }
+          },
+          {
+            "name": "company_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company.",
+              "title": "Company Id"
+            },
+            "description": "Platform admins only (required for them): the company to act on. Company users are always confined to their own company."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseListSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "400": {
+            "description": "A platform admin did not pass `company_id`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cases/{case_id}": {
       "get": {
         "tags": [
@@ -544,7 +838,7 @@
           "cases"
         ],
         "summary": "Get a case's activity timeline",
-        "description": "Chronological feed for the case detail page's activity timeline —\nSystem Specification section 3.5. Reads the same append-only `audit_log` rows\nevery check task and case/document endpoint already writes; this\nadds no new events, just a way to read the ones that exist.",
+        "description": "Chronological feed for the case detail page's activity timeline —\nSystem Specification section 3.5. Reads the same append-only `audit_log` rows\nevery check task and case/document endpoint already writes; this\nadds no new events, just a way to read the ones that exist.\n\nCompany users: the company's rows only — never a platform admin's.\nPlatform admins: EVERYTHING about the case, including the platform-only\nrows (deleted / restored with the reason, every support view), read\nthrough the platform session.",
         "operationId": "get_case_audit_log_cases__case_id__audit_log_get",
         "security": [
           {
@@ -2636,6 +2930,117 @@
         }
       }
     },
+    "/audit-log/export": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Export the audit log as CSV",
+        "description": "Every event matching the same filters as `GET /audit-log` (`event_type`, `case_id`, `q`, and `company_id` for platform admins) — no row limit — as one CSV, newest first, streamed so any size works. UTF-8 with a byte-order mark (Excel opens Arabic correctly); values a spreadsheet would run as formulas are prefixed with `'`. Same visibility as the list: a company sees nothing about platform admins. A platform admin's export of a company's log is recorded once in the platform audit log.",
+        "operationId": "export_audit_events_audit_log_export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Matches event type, case number, actor name/email",
+              "title": "Q"
+            },
+            "description": "Matches event type, case number, actor name/email"
+          },
+          {
+            "name": "company_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Platform admins only.",
+              "title": "Company Id"
+            },
+            "description": "Platform admins only."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The CSV file.",
+            "content": {
+              "text/csv": {}
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Requires a reviewer (L1 or L2) or platform admin role."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit-log/event-types": {
       "get": {
         "tags": [
@@ -2800,7 +3205,7 @@
           "platform"
         ],
         "summary": "Rename, suspend/reactivate, or change a company's upload limits",
-        "description": "`is_active=false` suspends the company: its users can no longer sign in, and existing tokens stop working on the next request. Data is kept. `max_file_size_mb` / `max_zip_size_mb` change the company's upload limits (any positive whole number of MB; no upper ceiling), effective on its next upload with no new sign-in. Every change is written to the platform audit log as `company_updated` with old → new values.",
+        "description": "`is_active=false` suspends the company: its users can no longer sign in, and existing tokens stop working on the next request. Data is kept. `max_file_size_mb` / `max_zip_size_mb` / `max_file_pages` change the company's upload limits (any positive whole number; no upper ceiling), effective on its next upload with no new sign-in. Every change is written to the platform audit log as `company_updated` with old → new values.",
         "operationId": "update_company_platform_companies__company_id__patch",
         "security": [
           {
@@ -3359,6 +3764,11 @@
               }
             ],
             "title": "Event Data"
+          },
+          "case_deleted": {
+            "type": "boolean",
+            "title": "Case Deleted",
+            "default": false
           }
         },
         "type": "object",
@@ -4539,6 +4949,122 @@
         ],
         "title": "CaseListItem"
       },
+      "CaseListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Cases matching the filters, across all pages."
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "CaseListPage",
+        "description": "One page of the case list (GET /cases/page)."
+      },
+      "CaseListSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents",
+            "description": "Documents across those cases."
+          },
+          "analyzing": {
+            "type": "integer",
+            "title": "Analyzing"
+          },
+          "awaiting_review": {
+            "type": "integer",
+            "title": "Awaiting Review"
+          },
+          "approved": {
+            "type": "integer",
+            "title": "Approved"
+          },
+          "rejected": {
+            "type": "integer",
+            "title": "Rejected"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open",
+            "description": "Not yet approved or rejected (analyzing + awaiting review)."
+          },
+          "escalated": {
+            "type": "integer",
+            "title": "Escalated",
+            "description": "Open cases assigned to the L2 tier."
+          },
+          "high_risk_open": {
+            "type": "integer",
+            "title": "High Risk Open"
+          },
+          "in_progress": {
+            "type": "integer",
+            "title": "In Progress"
+          },
+          "action_required": {
+            "type": "integer",
+            "title": "Action Required"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/CaseRiskCounts"
+          },
+          "actionable": {
+            "type": "integer",
+            "title": "Actionable",
+            "description": "Cases the caller may act on (`actionable=true`)."
+          },
+          "l2": {
+            "type": "integer",
+            "title": "L2",
+            "description": "Cases assigned to the L2 tier, open or decided."
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "documents",
+          "analyzing",
+          "awaiting_review",
+          "approved",
+          "rejected",
+          "open",
+          "escalated",
+          "high_risk_open",
+          "in_progress",
+          "action_required",
+          "risk",
+          "actionable",
+          "l2"
+        ],
+        "title": "CaseListSummary",
+        "description": "Counts over every live (not deleted) case the caller can see\n(GET /cases/summary). The `status_group` names of GET /cases/page."
+      },
       "CaseReportResponse": {
         "properties": {
           "id": {
@@ -4676,6 +5202,33 @@
         ],
         "title": "CaseResponse"
       },
+      "CaseRiskCounts": {
+        "properties": {
+          "high": {
+            "type": "integer",
+            "title": "High",
+            "default": 0
+          },
+          "medium": {
+            "type": "integer",
+            "title": "Medium",
+            "default": 0
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low",
+            "default": 0
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "description": "Not scored yet (and every case, for a submitter).",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "CaseRiskCounts"
+      },
       "CaseStatus": {
         "type": "string",
         "enum": [
@@ -4770,6 +5323,19 @@
             ],
             "title": "Max Zip Size Mb",
             "description": "Max bulk-upload zip size in MB (per company)."
+          },
+          "max_file_pages": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Pages",
+            "description": "Max pages per uploaded PDF (per company)."
           }
         },
         "type": "object",
@@ -4811,6 +5377,11 @@
             "type": "integer",
             "title": "Max Zip Size Mb",
             "description": "Largest bulk-upload zip this company may upload, in MB."
+          },
+          "max_file_pages": {
+            "type": "integer",
+            "title": "Max File Pages",
+            "description": "Most pages one uploaded PDF may have."
           }
         },
         "type": "object",
@@ -4821,7 +5392,8 @@
           "created_at",
           "user_count",
           "max_file_size_mb",
-          "max_zip_size_mb"
+          "max_zip_size_mb",
+          "max_file_pages"
         ],
         "title": "CompanyResponse"
       },
@@ -4876,6 +5448,19 @@
             ],
             "title": "Max Zip Size Mb",
             "description": "Max bulk-upload zip size in MB (per company)."
+          },
+          "max_file_pages": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Pages",
+            "description": "Max pages per uploaded PDF (per company)."
           }
         },
         "type": "object",
@@ -6464,6 +7049,11 @@
             "title": "Max Zip Size Mb",
             "description": "Largest bulk-upload zip, in MB."
           },
+          "max_file_pages": {
+            "type": "integer",
+            "title": "Max File Pages",
+            "description": "Most pages one PDF may have."
+          },
           "max_file_size_bytes": {
             "type": "integer",
             "title": "Max File Size Bytes"
@@ -6477,6 +7067,7 @@
         "required": [
           "max_file_size_mb",
           "max_zip_size_mb",
+          "max_file_pages",
           "max_file_size_bytes",
           "max_zip_size_bytes"
         ],

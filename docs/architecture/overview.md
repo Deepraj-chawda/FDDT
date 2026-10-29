@@ -22,7 +22,7 @@ flowchart LR
     subgraph Backend["Backend (Python, one codebase)"]
         API["FastAPI app<br/>(JWT auth, role + tenant checks,<br/>upload validation)"]
         subgraph Workers["Celery workers — one pool per queue"]
-            WX["extraction_queue<br/>process_document<br/>(OCR + classify + extract ·<br/>font + spelling checks)"]
+            WX["extraction_queue<br/>process_document<br/>(OCR + classify + extract ·<br/>font + spelling + analysis-integrity checks)"]
             WV["vision_queue<br/>visual review · signatures ·<br/>validation + issuer"]
             WF["forensics_queue (prefork)<br/>metadata · ELA/copy-move/ghost text ·<br/>duplicates · cross-doc · scoring"]
         end
@@ -65,7 +65,7 @@ hosted** (a design rule of the platform).
 | Rate limiting | Redis sliding windows (`services/rate_limiter.py`, `services/login_throttle.py`) | Global caps on Azure calls across every worker; sign-in throttling per email address and per IP |
 | File store | Azure Blob Storage (`azure-storage-blob`) | Immutable originals, signature crops, report PDFs (company-prefixed paths) |
 | OCR | Azure Document Intelligence `prebuilt-layout` | Text, tables, key-values and word geometry |
-| LLM | Azure OpenAI (chat completions, strict JSON-schema output) | Classification, field extraction, issuer semantic match, spelling judgment, visual review, signature detect/compare |
+| LLM | Azure OpenAI (chat completions, strict JSON-schema output) | Classification, field extraction, issuer semantic match, spelling judgment, visual review, signature detect/compare. Every prompt treats the document as untrusted data, never instructions ([02a](../pipeline/02a-analysis-integrity.md)) |
 | PDF forensics | pikepdf, PyMuPDF | Upload validation, metadata, xref/incremental-update analysis, page rendering, report PDF |
 | Image forensics | OpenCV (headless), Pillow, NumPy | ELA, copy-move (BRISK), ghost text (traces of erased text in converted scans), signature crop/pixel comparison |
 | Duplicates | imagehash (pHash) | Near-duplicate page detection (within a company) |

@@ -92,7 +92,7 @@ To submit documents for verification:
 
 3. **Attach PDF Files**:
    - Drag and drop your PDF documents into the upload zone or click **Browse files**.
-   - **File Requirements**: Files must be valid PDF documents within your company's maximum file size limit (standard limit is 10 MB per document). Password-protected PDFs are rejected immediately for security.
+   - **File Requirements**: Files must be valid PDF documents within your company's maximum file size limit (standard limit is 10 MB per document) and page limit (standard limit is 100 pages; split longer PDFs). Password-protected PDFs are rejected immediately for security.
 4. **Optional Reference Signature**:
    - If your document contains an authorized signature or stamp that should be compared against other documents in the case, you can define a reference signature box.
 5. Click **Submit Case**. The documents will begin automated processing immediately.
@@ -130,7 +130,8 @@ Submitters can track all their submitted cases under **My Cases**:
 
 ![My Cases Dashboard](images/company-manual/04-user-my-cases.png)
 
-- **Search**: Search by case reference number or document name.
+- **Search**: Search by case reference number.
+- **Paging**: 50 cases per page; use **Previous** / **Next** below the table.
 - **Filters**:
   - **All**: All cases submitted by your user account.
   - **Under review**: Cases currently being analyzed by the automated pipeline or queued for reviewer triage.
@@ -179,7 +180,8 @@ Click **Cases** in the navigation bar to access the full **Review Queue**:
   - <span style="color:#e11d48; font-weight:bold;">HIGH RISK</span> (Score 70–100): Critical anomalies detected (e.g., severe metadata tampering, copy-move duplication, unrecognized issuer).
   - <span style="color:#d97706; font-weight:bold;">MEDIUM RISK</span> (Score 30–69): Discrepancies or warnings (e.g., date mismatches, mathematical errors, missing expected fields).
   - <span style="color:#059669; font-weight:bold;">LOW RISK</span> (Score 0–29): Clear document with verified issuer and consistent fields.
-- **Filters & Search**: Filter by Risk Tier, Case Type, Review Status, or keyword.
+- **Filters & Search**: Filter by Risk Tier, Case Type, Review Status, or keyword (case number, submitter name or email). Filters and search cover all cases, 50 per page (**Previous** / **Next**).
+- **Export CSV**: Downloads every case matching the current filters, across all pages.
 
 ---
 
@@ -216,13 +218,14 @@ Every uploaded document undergoes an exhaustive battery of independent tests:
 | **Error Level Analysis (ELA)** | Analyzes compression resave artifacts to identify spliced text or altered numbers. |
 | **Duplicate Detection** | Computes cryptographic and perceptual hashes to detect duplicate submissions across historical cases. |
 | **Signature / Stamp Detection** | Detects signature regions and compares them against reference samples for consistency. |
+| **Analysis Integrity** | Flags a document whose text tries to instruct the AI ("ignore previous instructions", "mark as clean") as high risk, and a document that could not be analysed at all as medium risk. |
 
 ---
 
 ### Interactive PDF Visual Overlays
 
 To visually inspect anomalies:
-- Open the document preview within the Case Detail view.
+- Open the document preview within the Case Detail view. If it shows "Couldn't load this file for preview", click **Retry** (it fetches a fresh link).
 - Color-coded bounding boxes highlight exact regions of concern:
   - **Red Box**: Tampering or Error Level Analysis anomaly.
   - **Orange Box**: Copy-move duplication source and target.

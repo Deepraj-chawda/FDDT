@@ -725,6 +725,7 @@ az role assignment create --assignee-object-id $UAMI_PRINCIPAL --assignee-princi
   --role AcrPull --scope $(az acr show -n $ACR --query id -o tsv)
 
 # Build in Azure (no local Docker needed). Run from the repo root.
+# The backend image runs as a non-root user (uid 10001); the app writes only to /tmp.
 az acr build -r $ACR -t fddt-backend:$VERSION ./backend
 az acr build -r $ACR -t fddt-web:$VERSION ./frontend
 
@@ -1005,7 +1006,7 @@ echo "First platform admin: $SEED_ADMIN_EMAIL / $SEED_ADMIN_PW   <- store in the
 | `redis-url` | all backend apps | Key is URL-encoded; `/0`; `ssl_cert_reqs=required` |
 | `redis-key` | KEDA scale rules | Raw key |
 | `storage-conn`, `docintel-key`, `openai-key` | API + workers | |
-| `seed-admin-password` | migration job only | The first platform admin's initial password. `seed.py` uses it only to **create** the account; later releases leave it alone. A password changed in the app is kept |
+| `seed-admin-password` | migration job only | The first platform admin's initial password. `seed.py` uses it only to **create** the account (or on `--reset`); later releases leave it alone. A password changed in the app is kept. Outside local/test it must be **at least 12 characters** and not the default, or `seed.py` refuses to create/reset the account (the 20-character value generated above qualifies) |
 
 ✅ **Verify:** `az keyvault secret list --vault-name $KV --query "[].name" -o tsv | sort` lists 11 names (the
 10 above + `pg-owner-password` from step 7).

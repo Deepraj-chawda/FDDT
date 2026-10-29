@@ -10,13 +10,16 @@ API themselves (through `@/api/*`) rather than receiving data from a page.
 Renders **one page at a time** of a case document with bounding boxes drawn **live on top**. Nothing
 annotated is ever generated or stored; the boxes vanish the moment `overlays` is empty. Wrapped in an
 error boundary (react-pdf can throw synchronously on an expired or blocked URL, which would otherwise
-unmount the whole case page). Page width is measured from the card and capped at 560 px so it never
-spills into the adjacent column. Uses `react-pdf` (pdf.js) with a Vite-bundled worker.
+unmount the whole case page). The failure message offers **Retry** when `onRetry` is given, and the
+real pdf.js error (name and message) is logged to the console. Page width is measured from the card and
+capped at 560 px so it never spills into the adjacent column. Uses `react-pdf` (pdf.js) with a
+Vite-bundled worker.
 
 | Prop | Type | Meaning |
 |---|---|---|
 | `fileUrl` | `string` | A signed SAS URL for the PDF (from `CaseDocumentSummary.file_url`) |
 | `overlays` | `OverlayBox[]` | Boxes to draw |
+| `onRetry` | `() => void` (optional) | Called by the **Retry** button after a load failure; the case page fetches a fresh signed URL |
 
 ```ts
 interface OverlayBox { box: BoundingBox; color: OverlayColor; label: string }
