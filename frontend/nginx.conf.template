@@ -2,6 +2,19 @@ server {
     listen 80;
     root /usr/share/nginx/html;
     index index.html;
+    server_tokens off;
+
+    # Browser hardening for every response (the API adds its own as well).
+    # HSTS: the public endpoint is HTTPS-only (TLS ends at the Container Apps
+    # ingress). The CSP only restricts what is safe without auditing every
+    # script/style source: no framing (clickjacking), no plugins, no <base>
+    # hijack, forms post only here.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
 
     # Request-body ceilings at the proxy, an outer backstop only. The API
     # enforces each company's own upload limits (companies.max_file_size_mb /

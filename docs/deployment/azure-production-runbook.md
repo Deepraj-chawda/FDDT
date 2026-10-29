@@ -1798,10 +1798,10 @@ so later releases never reset a password changed in the app. Change the admin's 
 | Resource lock on the RG | `az lock create -g $RG -n no-delete --lock-type CanNotDelete` | High |
 
 **Known application gaps to accept or schedule** (from [azure-migration-notes.md](azure-migration-notes.md)):
-no forgot-password flow (users change their own password; admins reset others); JWT in `localStorage`; no
+no forgot-password flow (users change their own password; admins reset others); no
 automatic retry of a failed Azure call (documents whose queued tasks were lost are re-queued, but a check lost
 after extraction finished is not); keys and connection strings, not managed identity, for Storage / Document
-Intelligence / OpenAI; no page-count limit on uploads.
+Intelligence / OpenAI.
 
 ---
 

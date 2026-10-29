@@ -87,7 +87,7 @@ The Companies dashboard displays all onboarded client organizations:
 ### Configuring Company Upload & Storage Limits
 To customize file intake thresholds for high-volume or enterprise tenants:
 1. Click the **Edit** action button next to the target company.
-2. Adjust `max_file_size_mb` or `max_zip_size_mb`.
+2. Adjust `max_file_size_mb`, `max_zip_size_mb` or `max_file_pages` (most pages one PDF may have; 100 by default). Every page is held in a processing worker's memory (about 11 MB a page), so a higher page limit needs workers with more RAM.
 3. Save changes. The updated limits take effect immediately without requiring worker or server restarts.
 
 ### Suspending & Reactivating Companies
@@ -265,7 +265,10 @@ Navigate to **Audit History** (`/audit-history`) to inspect the centralized gove
 FDDT maintains an **append-only** audit log in the database. Audit rows cannot be modified or deleted by any user or administrator.
 
 ### Audited Platform Support Access
-When a Platform Administrator inspects a tenant company's cases or documents for technical support, the system automatically records a `platform_support_view` event. This guarantees complete transparency and regulatory compliance for enterprise clients.
+When a Platform Administrator inspects a tenant company's cases or documents for technical support, the system automatically records a `platform_admin_access` event. Support access and user management actions remain recorded **platform-only** so internal operator sessions are kept confidential.
+
+### Deleting & Restoring Cases
+Open the case (choose the company first), then **Delete case**. An optional reason goes to the audit log. The case is soft-deleted and removed from active company queues, dashboards, and case pages. Its historical audit trail remains recorded in the company's **Audit History** along with a `case_deleted` ("Case deleted (admin)") event attributed to **Platform Administrator** (hiding operator personal email), so company reviewers understand why the case was removed. Nothing is erased: documents, results and files are kept. In the admin's case list the case shows a **Deleted** badge; open it and choose **Restore case** to bring it back.
 
 ### Event Types & Audited Operations
 
@@ -275,6 +278,7 @@ When a Platform Administrator inspects a tenant company's cases or documents for
 | `user_password_changed` | Security & Admin | A user changed their own password (with their current password). |
 | `user_created` / `user_updated` | User Admin | New user account created or role/status modified. |
 | `company_created` / `company_updated` | Tenant Admin | New company provisioned or limits adjusted. |
+| `case_deleted` / `case_restored` | Tenant Admin | Platform admin deleted (soft) or restored a case. Platform-only. |
 | `case_created` / `case_submitted` | Case Lifecycle | Submitter uploaded a new case and supporting documents. |
 | `case_approved` / `case_rejected` | Review Decision | Reviewer completed adjudication with notes and reasoning. |
 | `case_escalated` | Review Decision | Reviewer L1 escalated a case to the L2 supervisor tier. |

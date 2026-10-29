@@ -3,6 +3,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.security import verify_password
+from app.db import tenancy
 from app.models.audit_log import AuditLog
 from app.models.document_check import DocumentCheckType as T
 from app.models.risk_rule import RiskRule
@@ -51,7 +52,9 @@ def test_admin_creates_a_user_who_can_log_in(client, platform_admin_headers, db_
     assert login.status_code == 200 and login.json()["access_token"]
     assert any(u["email"] == data["email"] for u in client.get("/settings/users", headers=platform_admin_headers).json())
 
+    tenancy.bind_platform(db_session)  # platform-only row: company_id NULL
     event = db_session.execute(select(AuditLog).where(AuditLog.event_type == "user_created")).scalars().one()
+    assert event.company_id is None and event.event_data["company_id"] == str(company.id)
     assert event.event_data["email"] == data["email"] and event.event_data["role"] == "reviewer_l1"
     assert "S3cure-pass!" not in str(event.event_data)  # the password is never logged
 

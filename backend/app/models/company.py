@@ -44,17 +44,21 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     max_zip_size_mb: Mapped[int] = mapped_column(
         Integer, nullable=False, default=lambda: _default_limits()[1]
     )
+    max_file_pages: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=lambda: _default_limits()[2]
+    )
 
     __table_args__ = (
         CheckConstraint("max_file_size_mb > 0", name="ck_companies_max_file_size_mb_positive"),
         CheckConstraint("max_zip_size_mb > 0", name="ck_companies_max_zip_size_mb_positive"),
+        CheckConstraint("max_file_pages > 0", name="ck_companies_max_file_pages_positive"),
     )
 
 
-def _default_limits() -> tuple[int, int]:
+def _default_limits() -> tuple[int, int, int]:
     from app.core.config import settings
 
-    return settings.default_max_file_size_mb, settings.default_max_zip_size_mb
+    return settings.default_max_file_size_mb, settings.default_max_zip_size_mb, settings.default_max_file_pages
 
 
 class TenantScopedMixin:

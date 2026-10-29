@@ -65,7 +65,8 @@ export function PlatformCompaniesPage() {
       setEditing(null)
       setError(null)
       setNotice(
-        `Saved ${c.name}: max file size ${c.max_file_size_mb} MB, max zip size ${c.max_zip_size_mb} MB. ` +
+        `Saved ${c.name}: max file size ${c.max_file_size_mb} MB, max ${c.max_file_pages} pages per PDF, ` +
+          `max zip size ${c.max_zip_size_mb} MB. ` +
           "New limits apply to the company's next upload.",
       )
       void queryClient.invalidateQueries({ queryKey: ["companies"] })
@@ -115,7 +116,7 @@ export function PlatformCompaniesPage() {
                     <td className="px-5 py-4 font-bold text-slate-900">{c.name}</td>
                     <td className="px-4 py-4 text-slate-600">{c.user_count}</td>
                     <td className="px-4 py-4 text-slate-600">
-                      {c.max_file_size_mb} MB / file · {c.max_zip_size_mb} MB / zip
+                      {c.max_file_size_mb} MB / file · {c.max_file_pages} pages / file · {c.max_zip_size_mb} MB / zip
                     </td>
                     <td className="px-4 py-4">
                       {c.is_active ? (
@@ -234,16 +235,19 @@ function EditCompanyModal({
   const [name, setName] = React.useState(company.name)
   const [fileMb, setFileMb] = React.useState(String(company.max_file_size_mb))
   const [zipMb, setZipMb] = React.useState(String(company.max_zip_size_mb))
+  const [maxPages, setMaxPages] = React.useState(String(company.max_file_pages))
   const inputClass =
     "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
 
   const [attempted, setAttempted] = React.useState(false)
   const file = Number(fileMb)
   const zip = Number(zipMb)
+  const pages = Number(maxPages)
   const fieldErrors = {
     name: name.trim().length < 2 ? "Enter the company's name (at least 2 characters)." : null,
     file: fileMb.trim() === "" || !Number.isInteger(file) || file < 1 ? "Enter a whole number of MB, at least 1." : null,
     zip: zipMb.trim() === "" || !Number.isInteger(zip) || zip < 1 ? "Enter a whole number of MB, at least 1." : null,
+    pages: maxPages.trim() === "" || !Number.isInteger(pages) || pages < 1 ? "Enter a whole number of pages, at least 1." : null,
   }
   const shown = (field: keyof typeof fieldErrors) => (attempted ? fieldErrors[field] : null)
   const cls = (field: keyof typeof fieldErrors) => (shown(field) ? `${inputClass} ${invalidFieldClass}` : inputClass)
@@ -251,12 +255,13 @@ function EditCompanyModal({
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     setAttempted(true)
-    if (fieldErrors.name || fieldErrors.file || fieldErrors.zip) return
+    if (fieldErrors.name || fieldErrors.file || fieldErrors.zip || fieldErrors.pages) return
     // Send only what changed (each change is audited old -> new).
     const payload: CompanyUpdatePayload = {}
     if (name.trim() !== company.name) payload.name = name.trim()
     if (file !== company.max_file_size_mb) payload.max_file_size_mb = file
     if (zip !== company.max_zip_size_mb) payload.max_zip_size_mb = zip
+    if (pages !== company.max_file_pages) payload.max_file_pages = pages
     if (Object.keys(payload).length === 0) return onCancel()
     onSave(payload)
   }
@@ -290,10 +295,18 @@ function EditCompanyModal({
               aria-invalid={Boolean(shown("zip"))} aria-describedby="edit-max-zip-error" />
             <FieldError id="edit-max-zip-error" message={shown("zip")} />
           </div>
+          <div>
+            <label htmlFor="edit-max-pages" className="mb-1 block text-xs font-semibold text-slate-700">Max pages per PDF</label>
+            <input id="edit-max-pages" type="number" min={1} step={1} inputMode="numeric" value={maxPages}
+              onChange={(e) => setMaxPages(e.target.value)} className={cls("pages")}
+              aria-invalid={Boolean(shown("pages"))} aria-describedby="edit-max-pages-error" />
+            <FieldError id="edit-max-pages-error" message={shown("pages")} />
+          </div>
         </div>
         <p className="text-[11px] text-slate-500">
-          Max file size applies to every PDF, uploaded on its own or inside a bulk zip. Max zip size applies to bulk
-          uploads. Limits above the web proxy's request-body cap also need that cap raised (see the deployment docs).
+          Max file size and max pages apply to every PDF, uploaded on its own or inside a bulk zip. Max zip size
+          applies to bulk uploads. Every page is held in a processing worker's memory (about 11 MB a page), so a
+          higher page limit needs workers with more RAM. Limits above the web proxy's request-body cap also need that cap raised (see the deployment docs).
         </p>
         <StatusLine error={error} />
         <div className="flex justify-end gap-2">

@@ -24,7 +24,7 @@ default — PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS=0).
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from fastapi import Depends, HTTPException, Query, Request, status
@@ -40,7 +40,7 @@ from app.models.base import utcnow
 from app.models.case import Case
 from app.models.company import Company
 from app.models.user import User
-from app.services.audit_service import record_event
+from app.services.audit_service import record_event, record_platform_event
 
 PLATFORM_ACCESS_EVENT = "platform_admin_access"
 
@@ -183,6 +183,7 @@ def get_case_scope(
 
     company = _load_company(system_db, company_id)
     tenancy.bind_company(db, company_id)
+    tenancy.include_deleted_cases(db)  # platform admins may view / restore deleted cases
     case = db.execute(
         select(Case).where(Case.id == case_id, Case.company_id == company_id)
     ).scalar_one()
@@ -200,6 +201,40 @@ class CompanyScope:
     db: Session
     ctx: AuthContext
     company_id: uuid.UUID
+    system_db: Session | None = None  # platform admins only (see record_company_event)
+    company: Company | None = None  # platform admins only
+    _platform_events: list = field(default_factory=list)
+
+
+def record_company_event(scope: CompanyScope, event_type: str, *, actor: User, event_data: dict | None = None) -> None:
+    """Audit a change made through a company-scoped route; the caller then
+    commits with `commit_company_change`.
+
+    A company user's change goes in the company's own log (`scope.db`). A
+    platform admin's change is PLATFORM-ONLY: no company user may see that a
+    platform admin did anything, so the row is written through the platform
+    session with company_id NULL (record_platform_event) — after the change
+    itself commits, so a change that fails leaves no row."""
+    if scope.ctx.is_platform_admin:
+        scope._platform_events.append((event_type, actor, event_data))
+    else:
+        record_event(scope.db, event_type, actor_user_id=actor.id, event_data=event_data)
+
+
+def commit_company_change(scope: CompanyScope) -> None:
+    scope.db.commit()
+    if not scope._platform_events:
+        return
+    system_db = scope.system_db
+    state = tenancy.snapshot(system_db)
+    tenancy.bind_platform(system_db)
+    try:
+        for event_type, actor, event_data in scope._platform_events:
+            record_platform_event(system_db, event_type, admin=actor, company=scope.company, event_data=event_data)
+        system_db.commit()
+    finally:
+        tenancy.restore(system_db, state)
+    scope._platform_events.clear()
 
 
 def company_scope(resource: str):
@@ -229,7 +264,8 @@ def company_scope(resource: str):
             )
         company = _load_company(system_db, company_id)
         tenancy.bind_company(db, company_id)
+        tenancy.include_deleted_cases(db)  # platform admins see deleted cases (marked)
         record_platform_access(system_db, ctx.user, company, request, resource=resource)
-        return CompanyScope(db=db, ctx=ctx, company_id=company_id)
+        return CompanyScope(db=db, ctx=ctx, company_id=company_id, system_db=system_db, company=company)
 
     return dependency

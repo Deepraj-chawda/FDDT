@@ -8,12 +8,16 @@ from app.models.user import UserRole
 
 class LoginRequest(BaseModel):
     email: EmailStr = Field(description="Account email (matched exactly as stored).")
-    password: str = Field(description="Account password.")
+    password: str = Field(max_length=1024, description="Account password.")
 
 
 class TokenResponse(BaseModel):
-    access_token: str = Field(description="JWT. Send as `Authorization: Bearer <token>`.")
+    access_token: str = Field(
+        description="Short-lived JWT. Send as `Authorization: Bearer <token>`. Keep it in memory "
+        "only; the session is renewed with `POST /auth/refresh` (refresh token in an httpOnly cookie)."
+    )
     token_type: str = Field(default="bearer", description="Always `bearer`.")
+    expires_in: int = Field(description="Seconds until the access token expires.")
 
 
 class CurrentUserResponse(BaseModel):
@@ -35,6 +39,7 @@ class UploadLimitsResponse(BaseModel):
 
     max_file_size_mb: int = Field(description="Largest document, in MB (1 MB = 1,048,576 bytes).")
     max_zip_size_mb: int = Field(description="Largest bulk-upload zip, in MB.")
+    max_file_pages: int = Field(description="Most pages one PDF may have.")
     max_file_size_bytes: int
     max_zip_size_bytes: int
 

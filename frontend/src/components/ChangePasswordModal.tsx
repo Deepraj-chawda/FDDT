@@ -3,7 +3,8 @@ import { useMutation } from "@tanstack/react-query"
 import { CheckCircle2Icon, EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react"
 
 import { ApiError } from "@/api/client"
-import { changePassword } from "@/api/auth"
+import { changePassword, logoutEverywhere } from "@/api/auth"
+import { clearSession, setSession } from "@/lib/session"
 import { Modal } from "@/components/settings/Modal"
 import { FieldError, invalidFieldClass, visibleError } from "@/components/ui/field-error"
 import { useAuth } from "@/hooks/useAuth"
@@ -42,7 +43,15 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 
   const change = useMutation({
     mutationFn: () => changePassword({ current_password: current, new_password: next }, token as string),
+    // Every other sign-in of the account just ended; this one carries on.
+    onSuccess: (body) => setSession(body),
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not change the password."),
+  })
+  // Ends every sign-in of the account, this one included (back to sign-in).
+  const signOutEverywhere = useMutation({
+    mutationFn: () => logoutEverywhere(token as string),
+    onSuccess: () => clearSession(),
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Could not sign out everywhere."),
   })
 
   const submit = (event: React.FormEvent) => {
@@ -59,7 +68,7 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-4">
           <p className="flex items-center gap-2 text-sm text-slate-700">
             <CheckCircle2Icon className="size-5 text-emerald-600" />
-            Your password has been changed. Use the new one next time you sign in.
+            Your password has been changed. You stay signed in here; every other device was signed out.
           </p>
           <div className="flex justify-end">
             <button
@@ -147,6 +156,18 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </form>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
+        <p className="text-[11px] text-slate-500">Signed in somewhere you don't recognise?</p>
+        <button
+          type="button"
+          onClick={() => signOutEverywhere.mutate()}
+          disabled={signOutEverywhere.isPending || change.isPending}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+        >
+          {signOutEverywhere.isPending && <Loader2Icon className="size-3.5 animate-spin" />}
+          Sign out everywhere
+        </button>
+      </div>
     </Modal>
   )
 }

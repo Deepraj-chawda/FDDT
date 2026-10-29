@@ -71,6 +71,7 @@ TASK_QUEUES: dict[str, str] = {
     # it creates is then queued like any single upload.
     "ingest_bulk_upload": FORENSICS_QUEUE,
     "reconcile_usage_stats": HOUSEKEEPING_QUEUE,
+    "purge_expired_refresh_tokens": HOUSEKEEPING_QUEUE,
     "log_queue_metrics": HOUSEKEEPING_QUEUE,
     "requeue_stuck_documents": HOUSEKEEPING_QUEUE,
 }
@@ -129,6 +130,11 @@ celery_app.conf.update(
         "log-queue-metrics": {"task": "log_queue_metrics", "schedule": 60.0},
         # Re-queue documents whose tasks were lost (Redis restart / outage).
         "requeue-stuck-documents": {"task": "requeue_stuck_documents", "schedule": 300.0},
+        # Drop refresh-token rows of sign-ins that ended long ago.
+        "purge-expired-refresh-tokens": {
+            "task": "purge_expired_refresh_tokens",
+            "schedule": crontab(hour=3, minute=30),
+        },
     },
 )
 

@@ -493,3 +493,30 @@ def test_an_oversized_zip_is_refused_from_its_content_length_before_the_body_is_
     assert "300.0 MB" in body["detail"]["message"]
     assert body_reads == []
     assert fake_storage.uploads == {} and ingest_calls == []
+
+
+def test_a_deleted_case_leaves_no_trace_in_its_bulk_upload(
+    client, plain_headers, platform_admin_headers, db_session, fake_storage, ingest_calls, enqueued
+):
+    """A platform admin deletes one case of a bulk upload: the company's
+    detail and list show the upload as if that folder was never in the zip;
+    the platform admin still sees the real numbers."""
+    data = make_zip({
+        "case-001/invoice.pdf": make_pdf("inv 1"),
+        "case-001/receipt.pdf": make_pdf("rcpt 1"),
+        "case-002/invoice.pdf": make_pdf("inv 2"),
+    })
+    bulk_id = _upload_and_ingest(client, plain_headers, db_session, fake_storage, data)
+    gone = db_session.execute(select(Case).where(Case.reference_label == "case-001")).scalar_one()
+    assert client.delete(f"/cases/{gone.id}", headers=platform_admin_headers).status_code == 204
+
+    detail = _detail(client, plain_headers, bulk_id)
+    assert [c["folder"] for c in detail["cases"]] == ["case-002"]
+    assert (detail["case_folder_count"], detail["cases_created"]) == (1, 1)
+    assert (detail["documents_accepted"], detail["documents_rejected"]) == (1, 0)
+    (listed,) = [b for b in client.get("/bulk-uploads", headers=plain_headers).json() if b["id"] == bulk_id]
+    assert (listed["case_folder_count"], listed["cases_created"], listed["documents_accepted"]) == (1, 1, 1)
+
+    company_id = db_session.info["test_company_id"]
+    real = client.get(f"/bulk-uploads/{bulk_id}?company_id={company_id}", headers=platform_admin_headers).json()
+    assert (real["case_folder_count"], real["cases_created"], real["documents_accepted"]) == (2, 2, 3)

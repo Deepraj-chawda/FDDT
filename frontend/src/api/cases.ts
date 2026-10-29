@@ -1,4 +1,5 @@
 import { API_BASE_URL, apiFetch, ApiError, parseErrorDetail } from "@/api/client"
+import { withSession } from "@/lib/session"
 import type {
   AuditLogEntry,
   Case,
@@ -7,6 +8,9 @@ import type {
   CaseDocument,
   CaseListFilters,
   CaseListItem,
+  CaseListPage,
+  CaseListSummary,
+  CasePageQuery,
   CaseReport,
   CaseType,
   SignatureMatch,
@@ -36,8 +40,63 @@ export function listCases(
   return apiFetch<CaseListItem[]>(`/cases${query ? `?${query}` : ""}`, { token })
 }
 
+// One page of cases, filtered and searched on the server.
+export function listCasesPage(
+  token: string,
+  query: CasePageQuery,
+  // Platform admins only: the company whose cases to read (required for them).
+  companyId: string | null = null
+): Promise<CaseListPage> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "" && value !== false) params.set(key, String(value))
+  }
+  if (companyId) params.set("company_id", companyId)
+  return apiFetch<CaseListPage>(`/cases/page?${params}`, { token })
+}
+
+// Every case matching `query`, page by page (for a CSV export).
+export async function listAllCases(
+  token: string,
+  query: Omit<CasePageQuery, "limit" | "offset">,
+  companyId: string | null = null
+): Promise<CaseListItem[]> {
+  const items: CaseListItem[] = []
+  for (;;) {
+    const page = await listCasesPage(token, { ...query, limit: 200, offset: items.length }, companyId)
+    items.push(...page.items)
+    if (page.items.length === 0 || items.length >= page.total) return items
+  }
+}
+
+export function getCaseSummary(
+  token: string,
+  { mine = false }: { mine?: boolean } = {},
+  companyId: string | null = null
+): Promise<CaseListSummary> {
+  const params = new URLSearchParams()
+  if (mine) params.set("mine", "true")
+  if (companyId) params.set("company_id", companyId)
+  const query = params.toString()
+  return apiFetch<CaseListSummary>(`/cases/summary${query ? `?${query}` : ""}`, { token })
+}
+
 export function getCase(caseId: string, token: string): Promise<CaseDetail> {
   return apiFetch<CaseDetail>(`/cases/${caseId}`, { token })
+}
+
+// Platform admins only. Soft delete: the case disappears for its company
+// (kept, restorable); recorded in the platform audit log only.
+export function deleteCase(caseId: string, reason: string | null, token: string): Promise<void> {
+  return apiFetch<void>(`/cases/${caseId}`, {
+    method: "DELETE",
+    token,
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export function restoreCase(caseId: string, token: string): Promise<void> {
+  return apiFetch<void>(`/cases/${caseId}/restore`, { method: "POST", token })
 }
 
 export function getCaseAuditLog(caseId: string, token: string): Promise<AuditLogEntry[]> {
@@ -55,10 +114,12 @@ export function uploadDocument(
   token: string,
   onProgress?: (percent: number) => void
 ): Promise<CaseDocument> {
-  return new Promise((resolve, reject) => {
+  // `token` only says the caller is signed in; the live access token is sent.
+  void token
+  return withSession((bearer) => new Promise<CaseDocument>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", `${API_BASE_URL}/cases/${caseId}/documents`)
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+    xhr.setRequestHeader("Authorization", `Bearer ${bearer}`)
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
@@ -91,7 +152,7 @@ export function uploadDocument(
     const formData = new FormData()
     formData.append("file", file)
     xhr.send(formData)
-  })
+   }))
 }
 
 /**

@@ -61,6 +61,7 @@ tamper analysis). The checks run in this order and the first failure wins. Each 
 | 4 | A PDF whose name carries another type's extension (`.png`, `.docx`, …) | 415 | `file_type_mismatch` | `detected_type`, `extension` |
 | 5 | The PDF needs a password to open | 422 | `file_password_protected` | "This file is password-protected. Please remove the password and re-upload." |
 | 6 | The PDF can't be parsed locally (PyMuPDF) | 422 | `file_corrupted` | "The file appears to be corrupted or unreadable." |
+| 7 | More pages than **the company's** page limit (`companies.max_file_pages`; default **100** for a new company) | 413 | `file_too_many_pages` | "The document has 120 pages; the maximum allowed is 100. Please split it into smaller PDFs."; `page_count`, `max_pages` |
 
 Details:
 - **Magic bytes.** `%PDF-` anywhere in the first 1024 bytes (the PDF spec allows junk before the
@@ -130,8 +131,7 @@ anything that needs the file mints a SAS URL with `StorageService.get_download_u
 
 ## Known limitations
 
-- No page-count limit and no antivirus scan (type, size, corruption and password checks exist; see
-  above).
+- No antivirus scan (type, size, page-count, corruption and password checks exist; see above).
 - Any company user can create a case, but only its owner or a reviewer of the company can add to it.
 - Documents stored before the PDF-only rule may be images; they were OCR'd but no forensic check runs on
   them, and `pipeline_status` only requires forensic checks for PDFs, so such a case can still be scored.

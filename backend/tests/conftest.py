@@ -147,7 +147,9 @@ def make_company(db_session, name: str) -> Company:
         tenancy.restore(db_session, state)
 
 
-def set_upload_limits(db_session, company_id, *, file_mb: int | None = None, zip_mb: int | None = None) -> None:
+def set_upload_limits(
+    db_session, company_id, *, file_mb: int | None = None, zip_mb: int | None = None, max_pages: int | None = None
+) -> None:
     """Set a company's per-company upload limits directly (what a platform
     admin does through PATCH /platform/companies/{id})."""
     state = tenancy.snapshot(db_session)
@@ -158,6 +160,8 @@ def set_upload_limits(db_session, company_id, *, file_mb: int | None = None, zip
             company.max_file_size_mb = file_mb
         if zip_mb is not None:
             company.max_zip_size_mb = zip_mb
+        if max_pages is not None:
+            company.max_file_pages = max_pages
         db_session.commit()
     finally:
         tenancy.restore(db_session, state)

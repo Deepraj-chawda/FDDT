@@ -32,6 +32,7 @@ class DocumentCheckType(str, enum.Enum):
     font_consistency = "font_consistency"
     ghost_content = "ghost_content"
     spelling_consistency = "spelling_consistency"
+    analysis_integrity = "analysis_integrity"
 
 
 class DocumentCheckStatus(str, enum.Enum):

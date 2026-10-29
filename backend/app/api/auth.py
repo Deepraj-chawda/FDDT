@@ -1,6 +1,17 @@
 """
-Auth endpoints (POST /auth/login, GET /auth/me) and the dependencies every
-other router uses for identity, role and tenant checks.
+Auth endpoints (sign-in, session refresh, sign-out, /auth/me, password
+change) and the dependencies every other router uses for identity, role and
+tenant checks.
+
+Sessions: `POST /auth/login` returns a short-lived access token (JWT, kept in
+the browser's memory, sent as `Authorization: Bearer`) and sets a refresh
+token as an httpOnly, Secure, SameSite=Strict cookie scoped to the auth
+routes. `POST /auth/refresh` rotates that cookie and returns a new access
+token; `POST /auth/logout` ends the sign-in; `POST /auth/logout-all` ends every
+sign-in of the account. The cookie routes also require the
+`X-Requested-With: fddt-web` header — a cross-site page cannot send it
+without a CORS preflight this API never allows (CSRF defence on top of
+SameSite). See app/services/refresh_tokens.py.
 
 Every protected endpoint applies TWO mandatory checks:
 
@@ -16,20 +27,29 @@ Every protected endpoint applies TWO mandatory checks:
    resource they are reading (app/api/tenant_access.py), and that access is
    audited.
 
-The JWT carries `role`, `company_id` (null for platform admins) and
-`is_platform_admin`, but the user is always re-read from the database and the
-token's company must still match it — a moved, demoted or deactivated
-account, or a suspended company, takes effect on the next request.
+The JWT carries `role`, `company_id` (null for platform admins),
+`is_platform_admin` and `ver` (users.token_version), but the user is always
+re-read from the database and the token must still match it — a moved,
+demoted or deactivated account, a suspended company, a password change or a
+sign-out everywhere takes effect on the next request.
 """
 import uuid
 from dataclasses import dataclass
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.config import settings
+from app.core.security import (
+    access_token_lifetime_seconds,
+    burn_password_check,
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 from app.db import tenancy
 from app.db.session import get_db, get_system_db
 from app.models.company import Company
@@ -41,7 +61,7 @@ from app.schemas.auth import (
     TokenResponse,
     UploadLimitsResponse,
 )
-from app.services import login_throttle
+from app.services import login_throttle, refresh_tokens
 from app.services.audit_service import record_event
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -60,6 +80,7 @@ def token_claims(user: User) -> dict:
         "role": user.role.value,
         "company_id": str(user.company_id) if user.company_id else None,
         "is_platform_admin": user.is_platform_admin,
+        "ver": user.token_version or 0,
     }
 
 
@@ -70,6 +91,66 @@ def _company_is_active(system_db: Session, company_id: uuid.UUID | None) -> bool
         select(Company.is_active).where(Company.id == company_id)
     ).scalar_one_or_none()
     return bool(active)
+
+
+# ---------------------------------------------------------------------------
+# Session plumbing (access token + refresh cookie)
+# ---------------------------------------------------------------------------
+
+CSRF_HEADER = "X-Requested-With"
+CSRF_HEADER_VALUE = "fddt-web"
+_NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
+
+
+def _require_csrf_header(request: Request) -> None:
+    if request.headers.get(CSRF_HEADER) != CSRF_HEADER_VALUE:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Missing request header.")
+
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        settings.refresh_cookie_name,
+        token,
+        max_age=settings.refresh_token_idle_days * 86400,
+        path=settings.refresh_cookie_path,
+        secure=settings.refresh_cookie_secure,
+        httponly=True,
+        samesite="strict",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        settings.refresh_cookie_name,
+        path=settings.refresh_cookie_path,
+        secure=settings.refresh_cookie_secure,
+        httponly=True,
+        samesite="strict",
+    )
+
+
+def _token_response(response: Response, user: User, refresh_token: str | None) -> TokenResponse:
+    """Access token in the body; the refresh token (when there is a new one)
+    only as the cookie."""
+    response.headers.update(_NO_STORE)
+    if refresh_token is not None:
+        _set_refresh_cookie(response, refresh_token)
+    return TokenResponse(
+        access_token=create_access_token(subject=str(user.id), extra_claims=token_claims(user)),
+        expires_in=access_token_lifetime_seconds(),
+    )
+
+
+def _session_401(detail: str) -> HTTPException:
+    """401 that also clears the refresh cookie (FastAPI sends the exception's
+    headers, not the injected Response's)."""
+    probe = Response()
+    _clear_refresh_cookie(probe)
+    return HTTPException(
+        status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={**_UNAUTHORIZED, **_NO_STORE, "Set-Cookie": probe.headers["set-cookie"]},
+    )
 
 
 def get_current_user(
@@ -88,7 +169,7 @@ def get_current_user(
     try:
         user_id = uuid.UUID(payload["sub"])
     except (ValueError, TypeError):
-        raise _unauthorized("Invalid or expired token")
+        raise _unauthorized("Invalid or expired token") from None
 
     state = tenancy.snapshot(system_db)
     tenancy.bind_platform(system_db)
@@ -104,6 +185,8 @@ def get_current_user(
             raise _unauthorized("Your account's company changed. Please sign in again.")
         if bool(payload.get("is_platform_admin", user.is_platform_admin)) != user.is_platform_admin:
             raise _unauthorized("Your account's role changed. Please sign in again.")
+        if payload.get("ver") != (user.token_version or 0):
+            raise _unauthorized("Your session has ended. Please sign in again.")
         if not _company_is_active(system_db, user.company_id):
             raise _unauthorized("Your company's account is suspended.")
     finally:
@@ -186,16 +269,18 @@ def require_platform_admin(current_user: User = Depends(get_current_user)) -> Us
 @router.post(
     "/login",
     response_model=TokenResponse,
-    summary="Log in and obtain a JWT",
+    summary="Sign in",
     description=(
-        "Exchanges email + password for a bearer token (HS256; lifetime from "
-        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES). The token carries `role`, `company_id` (null for a "
-        "platform admin) and `is_platform_admin`. An unknown email, a wrong password, a "
-        "deactivated account and a suspended company all return the same 401 so accounts "
-        "cannot be enumerated. Throttled (app/services/login_throttle.py): after "
-        "LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for LOGIN_LOCKOUT_MINUTES, "
-        "and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE attempts per minute; both "
-        "answer 429 with a Retry-After header."
+        "Exchanges email + password for a short-lived access token (JWT, HS256, lifetime "
+        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES, default 15) in the body, and starts a session: a refresh "
+        "token is set as an httpOnly, Secure, SameSite=Strict cookie (REFRESH_COOKIE_NAME, path "
+        "REFRESH_COOKIE_PATH) used by `POST /auth/refresh`. The token carries `role`, `company_id` "
+        "(null for a platform admin), `is_platform_admin` and `ver`. An unknown email, a wrong "
+        "password, a deactivated account and a suspended company all return the same 401 (in the "
+        "same time) so accounts cannot be enumerated. Throttled (app/services/login_throttle.py): "
+        "after LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for "
+        "LOGIN_LOCKOUT_MINUTES, and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE "
+        "attempts per minute; both answer 429 with a Retry-After header."
     ),
     responses={
         401: {"description": "Incorrect email or password (or the account/company is inactive)."},
@@ -203,7 +288,10 @@ def require_platform_admin(current_user: User = Depends(get_current_user)) -> Us
     },
 )
 def login(
-    payload: LoginRequest, request: Request, system_db: Session = Depends(get_system_db)
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    system_db: Session = Depends(get_system_db),
 ) -> TokenResponse:
     email = str(payload.email)
     blocked = login_throttle.check(email, request.client.host if request.client else None)
@@ -217,10 +305,12 @@ def login(
     user = system_db.execute(
         select(User).where(func.lower(User.email) == str(payload.email).lower())
     ).scalar_one_or_none()
+    if user is None:
+        burn_password_check(payload.password)  # same timing as a wrong password
     if (
         user is None
-        or not user.is_active
         or not verify_password(payload.password, user.hashed_password)
+        or not user.is_active
         or not _company_is_active(system_db, user.company_id)
     ):
         login_throttle.record_failure(email)
@@ -230,8 +320,110 @@ def login(
         )
 
     login_throttle.record_success(email)
-    access_token = create_access_token(subject=str(user.id), extra_claims=token_claims(user))
-    return TokenResponse(access_token=access_token)
+    refresh_token, _row = refresh_tokens.issue(system_db, user, request)
+    record_event(
+        system_db,
+        "user_signed_in",
+        actor_user_id=user.id,
+        company_id=user.company_id,
+        event_data={
+            "user_id": str(user.id),
+            "email": user.email,
+            "ip_address": request.client.host if request.client else None,
+            "user_agent": (request.headers.get("user-agent") or "")[:255] or None,
+        },
+    )
+    system_db.commit()
+    return _token_response(response, user, refresh_token)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    summary="Renew the session",
+    description=(
+        "Exchanges the refresh-token cookie for a new access token and ROTATES the cookie (the "
+        "old refresh token stops working). A refresh token that was already rotated and is "
+        "presented again means it was copied: that whole sign-in is ended and the event is "
+        "audited (`refresh_token_reuse_detected`). Requires the `X-Requested-With: fddt-web` "
+        "header. No bearer token needed."
+    ),
+    responses={
+        401: {"description": "No valid session: sign in again (the cookie is cleared)."},
+        403: {"description": "The `X-Requested-With` header is missing."},
+    },
+)
+def refresh_session(
+    request: Request,
+    response: Response,
+    system_db: Session = Depends(get_system_db),
+) -> TokenResponse:
+    _require_csrf_header(request)
+    token = request.cookies.get(settings.refresh_cookie_name, "")
+    try:
+        session = refresh_tokens.rotate(system_db, token, request)
+    except refresh_tokens.RefreshError:
+        raise _session_401("Your session has ended. Please sign in again.") from None
+    system_db.commit()
+    return _token_response(response, session.user, session.refresh_token)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Sign out",
+    description=(
+        "Ends this sign-in: its refresh tokens are revoked and the cookie is cleared. The current "
+        "access token lapses on its own within minutes; the client must discard it. Requires the "
+        "`X-Requested-With: fddt-web` header. Always 204."
+    ),
+    responses={403: {"description": "The `X-Requested-With` header is missing."}},
+)
+def logout(
+    request: Request,
+    response: Response,
+    system_db: Session = Depends(get_system_db),
+) -> None:
+    _require_csrf_header(request)
+    family = refresh_tokens.family_of(system_db, request.cookies.get(settings.refresh_cookie_name, ""))
+    if family is not None:
+        refresh_tokens.revoke_family(system_db, family, "logout")
+        system_db.commit()
+    _clear_refresh_cookie(response)
+    response.headers.update(_NO_STORE)
+
+
+@router.post(
+    "/logout-all",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Sign out everywhere",
+    description=(
+        "Ends every sign-in of the caller's account on every device: all refresh tokens are "
+        "revoked and every access token already issued stops working immediately."
+    ),
+    responses={401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."}},
+)
+def logout_everywhere(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    system_db: Session = Depends(get_system_db),
+) -> None:
+    state = tenancy.snapshot(system_db)
+    tenancy.bind_platform(system_db)
+    try:
+        user = system_db.get(User, current_user.id)
+        refresh_tokens.revoke_all_sessions(system_db, user, "revoked_all")
+        record_event(
+            system_db,
+            "user_signed_out_everywhere",
+            actor_user_id=user.id,
+            company_id=user.company_id,
+            event_data={"user_id": str(user.id), "email": user.email},
+        )
+        system_db.commit()
+    finally:
+        tenancy.restore(system_db, state)
+    _clear_refresh_cookie(response)
 
 
 @router.get(
@@ -300,6 +492,7 @@ def read_upload_limits(
     return UploadLimitsResponse(
         max_file_size_mb=limits.max_file_size_mb,
         max_zip_size_mb=limits.max_zip_size_mb,
+        max_file_pages=limits.max_file_pages,
         max_file_size_bytes=limits.max_file_bytes,
         max_zip_size_bytes=limits.max_zip_bytes,
     )
@@ -307,14 +500,15 @@ def read_upload_limits(
 
 @router.post(
     "/me/password",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=TokenResponse,
     summary="Change my password",
     description=(
         "Any signed-in user (every role) changes their own password by giving the current one. "
         "The new password (8-128 characters, different from the current one) is stored hashed and "
         "the change is recorded in the audit log (never the password). A forgotten password cannot "
         "be reset here: a platform admin resets it (`POST /settings/users/{id}/reset-password`). "
-        "Tokens already issued stay valid until they expire."
+        "Every sign-in of the account, on every device, is ended; this one continues with the new "
+        "access token and refresh cookie returned."
     ),
     responses={
         400: {"description": "The current password is wrong, or the new one equals it."},
@@ -324,9 +518,11 @@ def read_upload_limits(
 )
 def change_my_password(
     payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
     current_user: User = Depends(get_current_user),
     system_db: Session = Depends(get_system_db),
-) -> None:
+) -> TokenResponse:
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect.")
     if verify_password(payload.new_password, current_user.hashed_password):
@@ -336,6 +532,8 @@ def change_my_password(
     try:
         user = system_db.get(User, current_user.id)
         user.hashed_password = hash_password(payload.new_password)
+        refresh_tokens.revoke_all_sessions(system_db, user, "password_changed")
+        refresh_token, _row = refresh_tokens.issue(system_db, user, request)
         record_event(
             system_db,
             "user_password_changed",
@@ -344,5 +542,6 @@ def change_my_password(
             event_data={"user_id": str(user.id), "email": user.email},  # never the password
         )
         system_db.commit()
+        return _token_response(response, user, refresh_token)
     finally:
         tenancy.restore(system_db, state)

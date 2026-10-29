@@ -1,3 +1,5 @@
+import type * as React from "react"
+
 import { cn } from "@/lib/utils"
 
 /**
@@ -14,11 +16,13 @@ export function AuditRow({
   title,
   description,
   current = false,
+  children,
 }: {
   timestamp: string
   title: string
   description: string
   current?: boolean
+  children?: React.ReactNode
 }) {
   return (
     <div className={cn("border-l-2 pl-3", current ? "border-accent" : "border-border")}>
@@ -27,6 +31,7 @@ export function AuditRow({
       </span>
       <h4 className="mt-0.5 text-xs font-bold text-foreground">{title}</h4>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
+      {children}
     </div>
   )
 }

@@ -8,6 +8,7 @@ See `.env.example` at the backend root for the full list of variables a
 local `.env` file must define.
 """
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 
@@ -89,6 +90,10 @@ class Settings(BaseSettings):
     # company.
     default_max_file_size_mb: int = Field(default=10, ge=1, alias="DEFAULT_MAX_FILE_SIZE_MB")
     default_max_zip_size_mb: int = Field(default=300, ge=1, alias="DEFAULT_MAX_ZIP_SIZE_MB")
+    # Page cap per PDF, per company in the same way. Forensics rasterises
+    # every page at 200 DPI (~11 MB each, held in memory together), so a
+    # small but very long PDF could otherwise exhaust a worker's RAM.
+    default_max_file_pages: int = Field(default=100, ge=1, alias="DEFAULT_MAX_FILE_PAGES")
 
     # Bulk upload (app/api/bulk_uploads.py, app/services/bulk_upload_service.py):
     # one zip, one top-level folder per case. Every document inside still gets
@@ -170,12 +175,42 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/1", alias="CELERY_RESULT_BACKEND"
     )
 
-    # --- JWT Auth ---
+    # --- JWT Auth (app/core/security.py, app/services/refresh_tokens.py) ---
+    # Short-lived access token (JWT, kept only in the browser's memory) +
+    # long-lived refresh token (opaque, stored hashed, rotated on every use,
+    # sent only as an httpOnly cookie). Outside local/test, the app refuses
+    # to start with a weak JWT_SECRET_KEY (fewer than 32 characters or the
+    # default).
     jwt_secret_key: str = Field(default="changeme-in-.env", alias="JWT_SECRET_KEY")
-    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    # HMAC only: the API signs and verifies with one shared secret, and an
+    # unchecked value could select "none" (unsigned tokens).
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(default="HS256", alias="JWT_ALGORITHM")
+    jwt_issuer: str = Field(default="fddt-api", alias="JWT_ISSUER")
+    jwt_audience: str = Field(default="fddt-web", alias="JWT_AUDIENCE")
     jwt_access_token_expire_minutes: int = Field(
-        default=60 * 8, alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
+        default=15, ge=1, le=60, alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
     )
+    # A session (one sign-in) ends after this long WITHOUT use…
+    refresh_token_idle_days: int = Field(default=7, ge=1, alias="REFRESH_TOKEN_IDLE_DAYS")
+    # …and after this long in any case: then the user signs in again.
+    refresh_token_absolute_days: int = Field(default=30, ge=1, alias="REFRESH_TOKEN_ABSOLUTE_DAYS")
+    # Two tabs refreshing at the same moment both present the same token; the
+    # second one inside this window is not treated as theft.
+    refresh_token_reuse_grace_seconds: int = Field(
+        default=20, ge=0, le=120, alias="REFRESH_TOKEN_REUSE_GRACE_SECONDS"
+    )
+    refresh_cookie_name: str = Field(default="fddt_refresh", alias="REFRESH_COOKIE_NAME")
+    # The path the BROWSER uses for the auth routes (nginx serves the API
+    # under /api and strips it), so the cookie is sent to nothing else.
+    refresh_cookie_path: str = Field(default="/api/auth", alias="REFRESH_COOKIE_PATH")
+    refresh_cookie_secure: bool = Field(default=True, alias="REFRESH_COOKIE_SECURE")
+    # Interactive API docs (/docs, /redoc, /openapi.json). Off by default
+    # when ENVIRONMENT=production.
+    api_docs_enabled: bool | None = Field(default=None, alias="API_DOCS_ENABLED")
+
+    @property
+    def is_dev_environment(self) -> bool:
+        return self.environment.lower() in ("local", "dev", "development", "test", "testing")
 
     # --- Azure Blob Storage ---
     azure_storage_connection_string: str | None = Field(

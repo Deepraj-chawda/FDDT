@@ -48,7 +48,7 @@ import cv2
 import numpy as np
 
 from app.services.forensics.pdf_render import RenderedPage
-from app.services.llm_service import LLMService, PageVisualAnalysis, VisualCategoryFinding
+from app.services.llm_service import LLMService, VisualCategoryFinding
 
 Severity = Literal["info", "low", "medium", "high"]
 

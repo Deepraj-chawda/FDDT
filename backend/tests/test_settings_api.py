@@ -2,6 +2,7 @@
 import pytest
 from sqlalchemy import select
 
+from app.db import tenancy
 from app.models.audit_log import AuditLog
 from app.models.issuer_registry import IssuerRegistry, IssuerType
 from app.models.risk_rule import RiskRule
@@ -18,6 +19,19 @@ def seeded_rules(db_session):
 
 def _events(db, event_type):
     return db.execute(select(AuditLog).where(AuditLog.event_type == event_type).order_by(AuditLog.created_at)).scalars().all()
+
+
+def _platform_events(db, event_type):
+    """A platform admin's actions are platform-only rows (company_id NULL),
+    invisible to the company-bound test session."""
+    state = tenancy.snapshot(db)
+    tenancy.bind_platform(db)
+    try:
+        events = _events(db, event_type)
+    finally:
+        tenancy.restore(db, state)
+    assert all(e.company_id is None and e.event_data["platform_admin"] is True for e in events)
+    return events
 
 
 # --------------------------------------------------------------- access control
@@ -199,7 +213,7 @@ def test_list_users_and_change_role_and_deactivate(
     db_session.expire_all()
     assert db_session.get(User, reviewer_user.id).is_active is False
 
-    events = _events(db_session, "user_updated")
+    events = _platform_events(db_session, "user_updated")
     assert [e.event_data["changes"] for e in events] == [
         {"role": {"from": "user", "to": "reviewer_l2"}},
         {"is_active": {"from": True, "to": False}},
@@ -221,14 +235,22 @@ def test_deactivated_user_is_locked_out_and_can_be_reactivated(client, platform_
     client.patch(f"/settings/users/{reviewer_user.id}", headers=platform_admin_headers, json={"is_active": False})
     assert client.get("/cases", headers=reviewer_headers).status_code == 401
     client.patch(f"/settings/users/{reviewer_user.id}", headers=platform_admin_headers, json={"is_active": True})
-    assert client.get("/cases", headers=reviewer_headers).status_code == 200
+    # Reactivated, but the old session stays ended: a fresh sign-in works.
+    assert client.get("/cases", headers=reviewer_headers).status_code == 401
+    login = client.post("/auth/login", json={"email": reviewer_user.email, "password": "TestPassword123!"})
+    fresh = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    assert client.get("/cases", headers=fresh).status_code == 200
 
 
 def test_role_change_takes_effect_immediately_not_at_token_expiry(client, platform_admin_headers, plain_user, plain_headers):
-    """The JWT carries a role claim, but authorization re-reads the DB."""
+    """A role change ends the user's sessions at once; signing in again gives
+    the new role."""
     assert client.get("/settings/issuers", headers=plain_headers).status_code == 403
     client.patch(f"/settings/users/{plain_user.id}", headers=platform_admin_headers, json={"role": "reviewer_l2"})
-    assert client.get("/settings/issuers", headers=plain_headers).status_code == 200
+    assert client.get("/settings/issuers", headers=plain_headers).status_code == 401
+    login = client.post("/auth/login", json={"email": plain_user.email, "password": "TestPassword123!"})
+    fresh = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    assert client.get("/settings/issuers", headers=fresh).status_code == 200
 
 
 def test_moving_a_user_to_another_company_invalidates_their_token(
@@ -292,6 +314,6 @@ def test_platform_admin_can_reset_password_and_is_audited(client, db_session, pl
     assert login_old.status_code == 401
 
     # Audit log entry exists
-    events = _events(db_session, "user_password_reset")
+    events = _platform_events(db_session, "user_password_reset")
     assert any(e.event_data.get("user_id") == str(plain_user.id) for e in events)
 

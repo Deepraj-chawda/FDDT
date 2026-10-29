@@ -71,7 +71,7 @@ const OVERLAY_COLOR_LEGEND: Record<OverlayColor, string> = {
 // it). This is the page's only class component for exactly that reason:
 // error boundaries have no hook equivalent.
 class PdfViewerErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; onRetry?: () => void },
   { hasError: boolean }
 > {
   state = { hasError: false }
@@ -79,18 +79,32 @@ class PdfViewerErrorBoundary extends React.Component<
     return { hasError: true }
   }
   componentDidCatch(error: unknown) {
-    console.error("PdfOverlayViewer crashed:", error)
+    // pdf.js wraps a failed fetch (network drop, blocked request) as
+    // UnknownErrorException: log its message, the name alone says nothing.
+    const e = error as { name?: string; message?: string; status?: number }
+    console.error("PdfOverlayViewer crashed:", e?.name, e?.message, e?.status ?? "", error)
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="rounded-lg border bg-background p-3 text-sm text-destructive">
-          Couldn't load this file for preview.
-        </div>
-      )
+      return <PdfLoadFailed onRetry={this.props.onRetry} />
     }
     return this.props.children
   }
+}
+
+// Shown when the file can't be loaded. Retry asks the page for a fresh signed
+// URL (the one it holds expires after a few minutes) and remounts the viewer.
+function PdfLoadFailed({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-lg border bg-background p-4 text-sm text-destructive">
+      <span>Couldn't load this file for preview.</span>
+      {onRetry && (
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          Retry
+        </Button>
+      )}
+    </div>
+  )
 }
 
 // Renders one page of the case document with the currently-expanded
@@ -98,9 +112,9 @@ class PdfViewerErrorBoundary extends React.Component<
 // annotated/burned-in image is ever generated or stored, this is drawn
 // live over the real PDF render, and disappears the moment `overlays`
 // goes back to empty (the check gets collapsed).
-export function PdfOverlayViewer(props: { fileUrl: string; overlays: OverlayBox[] }) {
+export function PdfOverlayViewer(props: { fileUrl: string; overlays: OverlayBox[]; onRetry?: () => void }) {
   return (
-    <PdfViewerErrorBoundary>
+    <PdfViewerErrorBoundary onRetry={props.onRetry}>
       {/* react-pdf v11 suspends while it loads a file (React `use()`). Without
           a boundary here the nearest one is the app's route-level fallback,
           which blanked the whole case page and remounted it — refetching the
@@ -125,9 +139,11 @@ const MAX_PAGE_WIDTH = 560
 function PdfOverlayViewerInner({
   fileUrl,
   overlays,
+  onRetry,
 }: {
   fileUrl: string
   overlays: OverlayBox[]
+  onRetry?: () => void
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = React.useState(MAX_PAGE_WIDTH)
@@ -147,14 +163,18 @@ function PdfOverlayViewerInner({
     return () => observer.disconnect()
   }, [])
 
-  // Jump to whatever page the newest set of overlays actually lands on
-  // — a reviewer expanding a flagged check shouldn't have to go
-  // hunting through a multi-page document to find what it's pointing at.
-  React.useEffect(() => {
-    if (overlays.length > 0) {
-      setPageNumber(overlays[0].box.page)
-    }
-  }, [overlays])
+  // Jump to the page the first overlay lands on — a reviewer shouldn't have
+  // to hunt through a multi-page document for what a check points at. Only
+  // when that page changes: the case page re-polls while processing and
+  // hands over a new (often identical) overlay list each time, which must
+  // not pull the reviewer back from the page they are reading. Adjusted
+  // during render (React's pattern for state derived from props).
+  const jumpPage = overlays[0]?.box.page ?? null
+  const [lastJumpPage, setLastJumpPage] = React.useState<number | null>(null)
+  if (jumpPage !== lastJumpPage) {
+    setLastJumpPage(jumpPage)
+    if (jumpPage !== null) setPageNumber(jumpPage)
+  }
 
   const pageOverlays = overlays.filter((o) => o.box.page === pageNumber)
   const legendColors = Array.from(new Set(overlays.map((o) => o.color)))
@@ -200,9 +220,7 @@ function PdfOverlayViewerInner({
       </div>
 
       {loadError ? (
-        <div className="p-8 text-center text-sm text-destructive">
-          Couldn't load this file for preview.
-        </div>
+        <PdfLoadFailed onRetry={onRetry} />
       ) : (
         <div
           className="relative mx-auto overflow-hidden rounded-md border bg-muted/20 max-w-full"
@@ -212,7 +230,10 @@ function PdfOverlayViewerInner({
             file={fileUrl}
             options={PDF_DOCUMENT_OPTIONS}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-            onLoadError={() => setLoadError(true)}
+            onLoadError={(error) => {
+              console.error("PDF load failed:", error.name, error.message)
+              setLoadError(true)
+            }}
             loading={<div className="p-8 text-sm text-muted-foreground">Loading document…</div>}
           >
             <Page

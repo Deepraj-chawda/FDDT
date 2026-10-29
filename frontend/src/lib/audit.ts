@@ -47,6 +47,24 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   user_updated: "User changed",
   user_password_reset: "Password reset",
   user_password_changed: "Password changed",
+  risk_rule_created: "Risk rule added",
+  bulk_upload_received: "Bulk upload received",
+  bulk_upload_ingested: "Bulk upload ingested",
+  case_report_generated: "Case report generated",
+  // sign-in & sessions
+  user_signed_in: "Signed in",
+  user_signed_out_everywhere: "Signed out everywhere",
+  refresh_token_reuse_detected: "Session token reuse blocked",
+  // platform-only (platform admins see these; companies never do)
+  platform_admin_access: "Platform admin access",
+  case_deleted: "Case deleted (admin)",
+  case_restored: "Case restored (admin)",
+  user_created: "User created",
+  company_created: "Company created",
+  company_updated: "Company changed",
+  risk_rule_template_created: "Rule template added",
+  risk_rule_template_updated: "Rule template changed",
+  usage_stats_reconciled: "Usage counters reconciled",
 }
 
 export function auditLabel(eventType: string): string {
@@ -54,10 +72,17 @@ export function auditLabel(eventType: string): string {
 }
 
 export function auditTone(eventType: string): AuditTone {
-  if (eventType.endsWith("_failed") || eventType === "case_rejected" || eventType === "case_escalated" || eventType === "issuer_deactivated") {
+  if (
+    eventType.endsWith("_failed") ||
+    eventType === "case_rejected" ||
+    eventType === "case_escalated" ||
+    eventType === "issuer_deactivated" ||
+    eventType === "case_deleted" ||
+    eventType === "refresh_token_reuse_detected"
+  ) {
     return "rose"
   }
-  if (eventType === "case_approved" || eventType === "issuer_reactivated") return "emerald"
+  if (eventType === "case_approved" || eventType === "issuer_reactivated" || eventType === "case_restored") return "emerald"
   if (
     eventType === "risk_rule_updated" ||
     eventType === "risk_thresholds_updated" ||
@@ -66,7 +91,15 @@ export function auditTone(eventType: string): AuditTone {
     eventType === "user_password_changed" ||
     eventType === "issuer_updated" ||
     eventType === "issuer_created" ||
-    eventType === "risk_assessment_completed"
+    eventType === "risk_assessment_completed" ||
+    eventType === "risk_rule_created" ||
+    eventType === "user_created" ||
+    eventType === "company_created" ||
+    eventType === "company_updated" ||
+    eventType === "risk_rule_template_created" ||
+    eventType === "risk_rule_template_updated" ||
+    eventType === "platform_admin_access" ||
+    eventType === "user_signed_out_everywhere"
   ) {
     return "amber"
   }
@@ -87,10 +120,53 @@ function changeSummary(changes: unknown): string {
 }
 
 /** A one-line human description of an event, or null if there's nothing
- * worth adding beyond its label. Includes decision reasons/justifications. */
+ * worth adding beyond its label. Includes decision reasons/justifications.
+ * Platform-only rows (a platform admin's actions) also name the company and
+ * the admin, which only platform admins ever receive. */
 export function describeAuditEvent(eventType: string, data: Data): string | null {
+  const text = describe(eventType, data)
+  if (
+    !data ||
+    data.platform_admin !== true ||
+    eventType === "platform_admin_access" ||
+    eventType === "case_deleted" ||
+    eventType === "case_restored"
+  )
+    return text
+  const who = [str(data.company_name), str(data.admin_email) && `by ${str(data.admin_email)}`].filter(Boolean).join(" · ")
+  return [text, who].filter(Boolean).join(" — ") || null
+}
+
+function describe(eventType: string, data: Data): string | null {
   if (!data) return null
   switch (eventType) {
+    case "platform_admin_access":
+      return str(data.summary) ?? `${str(data.admin_email) ?? "Platform admin"} → ${str(data.company_name) ?? "company"} / ${str(data.resource) ?? ""}`
+    case "case_deleted":
+      return `${str(data.case_number) ?? "Case"} deleted by admin${str(data.reason) ? `. Reason: ${str(data.reason)}` : ""}`
+    case "case_restored":
+      return `${str(data.case_number) ?? "Case"} restored by admin`
+    case "user_created":
+      return `${str(data.email) ?? "user"} as ${str(data.role)?.replace(/_/g, " ") ?? "?"}`
+    case "user_signed_in": {
+      const where = [str(data.ip_address), str(data.user_agent)].filter(Boolean).join(" · ")
+      return `${str(data.email) ?? "User"}${where ? ` from ${where}` : ""}`
+    }
+    case "user_signed_out_everywhere":
+      return `${str(data.email) ?? "User"} ended every session`
+    case "refresh_token_reuse_detected":
+      return `${str(data.email) ?? "User"}: a used session token came back${str(data.ip_address) ? ` from ${str(data.ip_address)}` : ""} — that sign-in was ended`
+    case "company_created":
+      return str(data.name)
+    case "company_updated":
+      return `${str(data.name) ?? "company"} — ${changeSummary(data.changes)}`
+    case "risk_rule_created":
+    case "risk_rule_template_created":
+      return `${str(data.rule_id) ?? "rule"} (weight ${num(data.weight) ?? "?"}, ${str(data.severity) ?? "?"})`
+    case "risk_rule_template_updated":
+      return `${str(data.rule_id) ?? "rule"} — ${changeSummary(data.changes)}`
+    case "usage_stats_reconciled":
+      return `${num(data.rows_corrected) ?? 0} of ${num(data.rows_checked) ?? 0} counters corrected (${str(data.trigger) ?? "?"})`
     case "case_approved": {
       const tier = str(data.risk_tier)
       const score = num(data.risk_score)
@@ -141,6 +217,6 @@ export function describeAuditEvent(eventType: string, data: Data): string | null
       return n === null ? null : `${n} comparison${n === 1 ? "" : "s"} stored`
     }
     default:
-      return str(data.original_filename) ?? str(data.error)
+      return str(data.summary) ?? str(data.original_filename) ?? str(data.error)
   }
 }

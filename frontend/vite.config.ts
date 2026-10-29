@@ -66,7 +66,6 @@ export default defineConfig({
   },
   server: {
     allowedHosts: [
-      'busybody-entail-parkway.ngrok-free.dev',
       '.ngrok-free.dev',
       '.ngrok.app',
     ],

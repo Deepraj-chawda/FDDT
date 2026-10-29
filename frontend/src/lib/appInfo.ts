@@ -4,9 +4,7 @@
 // backend/app/core/config.py's APP_NAME / APP_FULL_NAME.
 //
 // Display-level only: internal identifiers keep their original names on
-// purpose (the `docauth.token` localStorage key — renaming it would sign
-// everyone out — plus the `docauth` DB/user, container names and package
-// folders).
+// purpose (the `docauth` DB/user, container names and package folders).
 //
 // Deliberately free of `import.meta.env` and other browser-only APIs:
 // vite.config.ts imports this file in Node too.

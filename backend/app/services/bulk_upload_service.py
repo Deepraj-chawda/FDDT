@@ -54,7 +54,6 @@ import uuid
 import zipfile
 import zlib
 from dataclasses import dataclass, field
-from pathlib import PurePosixPath
 from typing import Any, BinaryIO, Callable
 
 from sqlalchemy import select
@@ -68,7 +67,7 @@ from app.models.case import Case, CaseStatus
 from app.services.audit_service import record_event
 from app.services.document_intake import enqueue_document_pipeline, record_document, store_original
 from app.services.storage_service import StorageService
-from app.services.upload_limits import company_upload_limits
+from app.services.upload_limits import UploadLimits, company_upload_limits
 from app.services.upload_validation import UploadRejected, check_size, format_size, validate_upload
 from app.services.usage_service import record_case_created
 
@@ -441,15 +440,18 @@ class _Accepted:
 
 
 def _validate_case_files(
-    zf: zipfile.ZipFile, infos: list[zipfile.ZipInfo], case: dict[str, Any], max_file_bytes: int
+    zf: zipfile.ZipFile, infos: list[zipfile.ZipInfo], case: dict[str, Any], limits: UploadLimits
 ) -> list[_Accepted]:
+    max_file_bytes = limits.max_file_bytes
     accepted: list[_Accepted] = []
     for item in case["files"]:
         if item["status"] != "pending":
             continue  # rejected structurally in the plan
         try:
             content = _extract(zf, infos[item["entry_index"]], max_file_bytes)
-            validated = validate_upload(content, item["name"], max_bytes=max_file_bytes)
+            validated = validate_upload(
+                content, item["name"], max_bytes=max_file_bytes, max_pages=limits.max_file_pages
+            )
         except UploadRejected as rejection:
             item.update(status="rejected", code=rejection.code, message=rejection.message)
             continue
@@ -524,7 +526,7 @@ def ingest(
     db.commit()  # nothing is held open during the download below
 
     # The same per-company source the upload request used.
-    max_file_bytes = company_upload_limits(db, company_id).max_file_bytes
+    limits = company_upload_limits(db, company_id)
     db.commit()
     if pending_ids:
         with tempfile.TemporaryFile() as tmp:
@@ -544,7 +546,7 @@ def ingest(
                 for row_id in pending_ids:
                     row = db.get(BulkUploadCase, row_id)
                     db.commit()  # end the read before extraction / blob uploads
-                    _ingest_case(db, storage, zf, infos, bulk, row, company_id, max_file_bytes, enqueue)
+                    _ingest_case(db, storage, zf, infos, bulk, row, company_id, limits, enqueue)
 
     bulk.status = BulkUploadStatus.complete
     bulk.finished_at = utcnow()
@@ -572,13 +574,13 @@ def _ingest_case(
     bulk: BulkUpload,
     row: BulkUploadCase,
     company_id: uuid.UUID,
-    max_file_bytes: int,
+    limits: UploadLimits,
     enqueue: Enqueue,
 ) -> None:
     before = copy.deepcopy(row.files)
     entry = {"folder": row.folder, "files": copy.deepcopy(row.files)}
     # CPU work and blob uploads: no transaction is open here.
-    accepted = _validate_case_files(zf, infos, entry, max_file_bytes)
+    accepted = _validate_case_files(zf, infos, entry, limits)
     if not accepted:
         row.status = "failed"
         row.error_code = "case_no_valid_documents"

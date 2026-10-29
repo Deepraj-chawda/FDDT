@@ -21,7 +21,6 @@ cross-document comparison happens at upload time.
 from __future__ import annotations
 
 import base64
-import io
 import uuid
 from typing import TYPE_CHECKING
 

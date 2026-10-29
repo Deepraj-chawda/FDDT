@@ -5,11 +5,13 @@ Settings API: issuer registry, risk rules + thresholds (per company), users
 Issuer registry and risk rules/thresholds are PER COMPANY — each company has
 its own independent rows. They are managed by that company's `reviewer_l2`
 (always confined to their own company) and by platform admins, who must pass
-`company_id` and whose every read/change is audited in that company's log
-(app/api/tenant_access.py).
+`company_id` and whose every read/change is audited in the PLATFORM-ONLY log
+(company_id NULL — app/api/tenant_access.py): company users never see that a
+platform admin looked at or changed anything.
 
 Users are platform-admin-only: platform admins create every account and
 assign it to a company + role (companies cannot create or manage users).
+Those events are platform-only audit rows too.
 
 Every change writes an `audit_log` row (the same table and `record_event`
 writer the rest of the app uses; nothing parallel), which the Audit History
@@ -25,13 +27,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user, require_platform_admin
-from app.api.tenant_access import CompanyScope, company_scope
+from app.api.tenant_access import CompanyScope, commit_company_change, company_scope, record_company_event
 from app.core.security import hash_password
 from app.db.session import get_system_db
 from app.models.company import Company
 from app.models.issuer_registry import IssuerRegistry
 from app.models.risk_rule import RiskRule
-from app.models.user import COMPANY_ROLES, User, UserRole, has_rank
+from app.models.user import User, UserRole, has_rank
 from app.schemas.settings import (
     IssuerCreate,
     IssuerResponse,
@@ -46,8 +48,8 @@ from app.schemas.settings import (
     UserCreate,
     UserPasswordReset,
 )
-from app.services.audit_service import record_event
-from app.services import risk_rule_catalog as catalog
+from app.services.audit_service import record_platform_event
+from app.services import refresh_tokens, risk_rule_catalog as catalog
 from app.services.risk_scoring_service import get_risk_settings, load_current_rules
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -70,12 +72,12 @@ _rules_scope = company_scope("Settings > Risk Rules")
 
 def _actor(db: Session, user_id: uuid.UUID | None) -> str | None:
     """Display name of who made a change. A change made by a platform admin
-    is attributed to "Platform admin" in a company session (platform
-    accounts are outside every company)."""
+    shows no name in a company session: platform accounts are outside every
+    company, and nothing about them is shown to company users."""
     if user_id is None:
         return None
     user = db.get(User, user_id)
-    return (user.full_name or user.email) if user else "Platform admin"
+    return (user.full_name or user.email) if user else None
 
 
 # ---------------------------------------------------------------------------
@@ -152,13 +154,13 @@ def create_issuer(
     )
     db.add(issuer)
     db.flush()
-    record_event(
-        db,
+    record_company_event(
+        scope,
         "issuer_created",
-        actor_user_id=admin.id,
+        actor=admin,
         event_data={"issuer_id": str(issuer.id), "name": issuer.name, "type": issuer.type.value},
     )
-    db.commit()
+    commit_company_change(scope)
     db.refresh(issuer)
     return issuer
 
@@ -211,13 +213,13 @@ def update_issuer(
         event = "issuer_reactivated" if changes["is_active"]["to"] else "issuer_deactivated"
     else:
         event = "issuer_updated"
-    record_event(
-        db,
+    record_company_event(
+        scope,
         event,
-        actor_user_id=admin.id,
+        actor=admin,
         event_data={"issuer_id": str(issuer.id), "name": issuer.name, "changes": changes},
     )
-    db.commit()
+    commit_company_change(scope)
     db.refresh(issuer)
     return issuer
 
@@ -350,17 +352,17 @@ def create_risk_rule(
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "A rule with that name was just created — reload and retry.")
-    record_event(
-        db,
+        raise HTTPException(status.HTTP_409_CONFLICT, "A rule with that name was just created — reload and retry.") from None
+    record_company_event(
+        scope,
         "risk_rule_created",
-        actor_user_id=admin.id,
+        actor=admin,
         event_data={
             "rule_id": rule.rule_id, "category": rule.category, "check_type": rule.check_type,
             "condition": condition, "weight": rule.weight, "severity": rule.severity, "is_active": rule.is_active,
         },
     )
-    db.commit()
+    commit_company_change(scope)
     db.refresh(rule)
     return _rule_response(db, rule, {})
 
@@ -466,11 +468,11 @@ def update_risk_rule(
         db.rollback()
         raise HTTPException(
             status.HTTP_409_CONFLICT, "This rule was just changed by someone else — reload and retry."
-        )
-    record_event(
-        db,
+        ) from None
+    record_company_event(
+        scope,
         "risk_rule_updated",
-        actor_user_id=admin.id,
+        actor=admin,
         event_data={
             "rule_id": rule_id,
             "from_version": current.version,
@@ -479,7 +481,7 @@ def update_risk_rule(
             "note": new_row.change_note,
         },
     )
-    db.commit()
+    commit_company_change(scope)
     db.refresh(new_row)
     return _rule_response(db, new_row, {})
 
@@ -541,13 +543,13 @@ def update_risk_thresholds(
         row.high_threshold = payload.high_threshold
         row.metadata_score_cap = new["metadata_cap"]
         row.updated_by = admin.id
-        record_event(
-            db,
+        record_company_event(
+            scope,
             "risk_thresholds_updated",
-            actor_user_id=admin.id,
+            actor=admin,
             event_data={"from": old, "to": new},
         )
-    db.commit()
+    commit_company_change(scope)
     db.refresh(row)
     return RiskThresholdsResponse(
         medium_threshold=row.medium_threshold,
@@ -661,18 +663,16 @@ def create_user(
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "An account with that email already exists.")
-    record_event(
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with that email already exists.") from None
+    record_platform_event(
         db,
         "user_created",
-        actor_user_id=admin.id,
-        company_id=user.company_id,
+        admin=admin,
+        company=company,
         event_data={  # never the password
             "user_id": str(user.id),
             "email": user.email,
             "role": user.role.value,
-            "company_id": str(user.company_id) if user.company_id else None,
-            "company_name": company.name if company else None,
         },
     )
     db.commit()
@@ -687,8 +687,8 @@ def create_user(
     description=(
         "Partial update of `role`, `company_id` and/or `is_active`. A platform admin cannot "
         "change their own role or deactivate themselves (this also guarantees a platform admin "
-        "always remains). Changing a user's company or role invalidates their existing tokens "
-        "(they must sign in again). There is no self-service signup and no password-reset "
+        "always remains). Any change ends every sign-in of the user (sessions and access "
+        "tokens): they must sign in again. There is no self-service signup and no password-reset "
         "endpoint. Platform admin only."
     ),
     responses={
@@ -739,10 +739,13 @@ def update_user(
         changes["is_active"] = {"from": user.is_active, "to": payload.is_active}
         user.is_active = payload.is_active
     if changes:
-        record_event(
+        # Any change of role, company or active flag ends the account's
+        # sessions: signed-in devices must sign in again under the new terms.
+        refresh_tokens.revoke_all_sessions(db, user, "account_changed")
+        record_platform_event(
             db,
             "user_updated",
-            actor_user_id=admin.id,
+            admin=admin,
             company_id=user.company_id,
             event_data={"user_id": str(user.id), "email": user.email, "changes": changes},
         )
@@ -757,7 +760,8 @@ def update_user(
     summary="Reset user password (platform admin only)",
     description=(
         "Resets the password for any user account. The new password is stored hashed. "
-        "Only platform admins have access to this action. Action is logged in the audit trail."
+        "Only platform admins have access to this action. Every sign-in of the account is ended "
+        "(all its sessions and access tokens). Action is logged in the audit trail."
     ),
     responses={
         401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
@@ -776,10 +780,11 @@ def reset_user_password(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
     user.hashed_password = hash_password(payload.password)
-    record_event(
+    refresh_tokens.revoke_all_sessions(db, user, "password_reset")  # signed out everywhere
+    record_platform_event(
         db,
         "user_password_reset",
-        actor_user_id=admin.id,
+        admin=admin,
         company_id=user.company_id,
         event_data={"user_id": str(user.id), "email": user.email},
     )

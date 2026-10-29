@@ -134,6 +134,7 @@ export interface AuditEvent {
   document_id: string | null
   document_filename: string | null
   event_data: Record<string, unknown> | null
+  case_deleted?: boolean
 }
 
 export interface AuditPage {

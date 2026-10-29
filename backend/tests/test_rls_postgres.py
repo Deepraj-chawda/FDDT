@@ -75,7 +75,7 @@ def two_companies(engines):
     with owner.begin() as conn:
         for key in ("a", "b"):
             company_id, user_id, case_id, doc_id, issuer_id = (uuid.uuid4() for _ in range(5))
-            conn.execute(text("INSERT INTO companies (id, name, is_active, max_file_size_mb, max_zip_size_mb) VALUES (:id, :name, true, 10, 300)"),
+            conn.execute(text("INSERT INTO companies (id, name, is_active, max_file_size_mb, max_zip_size_mb, max_file_pages) VALUES (:id, :name, true, 10, 300, 100)"),
                          {"id": company_id, "name": f"RLS test {key.upper()} {tag}"})
             conn.execute(text(
                 "INSERT INTO users (id, company_id, email, hashed_password, role, is_active, created_at, updated_at) "

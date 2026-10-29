@@ -1,3 +1,6 @@
+# Local development only. Postgres, Redis and PgBouncer are published on
+# 127.0.0.1 only: their dev passwords (or none, for Redis) must not be
+# reachable from the network.
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docauth}
       POSTGRES_DB: ${POSTGRES_DB:-docauth}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +25,7 @@ services:
     container_name: docauth-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -42,10 +45,16 @@ services:
       - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
     ports:
-      - "${PGBOUNCER_PORT:-6432}:6432"
+      - "127.0.0.1:${PGBOUNCER_PORT:-6432}:6432"
     depends_on:
       postgres:
         condition: service_healthy
+    # Ready = accepting client connections, so workers don't connect early.
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "6432", "-d", "docauth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # ---------------------------------------------------------------------------
   # Processing workers (optional, local) — one service per queue so each scales
@@ -76,7 +85,7 @@ services:
       postgres:
         condition: service_healthy
       pgbouncer:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped

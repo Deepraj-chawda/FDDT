@@ -1,5 +1,7 @@
 // Minimal fetch wrapper. Base URL is env-var driven (SPECIFICATION.md section 4:
 // "Use environment variables for ... environment-specific config").
+import { withSession } from "@/lib/session"
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api"
 
 export class ApiError extends Error {
@@ -45,18 +47,27 @@ export function parseErrorDetail(body: unknown): { message?: string; code?: stri
 }
 
 interface RequestOptions extends RequestInit {
+  /** Pass the signed-in user's token (from useAuth) for an authenticated
+   * call. The live access token is used — renewed first if it is about to
+   * expire, and once more after a 401 (lib/session.ts). */
   token?: string | null
 }
 
 export async function apiFetch<T>(
   path: string,
-  { token, headers, ...options }: RequestOptions = {}
+  { token, ...options }: RequestOptions = {}
 ): Promise<T> {
+  if (!token) return send<T>(path, null, options)
+  return withSession((bearer) => send<T>(path, bearer, options))
+}
+
+async function send<T>(path: string, bearer: string | null, { headers, ...options }: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
       ...headers,
     },
   })
@@ -74,7 +85,7 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, detail, code)
   }
 
-  // 204 No Content (e.g. changing your password) has no body to parse.
+  // 204 No Content (e.g. signing out) has no body to parse.
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }

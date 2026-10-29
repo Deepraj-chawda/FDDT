@@ -187,7 +187,7 @@ export function BulkUploadPage() {
                         {limits && (
                           <p className="text-xs text-muted-foreground">
                             Max zip size: {formatFileSize(limits.max_zip_size_bytes)} · max file size:{" "}
-                            {formatFileSize(limits.max_file_size_bytes)} per PDF
+                            {formatFileSize(limits.max_file_size_bytes)} and {limits.max_file_pages} pages per PDF
                           </p>
                         )}
                       </div>

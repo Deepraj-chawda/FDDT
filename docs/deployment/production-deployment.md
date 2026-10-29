@@ -600,9 +600,10 @@ Recovery objectives with tier M as designed: RPO ≈ 5 minutes (PostgreSQL log b
 - [ ] A full browser walkthrough of every role (submitter, Reviewer L1, Reviewer L2, platform admin).
 
 **Known gaps to accept or schedule** (from [azure-migration-notes.md](azure-migration-notes.md))
-- No forgot-password flow (users change their own password; admins reset others), tokens in `localStorage`.
-  Sign-in throttling exists (per address and per IP).
-- No malware scan and no page-count limit on uploads (type, size, corruption and password are checked).
+- No forgot-password flow (users change their own password; admins reset others). Sessions use a
+  15-minute in-memory access token and a rotating httpOnly refresh cookie
+  ([authentication](../architecture/authentication.md)); sign-in throttling exists (per address and per IP).
+- No malware scan on uploads (type, size, page count, corruption and password are checked).
 - No automatic retry of a failed Azure call. (Documents whose queued tasks were lost are re-queued by the
   stuck-document job.)
 - Keys and connection strings, not managed identity, for Storage / Document Intelligence / OpenAI.

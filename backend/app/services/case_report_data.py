@@ -85,6 +85,11 @@ _NOTE_FINDINGS = {
 # (check type, label, what it looks at).
 CHECK_CATALOG: list[tuple[DocumentCheckType, str, str]] = [
     (
+        DocumentCheckType.analysis_integrity,
+        "Analysis integrity",
+        "Whether the automated analysis ran in full, and whether the document's text tries to instruct the AI.",
+    ),
+    (
         DocumentCheckType.metadata_forensics,
         "Metadata forensics",
         "PDF metadata, edit history and incremental-save markers.",

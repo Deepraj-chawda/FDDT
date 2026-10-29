@@ -74,6 +74,47 @@ class CaseListItem(BaseModel):
         "False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). "
         "Does not reflect status — a decided case is still `can_act` but every action is a 409."
     )
+    deleted_at: datetime | None = Field(
+        default=None,
+        description="Platform admins only: when the case was deleted. Company users never see "
+        "a deleted case at all.",
+    )
+
+
+class CaseListPage(BaseModel):
+    """One page of the case list (GET /cases/page)."""
+
+    items: list[CaseListItem]
+    total: int = Field(description="Cases matching the filters, across all pages.")
+    limit: int
+    offset: int
+
+
+class CaseRiskCounts(BaseModel):
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    pending: int = Field(default=0, description="Not scored yet (and every case, for a submitter).")
+
+
+class CaseListSummary(BaseModel):
+    """Counts over every live (not deleted) case the caller can see
+    (GET /cases/summary). The `status_group` names of GET /cases/page."""
+
+    total: int
+    documents: int = Field(description="Documents across those cases.")
+    analyzing: int
+    awaiting_review: int
+    approved: int
+    rejected: int
+    open: int = Field(description="Not yet approved or rejected (analyzing + awaiting review).")
+    escalated: int = Field(description="Open cases assigned to the L2 tier.")
+    high_risk_open: int
+    in_progress: int
+    action_required: int
+    risk: CaseRiskCounts
+    actionable: int = Field(description="Cases the caller may act on (`actionable=true`).")
+    l2: int = Field(description="Cases assigned to the L2 tier, open or decided.")
 
 
 class CrossDocumentFindingSummary(BaseModel):
@@ -222,6 +263,12 @@ class CaseDetail(CaseListItem):
     assessment: RiskAssessmentSchema | None
     pipeline: PipelineStatusSchema
     actions: list[CaseActionSchema]
+
+
+class DeleteCaseRequest(BaseModel):
+    reason: str | None = Field(
+        default=None, max_length=1000, description="Why the case is deleted (platform audit log only)."
+    )
 
 
 class ApproveRequest(BaseModel):

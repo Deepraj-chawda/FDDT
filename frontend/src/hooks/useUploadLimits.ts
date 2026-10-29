@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth"
 export interface UploadLimits {
   max_file_size_mb: number
   max_zip_size_mb: number
+  max_file_pages: number
   max_file_size_bytes: number
   max_zip_size_bytes: number
 }

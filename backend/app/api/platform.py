@@ -65,20 +65,23 @@ class CompanyResponse(BaseModel):
     user_count: int
     max_file_size_mb: int = Field(description="Largest document this company may upload, in MB.")
     max_zip_size_mb: int = Field(description="Largest bulk-upload zip this company may upload, in MB.")
+    max_file_pages: int = Field(description="Most pages one uploaded PDF may have.")
 
 
 # No upper ceiling: how much capacity a company gets is the platform admin's
 # call. Only a positive whole number of MB is required.
 _FILE_LIMIT = Field(default=None, ge=1, description="Max document size in MB (per company).")
 _ZIP_LIMIT = Field(default=None, ge=1, description="Max bulk-upload zip size in MB (per company).")
+_PAGE_LIMIT = Field(default=None, ge=1, description="Max pages per uploaded PDF (per company).")
 
 
 class CompanyCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
-    # Omitted: the platform defaults (DEFAULT_MAX_FILE_SIZE_MB / _ZIP_SIZE_MB),
-    # stored on the row now — never re-derived later.
+    # Omitted: the platform defaults (DEFAULT_MAX_FILE_SIZE_MB / _ZIP_SIZE_MB /
+    # DEFAULT_MAX_FILE_PAGES), stored on the row now — never re-derived later.
     max_file_size_mb: int | None = _FILE_LIMIT
     max_zip_size_mb: int | None = _ZIP_LIMIT
+    max_file_pages: int | None = _PAGE_LIMIT
 
     @field_validator("name")
     @classmethod
@@ -94,6 +97,7 @@ class CompanyUpdate(BaseModel):
     is_active: bool | None = None
     max_file_size_mb: int | None = _FILE_LIMIT
     max_zip_size_mb: int | None = _ZIP_LIMIT
+    max_file_pages: int | None = _PAGE_LIMIT
 
 
 def _company_response(db: Session, company: Company) -> CompanyResponse:
@@ -102,6 +106,7 @@ def _company_response(db: Session, company: Company) -> CompanyResponse:
         id=company.id, name=company.name, is_active=company.is_active,
         created_at=company.created_at, user_count=int(count),
         max_file_size_mb=company.max_file_size_mb, max_zip_size_mb=company.max_zip_size_mb,
+        max_file_pages=company.max_file_pages,
     )
 
 
@@ -117,6 +122,7 @@ def list_companies(db: Session = Depends(get_system_db)) -> list[CompanyResponse
             id=c.id, name=c.name, is_active=c.is_active, created_at=c.created_at,
             user_count=int(counts.get(c.id, 0)),
             max_file_size_mb=c.max_file_size_mb, max_zip_size_mb=c.max_zip_size_mb,
+            max_file_pages=c.max_file_pages,
         )
         for c in db.execute(select(Company).order_by(Company.name)).scalars().all()
     ]
@@ -147,13 +153,14 @@ def create_company(
         is_active=True,
         max_file_size_mb=payload.max_file_size_mb or settings.default_max_file_size_mb,
         max_zip_size_mb=payload.max_zip_size_mb or settings.default_max_zip_size_mb,
+        max_file_pages=payload.max_file_pages or settings.default_max_file_pages,
     )
     db.add(company)
     try:
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "A company with this name already exists.")
+        raise HTTPException(status.HTTP_409_CONFLICT, "A company with this name already exists.") from None
     rules = seed_risk_rules(db, company.id)
     record_event(
         db,
@@ -162,6 +169,7 @@ def create_company(
         event_data={
             "company_id": str(company.id), "name": company.name, "seeded_risk_rules": rules,
             "max_file_size_mb": company.max_file_size_mb, "max_zip_size_mb": company.max_zip_size_mb,
+            "max_file_pages": company.max_file_pages,
         },
     )
     db.commit()
@@ -176,8 +184,8 @@ def create_company(
     description=(
         "`is_active=false` suspends the company: its users can no longer sign in, and existing "
         "tokens stop working on the next request. Data is kept. `max_file_size_mb` / "
-        "`max_zip_size_mb` change the company's upload limits (any positive whole number of MB; "
-        "no upper ceiling), effective on its next upload with no new sign-in. Every change is "
+        "`max_zip_size_mb` / `max_file_pages` change the company's upload limits (any positive "
+        "whole number; no upper ceiling), effective on its next upload with no new sign-in. Every change is "
         "written to the platform audit log as `company_updated` with old → new values."
     ),
     responses={**_RESPONSES, 404: {"description": "No such company."}, 409: {"description": "Name taken."}},
@@ -207,7 +215,7 @@ def update_company(
         company.is_active = payload.is_active
     # Upload limits: effective on the company's next upload request (they
     # are read fresh each time — app/services/upload_limits.py).
-    for field in ("max_file_size_mb", "max_zip_size_mb"):
+    for field in ("max_file_size_mb", "max_zip_size_mb", "max_file_pages"):
         new = getattr(payload, field)
         if new is not None and new != getattr(company, field):
             changes[field] = {"from": getattr(company, field), "to": new}

@@ -46,6 +46,7 @@ current build, and those outside its scope, are collected in the table in
 - [overview.md](architecture/overview.md) — system diagram, tech stack, the key design decisions and their
   rationale, the scope-of-the-current-build table, security posture.
 - [data-flow.md](architecture/data-flow.md) — sequence diagram and step-by-step walkthrough, Celery task names and queues.
+- [authentication.md](architecture/authentication.md) — sign-in, access + rotating refresh tokens, what ends a session, CSRF and header hardening.
 - [multi-tenancy.md](multi-tenancy.md) — companies, roles, two-layer tenant isolation (application + RLS),
   platform-admin support access, blob layout, billing & usage.
 - [processing-queues.md](processing-queues.md) — the three queues, fair-share scheduling, idempotent writes,
@@ -56,7 +57,7 @@ Each page covers what it detects, the algorithm and libraries, the real input/ou
 limitations and the risk rules it feeds.
 
 1. [Upload & intake](pipeline/01-upload-intake.md) · [1a. Bulk upload (a zip of cases)](pipeline/01a-bulk-upload.md)
-2. [Extraction & normalization](pipeline/02-extraction-normalization.md)
+2. [Extraction & normalization](pipeline/02-extraction-normalization.md) · [2a. Analysis integrity](pipeline/02a-analysis-integrity.md)
 3. [Field validation](pipeline/03-field-validation.md)
 4. [Cross-document consistency](pipeline/04-cross-document-consistency.md)
 5. [Issuer verification](pipeline/05-issuer-verification.md)

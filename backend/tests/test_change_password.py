@@ -28,7 +28,12 @@ def _change(client, token: str, current: str, new: str):
 def test_user_changes_own_password_and_signs_in_with_it(client, seeded_user, db_session):
     token = _token(client, seeded_user.email)
     response = _change(client, token, OLD, "BrandNewPass9")
-    assert response.status_code == 204
+    assert response.status_code == 200
+    # Every earlier session ended (this access token too); this one continues
+    # with the access token returned.
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+    new_token = response.json()["access_token"]
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {new_token}"}).status_code == 200
     # The old password no longer works; the new one does.
     assert client.post("/auth/login", json={"email": seeded_user.email, "password": OLD}).status_code == 401
     _token(client, seeded_user.email, "BrandNewPass9")
@@ -66,5 +71,5 @@ def test_requires_sign_in(client):
 
 def test_platform_admin_can_change_own_password(client, platform_admin_user):
     token = _token(client, platform_admin_user.email)
-    assert _change(client, token, OLD, "AdminNewPass9").status_code == 204
+    assert _change(client, token, OLD, "AdminNewPass9").status_code == 200
     _token(client, platform_admin_user.email, "AdminNewPass9")

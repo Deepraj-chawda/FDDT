@@ -4,19 +4,29 @@ section 3.5). This is the same table every check task, case action and
 settings change already writes to via `record_event`; this endpoint adds no
 events and no parallel log, it only exposes them.
 
-Tenancy: a company reviewer sees only their own company's log — never the
-`platform_admin_access` rows (those are platform-only: company_id NULL, so
-RLS hides them, and every company-facing query also excludes the event type).
-A platform admin passes `company_id` to read one company's log, which then
-INCLUDES the platform-access rows about that company (that read is itself
-audited), or omits it to read the platform-level log (companies and users
-created, usage reconciliations, and every platform-admin access).
+Tenancy: a company reviewer sees only their own company's log, and NOTHING a
+platform admin did — neither their support access (`platform_admin_access`)
+nor their changes (users created/updated, passwords reset, issuer registry or
+risk-rule edits). Those rows are platform-only: written with company_id NULL
+(the company they concern is in event_data.company_id), so RLS hides them
+from every company session, and the company-facing queries also exclude
+anything flagged `platform_admin`. A platform admin passes `company_id` to
+read one company's log, which then INCLUDES the platform-only rows about that
+company (that read is itself audited), or omits it to read the platform-level
+log (companies and users created, usage reconciliations, and every
+platform-admin action).
 
 (A submitter sees their own case's timeline through GET /cases/{id}/audit-log.)
 """
+import csv
+import io
+import json
 import uuid
+from collections.abc import Iterator
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -43,32 +53,112 @@ def _audit_session(
     ctx: AuthContext,
     db: Session,
     system_db: Session,
+    resource: str = "audit log",
 ) -> tuple[Session, uuid.UUID | None]:
     """(session to read with, company whose log it is — None = platform log).
     A platform admin always reads through the platform session (the
     company's log view also shows the platform-only access rows about it)."""
     if not ctx.is_platform_admin:
+        tenancy.include_deleted_cases(db)
         return db, ctx.company_id
     if company_id is None:
         return tenancy.bind_platform(system_db), None
     company = _load_company(system_db, company_id)
-    record_platform_access(system_db, ctx.user, company, request, resource="audit log")
+    record_platform_access(system_db, ctx.user, company, request, resource=resource)
     tenancy.bind_platform(system_db)
     return system_db, company_id
 
 
 def _scope_filter(ctx: AuthContext, scope_company: uuid.UUID | None):
-    access_about = and_(
-        AuditLog.event_type == PLATFORM_ACCESS_EVENT,
+    if not ctx.is_platform_admin:
+        # Company users: their company's rows, plus case_deleted / case_restored,
+        # but never platform support access (PLATFORM_ACCESS_EVENT) or internal platform admin edits.
+        return and_(
+            AuditLog.company_id == scope_company,
+            AuditLog.event_type != PLATFORM_ACCESS_EVENT,
+            or_(
+                AuditLog.event_data.is_(None),
+                func.coalesce(AuditLog.event_data["platform_admin"].as_boolean(), False).is_(False),
+                AuditLog.event_type.in_(("case_deleted", "case_restored")),
+            ),
+        )
+    if scope_company is None:
+        return or_(
+            AuditLog.company_id.is_(None),
+            AuditLog.event_type.in_(("case_deleted", "case_restored")),
+        )
+    # Platform-only rows about this company (support access, user and
+    # settings changes) sit at company_id NULL with the company in event_data.
+    about = and_(
+        AuditLog.company_id.is_(None),
         AuditLog.event_data["company_id"].as_string() == str(scope_company),
     )
-    if not ctx.is_platform_admin:
-        # Company users: their company's rows, and never platform-access rows
-        # (also hidden by RLS — this is the application-layer half).
-        return and_(AuditLog.company_id == scope_company, AuditLog.event_type != PLATFORM_ACCESS_EVENT)
-    if scope_company is None:
-        return AuditLog.company_id.is_(None)
-    return or_(AuditLog.company_id == scope_company, access_about)
+    return or_(AuditLog.company_id == scope_company, about)
+
+
+def _events_query(
+    ctx: AuthContext,
+    scope_company: uuid.UUID | None,
+    event_type: str | None,
+    case_id: uuid.UUID | None,
+    q: str | None,
+):
+    """The filtered event query shared by the paged list and the export."""
+    base = (
+        select(AuditLog, Case.case_number, Case.deleted_at, User, Document.original_filename)
+        .outerjoin(Case, Case.id == AuditLog.case_id)
+        .outerjoin(User, User.id == AuditLog.actor_user_id)
+        .outerjoin(Document, Document.id == AuditLog.document_id)
+    )
+    base = base.where(_scope_filter(ctx, scope_company))
+    if event_type:
+        base = base.where(AuditLog.event_type == event_type)
+    if case_id:
+        base = base.where(AuditLog.case_id == case_id)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        base = base.where(
+            or_(
+                AuditLog.event_type.ilike(like),
+                Case.case_number.ilike(like),
+                User.email.ilike(like),
+                User.full_name.ilike(like),
+            )
+        )
+    return base
+
+
+def _clean_event_data(entry: AuditLog, is_platform_admin: bool = False) -> dict | None:
+    if not entry.event_data:
+        return None
+    data = dict(entry.event_data)
+    if not is_platform_admin:
+        data.pop("admin_email", None)
+        data.pop("admin_name", None)
+    return data
+
+
+def _actor_name(entry: AuditLog, actor: User | None, is_platform_admin: bool = False) -> str | None:
+    if not is_platform_admin and (
+        entry.event_type in ("case_deleted", "case_restored")
+        or (entry.event_data or {}).get("platform_admin")
+    ):
+        return "Platform Administrator"
+    if actor is not None:
+        return actor.full_name or actor.email
+    data = entry.event_data or {}
+    # Platform-only rows carry the admin's identity themselves; only a
+    # platform admin's session ever reads those.
+    return data.get("admin_name") or data.get("admin_email")
+
+
+def _actor_email(entry: AuditLog, actor: User | None, is_platform_admin: bool = False) -> str | None:
+    if not is_platform_admin and (
+        entry.event_type in ("case_deleted", "case_restored")
+        or (entry.event_data or {}).get("platform_admin")
+    ):
+        return None
+    return actor.email if actor else (entry.event_data or {}).get("admin_email")
 
 
 @router.get(
@@ -99,45 +189,12 @@ def list_audit_events(
     system_db: Session = Depends(get_system_db),
 ) -> AuditPage:
     session, scope_company = _audit_session(request, company_id, ctx, db, system_db)
-    base = (
-        select(AuditLog, Case.case_number, User, Document.original_filename)
-        .outerjoin(Case, Case.id == AuditLog.case_id)
-        .outerjoin(User, User.id == AuditLog.actor_user_id)
-        .outerjoin(Document, Document.id == AuditLog.document_id)
-    )
-    base = base.where(_scope_filter(ctx, scope_company))
-    if event_type:
-        base = base.where(AuditLog.event_type == event_type)
-    if case_id:
-        base = base.where(AuditLog.case_id == case_id)
-    if q and q.strip():
-        like = f"%{q.strip()}%"
-        base = base.where(
-            or_(
-                AuditLog.event_type.ilike(like),
-                Case.case_number.ilike(like),
-                User.email.ilike(like),
-                User.full_name.ilike(like),
-            )
-        )
+    base = _events_query(ctx, scope_company, event_type, case_id, q)
 
     total = session.execute(select(func.count()).select_from(base.subquery())).scalar_one()
     rows = session.execute(
         base.order_by(AuditLog.created_at.desc(), AuditLog.id).limit(limit).offset(offset)
     ).all()
-
-    def _actor_name(entry: AuditLog, actor: User | None) -> str | None:
-        if actor is not None:
-            return actor.full_name or actor.email
-        data = entry.event_data or {}
-        name = data.get("admin_name") or data.get("admin_email")
-        if name:
-            return name
-        # A person acted, but the session can't see their user row: only a
-        # platform admin (no company — hidden from a company session by RLS),
-        # e.g. "user created" in the company's own log. Say so rather than
-        # leaving it blank, which the UI would show as the automated pipeline.
-        return "Platform team" if entry.actor_user_id is not None else None
 
     return AuditPage(
         total=total,
@@ -146,16 +203,108 @@ def list_audit_events(
                 id=entry.id,
                 created_at=entry.created_at,
                 event_type=entry.event_type,
-                actor_name=_actor_name(entry, actor),
-                actor_email=actor.email if actor else (entry.event_data or {}).get("admin_email"),
+                actor_name=_actor_name(entry, actor, is_platform_admin=ctx.is_platform_admin),
+                actor_email=_actor_email(entry, actor, is_platform_admin=ctx.is_platform_admin),
                 case_id=entry.case_id,
-                case_number=case_number,
+                case_number=case_number or (entry.event_data or {}).get("case_number"),
                 document_id=entry.document_id,
                 document_filename=filename,
-                event_data=entry.event_data,
+                event_data=_clean_event_data(entry, is_platform_admin=ctx.is_platform_admin),
+                case_deleted=bool(case_deleted_at is not None),
             )
-            for entry, case_number, actor, filename in rows
+            for entry, case_number, case_deleted_at, actor, filename in rows
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Export (every matching event, any number, one streamed CSV)
+# ---------------------------------------------------------------------------
+
+_EXPORT_HEADER = [
+    "Timestamp (UTC)", "Event type", "Actor", "Actor email", "Case", "Document", "Summary", "All details (JSON)",
+]
+_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _cell(value) -> str:
+    """Text for one CSV cell. A value that a spreadsheet would run as a
+    formula is prefixed with ' (case data comes from uploaded documents)."""
+    if value is None:
+        return ""
+    text = str(value)
+    return f"'{text}" if text.startswith(_FORMULA_START) else text
+
+
+def _csv_line(values: list) -> str:
+    buffer = io.StringIO()
+    csv.writer(buffer, lineterminator="\r\n").writerow([_cell(v) for v in values])
+    return buffer.getvalue()
+
+
+def _utc(dt: datetime) -> str:
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).astimezone(timezone.utc).isoformat()
+
+
+@router.get(
+    "/export",
+    summary="Export the audit log as CSV",
+    description=(
+        "Every event matching the same filters as `GET /audit-log` (`event_type`, `case_id`, `q`, "
+        "and `company_id` for platform admins) — no row limit — as one CSV, newest first, streamed "
+        "so any size works. UTF-8 with a byte-order mark (Excel opens Arabic correctly); values a "
+        "spreadsheet would run as formulas are prefixed with `'`. Same visibility as the list: a "
+        "company sees nothing about platform admins. A platform admin's export of a company's log "
+        "is recorded once in the platform audit log."
+    ),
+    response_class=StreamingResponse,
+    responses={
+        200: {"content": {"text/csv": {}}, "description": "The CSV file."},
+        401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
+        403: {"description": "Requires a reviewer (L1 or L2) or platform admin role."},
+    },
+)
+def export_audit_events(
+    request: Request,
+    event_type: str | None = Query(default=None),
+    case_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, description="Matches event type, case number, actor name/email"),
+    company_id: uuid.UUID | None = Query(default=None, description="Platform admins only."),
+    ctx: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_tenant_db),
+    system_db: Session = Depends(get_system_db),
+) -> StreamingResponse:
+    session, scope_company = _audit_session(
+        request, company_id, ctx, db, system_db, resource="audit log export"
+    )
+    stmt = _events_query(ctx, scope_company, event_type, case_id, q).order_by(
+        AuditLog.created_at.desc(), AuditLog.id
+    )
+
+    def rows() -> Iterator[str]:
+        yield "\ufeff" + _csv_line(_EXPORT_HEADER)
+        result = session.execute(stmt.execution_options(yield_per=1000))
+        for entry, case_number, case_deleted_at, actor, filename in result:
+            data = _clean_event_data(entry, is_platform_admin=ctx.is_platform_admin) or {}
+            case_num = case_number or (entry.event_data or {}).get("case_number")
+            case_display = f"{case_num} (Deleted)" if (case_num and case_deleted_at is not None) else (case_num or "")
+            yield _csv_line([
+                _utc(entry.created_at),
+                entry.event_type,
+                _actor_name(entry, actor, is_platform_admin=ctx.is_platform_admin) or "System pipeline",
+                _actor_email(entry, actor, is_platform_admin=ctx.is_platform_admin),
+                case_display,
+                filename,
+                data.get("summary") or data.get("reason") or data.get("note"),
+                json.dumps(data, ensure_ascii=False, default=str) if data else "",
+            ])
+
+    scope = "platform" if ctx.is_platform_admin and scope_company is None else "company"
+    filename = f"audit-log-{scope}-{datetime.now(timezone.utc).date().isoformat()}.csv"
+    return StreamingResponse(
+        rows(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
     )
 
 
@@ -182,6 +331,7 @@ def list_event_types(
         session = tenancy.bind_platform(system_db)
         scope_company = company_id
     else:
+        tenancy.include_deleted_cases(db)
         session, scope_company = db, ctx.company_id
     stmt = select(AuditLog.event_type).distinct().order_by(AuditLog.event_type)
     stmt = stmt.where(_scope_filter(ctx, scope_company))

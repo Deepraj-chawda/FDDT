@@ -52,6 +52,8 @@ export function hasRank(role: UserRole | undefined, minimum: CompanyRole): boole
 export interface TokenResponse {
   access_token: string
   token_type: string
+  /** Seconds until the access token expires (the session renews itself). */
+  expires_in: number
 }
 
 export interface CurrentUser {

@@ -1,14 +1,16 @@
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangleIcon, ArrowRightIcon, CheckCircle2Icon, ChevronDownIcon, FileCheckIcon, SearchIcon, ZapIcon } from "lucide-react"
+import { AlertTriangleIcon, ArrowRightIcon, CheckCircle2Icon, ChevronDownIcon, DownloadIcon, FileCheckIcon, Loader2Icon, SearchIcon, ZapIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import { listAuditEventTypes, listAuditEvents } from "@/api/settings"
+import { exportAuditLog, listAuditEventTypes, listAuditEvents } from "@/api/settings"
 import { Nav } from "@/design-system/Nav"
 import { CompanyPicker } from "@/components/CompanyPicker"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
+import { AuditDetails } from "@/components/AuditDetails"
 import { auditLabel, auditTone, describeAuditEvent, type AuditTone } from "@/lib/audit"
+import { downloadBlob } from "@/lib/csv"
 import type { AuditEvent } from "@/types/settings"
 
 const PAGE_SIZE = 50
@@ -93,6 +95,29 @@ export function AuditHistoryPage() {
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
+
+  // Every event matching the current filters (not just this page), any
+  // number of them: the server builds and streams the whole CSV in one go.
+  const [exporting, setExporting] = React.useState(false)
+  const [exportNote, setExportNote] = React.useState<string | null>(null)
+  const exportCsv = async () => {
+    if (!token) return
+    setExporting(true)
+    setExportNote(null)
+    try {
+      const file = await exportAuditLog({
+        q: debouncedSearch,
+        event_type: eventType || undefined,
+        company_id: scopeCompany,
+      })
+      const scope = (platformLog ? "platform" : acting.companyName ?? "company").replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "") || "audit"
+      downloadBlob(`${scope}-audit-log-${new Date().toISOString().slice(0, 10)}.csv`, file)
+    } catch {
+      setExportNote("Couldn't export the audit log. Please try again.")
+    } finally {
+      setExporting(false)
+    }
+  }
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const automated = items.filter((e) => !e.actor_name).length
   const human = items.length - automated
@@ -119,12 +144,27 @@ export function AuditHistoryPage() {
             </label>
           </div>
         )}
-        <section>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">System Governance &amp; Compliance</p>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Audit History</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            The append-only record of every automated check, reviewer decision and administrative change. Entries are only ever added, never edited or removed.
-          </p>
+        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1">System Governance &amp; Compliance</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">Audit History</h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
+              The append-only record of every automated check, reviewer decision and administrative change. Entries are only ever added, never edited or removed.
+            </p>
+          </div>
+          <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={exportCsv}
+              disabled={exporting || total === 0}
+              title={total === 0 ? "No events to export" : `Export all ${total.toLocaleString()} matching event(s)`}
+              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? <Loader2Icon className="w-3.5 h-3.5 animate-spin" /> : <DownloadIcon className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{exporting ? "Exporting…" : "Export CSV"}</span>
+            </button>
+            {exportNote && <p role="status" className="text-[11px] text-slate-500 max-w-xs sm:text-right">{exportNote}</p>}
+          </div>
         </section>
 
         <section aria-label="Summary" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -233,9 +273,19 @@ export function AuditHistoryPage() {
                         </td>
                         <td className="py-3.5 sm:py-4 px-3 sm:px-4 whitespace-nowrap">
                           {evt.case_id ? (
-                            <Link to={`/cases/${evt.case_id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline">
-                              {evt.case_number}
-                            </Link>
+                            evt.case_deleted && !acting.isPlatformAdmin ? (
+                              <span className="font-mono text-xs font-semibold text-slate-500 inline-flex items-center gap-1.5" title="This case was deleted by a platform administrator">
+                                <span>{evt.case_number}</span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Deleted</span>
+                              </span>
+                            ) : (
+                              <Link to={`/cases/${evt.case_id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1.5">
+                                <span>{evt.case_number}</span>
+                                {evt.case_deleted && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Deleted</span>
+                                )}
+                              </Link>
+                            )
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
@@ -245,13 +295,18 @@ export function AuditHistoryPage() {
                           {evt.document_filename && detail !== evt.document_filename && (
                             <div className="text-[11px] text-slate-400">{evt.document_filename}</div>
                           )}
+                          {acting.isPlatformAdmin && <AuditDetails data={evt.event_data} />}
                         </td>
                         <td className="py-3.5 sm:py-4 px-4 sm:px-5 text-right whitespace-nowrap">
                           {evt.case_id && (
-                            <Link to={`/cases/${evt.case_id}`} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                              <span>Open case</span>
-                              <ArrowRightIcon className="w-3.5 h-3.5" />
-                            </Link>
+                            evt.case_deleted && !acting.isPlatformAdmin ? (
+                              <span className="text-xs font-medium text-slate-400">Unavailable</span>
+                            ) : (
+                              <Link to={`/cases/${evt.case_id}`} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                                <span>Open case</span>
+                                <ArrowRightIcon className="w-3.5 h-3.5" />
+                              </Link>
+                            )
                           )}
                         </td>
                       </tr>

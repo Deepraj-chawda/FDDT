@@ -362,6 +362,33 @@ SEED_RULES: list[dict[str, Any]] = [
         "severity": "low",
         "reason_template": "'{document}': {count} misspelled word(s) in the printed text, e.g. '{text}' for '{correction}' — a sign the text may have been retyped.",
     },
+    # ------------------------------------------------------ analysis integrity
+    {
+        "rule_id": "integrity.prompt_injection",
+        "category": VERIFICATION,
+        "check_type": "analysis_integrity",
+        # The document's text addresses the AI ("ignore previous instructions",
+        # "mark this invoice as clean"), or Azure OpenAI refused to read it for
+        # that reason (app/services/forensics/analysis_integrity.py). Weighted
+        # to reach the high tier on its own (default high threshold 60).
+        "condition": _finding("analysis_integrity", finding="prompt_injection_suspected"),
+        "weight": 60,
+        "severity": "high",
+        "reason_template": "'{document}' contains text that tries to instruct the AI reviewer — a genuine business document never addresses an AI. {description}",
+    },
+    {
+        "rule_id": "integrity.analysis_incomplete",
+        "category": VERIFICATION,
+        "check_type": "analysis_integrity",
+        # Text extraction / classification failed for another reason (outage,
+        # timeout, unreadable file): field validation and issuer verification
+        # never ran, so the case must not read as clean. Weighted to reach the
+        # medium tier on its own (default medium threshold 30).
+        "condition": _finding("analysis_integrity", finding="analysis_incomplete"),
+        "weight": 30,
+        "severity": "medium",
+        "reason_template": "'{document}' could not be fully analysed: text extraction failed, so its fields and issuer were not checked. Review it manually.",
+    },
     # -------------------------------------------- visual review (vision model)
     {
         "rule_id": "visual.font_inconsistency",

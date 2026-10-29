@@ -16,6 +16,7 @@ from app.models.document import Document
 from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
 from app.models.document_page_hash import DocumentPageHash
 from app.models.issuer_registry import IssuerRegistry, IssuerType
+from app.models.refresh_token import RefreshToken
 from app.models.risk_rule import RiskRule
 from app.models.risk_rule_template import RiskRuleTemplate
 from app.models.risk_score import RiskScore
@@ -32,6 +33,7 @@ __all__ = [
     "Company",
     "CompanyUsageStats",
     "TenantScopedMixin",
+    "RefreshToken",
     "User",
     "UserRole",
     "Case",

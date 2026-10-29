@@ -56,8 +56,8 @@ These are pre-deployment blockers found while documenting, not deployment tasks 
 7. **Upload limits.** PDF only (by header bytes), per-company size limits (10 MB / 300 MB zip by default,
    set by a platform admin), corruption and password-protection checks exist (`services/upload_validation.py`,
    `services/upload_limits.py`). The nginx proxy's body caps (`UPLOAD_BODY_LIMIT` / `BULK_UPLOAD_BODY_LIMIT`)
-   must cover the largest limit any company is given. Still missing: a
-   page-count limit, a malware scan (e.g. Defender for Storage malware scanning) and a Blob
+   must cover the largest limit any company is given. Uploads are capped at
+   the company's `max_file_pages` (default 100). Still missing: a malware scan (e.g. Defender for Storage malware scanning) and a Blob
    lifecycle/quarantine policy.
 8. ~~**Stuck-work recovery.**~~ — **fixed**: a failed publish no longer fails the upload, and the
    `requeue_stuck_documents` job (every 5 minutes, `tasks/stuck_documents_task.py`) re-queues documents left

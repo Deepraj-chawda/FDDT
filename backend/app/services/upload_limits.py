@@ -5,8 +5,9 @@ bulk_uploads.py and its ingestion, app/services/bulk_upload_service.py).
 Neither path has a fallback constant of its own.
 
 Limits live on the company row (`companies.max_file_size_mb` /
-`max_zip_size_mb`). A platform admin sets them (app/api/platform.py), and new
-companies start from DEFAULT_MAX_FILE_SIZE_MB / DEFAULT_MAX_ZIP_SIZE_MB. They
+`max_zip_size_mb` / `max_file_pages`). A platform admin sets them
+(app/api/platform.py), and new companies start from DEFAULT_MAX_FILE_SIZE_MB /
+DEFAULT_MAX_ZIP_SIZE_MB / DEFAULT_MAX_FILE_PAGES. They
 are read fresh on every request, so a change takes effect on the company's
 next upload with no new sign-in.
 
@@ -30,6 +31,7 @@ MB = 1024 * 1024
 class UploadLimits:
     max_file_size_mb: int
     max_zip_size_mb: int
+    max_file_pages: int
 
     @property
     def max_file_bytes(self) -> int:
@@ -44,6 +46,8 @@ def company_upload_limits(db: Session, company_id: uuid.UUID) -> UploadLimits:
     """The company's current limits. Works on a company-bound session (the
     company may read its own row) and on the platform session."""
     row = db.execute(
-        select(Company.max_file_size_mb, Company.max_zip_size_mb).where(Company.id == company_id)
+        select(Company.max_file_size_mb, Company.max_zip_size_mb, Company.max_file_pages).where(
+            Company.id == company_id
+        )
     ).one()
-    return UploadLimits(max_file_size_mb=row[0], max_zip_size_mb=row[1])
+    return UploadLimits(max_file_size_mb=row[0], max_zip_size_mb=row[1], max_file_pages=row[2])

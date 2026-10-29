@@ -30,7 +30,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.api.auth import get_tenant_db, require_company_role
 from app.api.cases import _visible_flag
@@ -216,7 +216,8 @@ def list_bulk_uploads(
         stmt = stmt.where(BulkUpload.uploaded_by_user_id == user.id)
     rows = db.execute(stmt).scalars().all()
     users = _users(db, {b.uploaded_by_user_id for b in rows})
-    return [_summary(b, users.get(b.uploaded_by_user_id)) for b in rows]
+    hidden = _deleted_case_entries(db, [b.id for b in rows])
+    return [_summary(b, users.get(b.uploaded_by_user_id), hidden.get(b.id, [])) for b in rows]
 
 
 @router.get(
@@ -251,7 +252,31 @@ def _users(db: Session, ids: set[uuid.UUID]) -> dict[uuid.UUID, User]:
     return {u.id: u for u in db.execute(select(User).where(User.id.in_(ids))).scalars().all()}
 
 
-def _summary(bulk: BulkUpload, uploader: User | None) -> BulkUploadSummary:
+def _deleted_case_entries(db: Session, bulk_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[BulkUploadCase]]:
+    """{bulk upload: its folders whose case a platform admin deleted}. A
+    company session can't see deleted cases (app/db/tenancy.py), so these are
+    the folders whose case it can't load; always empty for a platform admin."""
+    if not bulk_ids:
+        return {}
+    entries = db.execute(
+        select(BulkUploadCase).where(
+            BulkUploadCase.bulk_upload_id.in_(bulk_ids), BulkUploadCase.case_id.isnot(None)
+        )
+    ).scalars().all()
+    case_ids = {e.case_id for e in entries}
+    visible = set(db.execute(select(Case.id).where(Case.id.in_(case_ids))).scalars().all()) if case_ids else set()
+    hidden: dict[uuid.UUID, list[BulkUploadCase]] = defaultdict(list)
+    for entry in entries:
+        if entry.case_id not in visible:
+            hidden[entry.bulk_upload_id].append(entry)
+    return hidden
+
+
+def _summary(bulk: BulkUpload, uploader: User | None, hidden: list[BulkUploadCase] = ()) -> BulkUploadSummary:
+    """`hidden`: folders of deleted cases — the company's counts leave them
+    out, as if they had never been in the zip."""
+    files = [f for entry in hidden for f in (entry.files or [])]
+    accepted = sum(1 for f in files if f.get("status") == "accepted")
     return BulkUploadSummary(
         id=bulk.id,
         original_filename=bulk.original_filename,
@@ -260,11 +285,11 @@ def _summary(bulk: BulkUpload, uploader: User | None) -> BulkUploadSummary:
         error_code=bulk.error_code,
         error_message=bulk.error_message,
         zip_size_bytes=bulk.zip_size_bytes,
-        case_folder_count=bulk.case_folder_count,
-        cases_created=bulk.cases_created,
+        case_folder_count=bulk.case_folder_count - len(hidden) if bulk.case_folder_count is not None else None,
+        cases_created=bulk.cases_created - len(hidden),
         cases_failed=bulk.cases_failed,
-        documents_accepted=bulk.documents_accepted,
-        documents_rejected=bulk.documents_rejected,
+        documents_accepted=bulk.documents_accepted - accepted,
+        documents_rejected=bulk.documents_rejected - (len(files) - accepted),
         uploaded_by=UserSummary.model_validate(uploader) if uploader else None,
         created_at=bulk.created_at,
         started_at=bulk.started_at,
@@ -285,6 +310,10 @@ def _detail(db: Session, user: User, bulk: BulkUpload) -> BulkUploadDetail:
         select(Case).where(Case.bulk_upload_id == bulk.id, Case.company_id == company_id)
     ).scalars().all()
     by_id = {c.id: c for c in cases}
+    # A deleted case (platform admin) is gone for the company: so is its
+    # folder, from the list and from every count.
+    hidden = [e for e in entries if e.case_id is not None and e.case_id not in by_id]
+    entries = [e for e in entries if e.case_id is None or e.case_id in by_id]
     doc_counts: dict[uuid.UUID, dict[str, int]] = defaultdict(lambda: {"total": 0, "finished": 0, "started": 0})
     if by_id:
         for case_id, doc_status, n in db.execute(
@@ -355,16 +384,17 @@ def _detail(db: Session, user: User, bulk: BulkUpload) -> BulkUploadDetail:
 
     warnings: list[str] = []
     threshold = settings.bulk_upload_case_warning_threshold
-    if (bulk.case_folder_count or 0) > threshold:
+    folder_count = (bulk.case_folder_count or 0) - len(hidden)
+    if folder_count > threshold:
         warnings.append(
-            f"This zip contains {bulk.case_folder_count} cases (more than {threshold}). They will all "
+            f"This zip contains {folder_count} cases (more than {threshold}). They will all "
             "be processed, but results for the later cases will take longer to appear."
         )
     ingestion_over = bulk.status in (BulkUploadStatus.complete, BulkUploadStatus.failed)
     settled = ingestion_over and progress.validating == progress.queued == progress.processing == 0
     uploader = _users(db, {bulk.uploaded_by_user_id}).get(bulk.uploaded_by_user_id)
     return BulkUploadDetail(
-        **_summary(bulk, uploader).model_dump(),
+        **_summary(bulk, uploader, hidden).model_dump(),
         wrapper_folder=details.get("wrapper_folder"),
         ignored_entries=details.get("ignored_entries", []),
         ignored_entry_count=details.get("ignored_entry_count", 0),

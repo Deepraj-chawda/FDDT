@@ -25,12 +25,16 @@ function TemplateRow({ t, onSaved }: { t: RuleTemplate; onSaved: (msg: string) =
   const [reason, setReason] = React.useState(t.reason_template)
   const [error, setError] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
+  // A new server copy (after a save): reset the draft to it (adjusted during render).
+  const templateVersion = JSON.stringify([t.updated_at, t.weight, t.severity, t.is_active, t.reason_template])
+  const [draftVersion, setDraftVersion] = React.useState(templateVersion)
+  if (templateVersion !== draftVersion) {
+    setDraftVersion(templateVersion)
     setWeight(String(t.weight))
     setSeverity(t.severity)
     setActive(t.is_active)
     setReason(t.reason_template)
-  }, [t.updated_at, t.weight, t.severity, t.is_active, t.reason_template])
+  }
 
   const w = Number(weight)
   const weightOk = weight.trim() !== "" && Number.isFinite(w) && w >= -100 && w <= 100

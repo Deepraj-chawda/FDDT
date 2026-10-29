@@ -1,4 +1,5 @@
 import { API_BASE_URL, apiFetch, ApiError, parseErrorDetail } from "@/api/client"
+import { withSession } from "@/lib/session"
 import type { BulkUploadDetail, BulkUploadSummary } from "@/types/bulkUpload"
 import type { CaseType } from "@/types/case"
 
@@ -13,11 +14,13 @@ export function uploadBulkZip(
   token: string,
   onProgress?: (percent: number) => void,
 ): Promise<BulkUploadDetail> {
-  return new Promise((resolve, reject) => {
+  // `token` only says the caller is signed in; the live access token is sent.
+  void token
+  return withSession((bearer) => new Promise<BulkUploadDetail>((resolve, reject) => {
     const params = new URLSearchParams({ case_type: caseType, filename: file.name })
     const xhr = new XMLHttpRequest()
     xhr.open("POST", `${API_BASE_URL}/bulk-uploads?${params}`)
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+    xhr.setRequestHeader("Authorization", `Bearer ${bearer}`)
     xhr.setRequestHeader("Content-Type", "application/zip")
 
     xhr.upload.onprogress = (event) => {
@@ -42,7 +45,7 @@ export function uploadBulkZip(
     }
     xhr.onerror = () => reject(new ApiError(0, "Network error during upload"))
     xhr.send(file)
-  })
+   }))
 }
 
 export function getBulkUpload(

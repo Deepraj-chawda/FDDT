@@ -16,7 +16,7 @@ of that lives on this model.
 import enum
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -45,7 +45,7 @@ class Document(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
     blob_storage_path: Mapped[str] = mapped_column(String(1024), nullable=False)
     file_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     content_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    file_size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     # Filled in later by the classification service; no fixed enum here on
     # purpose — the label list is configurable, not hardcoded (see
     # app/services/classification_service.py's DOCUMENT_TYPE_LABELS).

@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.audit_log import AuditLog
 from app.models.document import Document
 from app.services.upload_validation import UploadRejected, is_pdf, validate_upload
+from tests.conftest import set_upload_limits
 from tests.sample_files import PDF, make_encrypted_pdf, make_image, make_pdf
 
 LIMIT = 10 * 1024 * 1024
@@ -162,6 +163,28 @@ def test_password_protected_pdf_gets_the_password_message_not_corruption(
         fake_storage, enqueued, db_session,
     )
     assert detail["message"] == "This file is password-protected. Please remove the password and re-upload."
+
+
+def test_a_new_companys_default_page_cap_is_100(company):
+    assert company.max_file_pages == 100
+
+
+def test_pdf_over_the_companys_page_cap_is_rejected_stating_both_counts(
+    client, auth_headers, case_id, fake_storage, enqueued, db_session, company
+):
+    set_upload_limits(db_session, company.id, max_pages=3)
+    detail = _assert_rejected(
+        _upload(client, auth_headers, case_id, "long.pdf", make_pdf(pages=4)), 413, "file_too_many_pages",
+        fake_storage, enqueued, db_session,
+    )
+    assert detail["page_count"] == 4 and detail["max_pages"] == 3
+    assert "4 pages" in detail["message"] and "maximum allowed is 3" in detail["message"]
+
+
+def test_pdf_at_the_page_cap_is_accepted(client, auth_headers, case_id, db_session, company):
+    set_upload_limits(db_session, company.id, max_pages=3)
+    response = _upload(client, auth_headers, case_id, "three.pdf", make_pdf(pages=3))
+    assert response.status_code == 201, response.text
 
 
 def test_valid_pdf_passes_and_enters_the_pipeline_unchanged(client, auth_headers, case_id, fake_storage, enqueued):

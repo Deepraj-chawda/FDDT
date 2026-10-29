@@ -33,7 +33,7 @@ stages:
     displayName: Lint and test
     jobs:
       - job: frontend
-        displayName: Frontend (oxlint, tsc, vite build)
+        displayName: Frontend (oxlint, vitest, tsc, vite build)
         steps:
           - task: NodeTool@0
             inputs:
@@ -44,6 +44,9 @@ stages:
           - script: npm run lint
             workingDirectory: frontend
             displayName: oxlint
+          - script: npm test
+            workingDirectory: frontend
+            displayName: vitest
           - script: npm run build
             workingDirectory: frontend
             displayName: tsc -b && vite build

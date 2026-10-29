@@ -28,6 +28,8 @@ tamper analysis. Checks, in order (the first failure wins):
      truncated PDF: into zero pages (counted as corrupted), or into the
      pages that survived — so a repaired file whose "%%EOF" end marker is
      missing is also corrupted. Every page's content stream is parsed.
+   * more pages than the company's `max_file_pages` → `file_too_many_pages`
+     (forensics renders every page into memory at once).
 """
 from __future__ import annotations
 
@@ -144,7 +146,7 @@ def _corrupted() -> UploadRejected:
     )
 
 
-def _parse_pdf(content: bytes) -> int:
+def _parse_pdf(content: bytes, max_pages: int | None) -> int:
     try:
         doc = pymupdf.open(stream=content, filetype="pdf")
     except Exception as exc:  # noqa: BLE001 - FileDataError, RuntimeError, ...
@@ -158,6 +160,15 @@ def _parse_pdf(content: bytes) -> int:
             )
         if doc.page_count == 0:
             raise _corrupted()  # what MuPDF "repairs" a badly truncated file into
+        if max_pages is not None and doc.page_count > max_pages:
+            raise UploadRejected(
+                "file_too_many_pages",
+                f"The document has {doc.page_count} pages; the maximum allowed is {max_pages}. "
+                "Please split it into smaller PDFs.",
+                413,
+                page_count=doc.page_count,
+                max_pages=max_pages,
+            )
         if doc.is_repaired and b"%%EOF" not in content[-_PDF_TAIL_WINDOW:]:
             # MuPDF rebuilt the cross-reference table AND the end-of-file
             # marker is missing: the file was cut off (it can still yield a
@@ -174,9 +185,12 @@ def _parse_pdf(content: bytes) -> int:
         doc.close()
 
 
-def validate_upload(content: bytes, filename: str | None, *, max_bytes: int) -> ValidatedUpload:
+def validate_upload(
+    content: bytes, filename: str | None, *, max_bytes: int, max_pages: int | None = None
+) -> ValidatedUpload:
     """Raise UploadRejected for the first failed check, else describe the
-    file. `content` is the full file (the caller has already bounded it)."""
+    file. `content` is the full file (the caller has already bounded it).
+    `max_pages` is the company's page cap (None: no cap)."""
     check_size(len(content), max_bytes)
     if not is_pdf(content):
         found = describe_non_pdf(content)
@@ -187,4 +201,4 @@ def validate_upload(content: bytes, filename: str | None, *, max_bytes: int) -> 
             415,
         )
     _check_extension(filename)
-    return ValidatedUpload(PDF_CONTENT_TYPE, page_count=_parse_pdf(content))
+    return ValidatedUpload(PDF_CONTENT_TYPE, page_count=_parse_pdf(content, max_pages))

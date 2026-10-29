@@ -333,7 +333,8 @@ Being direct about this is part of using the tool responsibly:
 - **ELA is a signal, not a verdict** — weak against print-and-rescan tampering, and can flag a
   legitimately recompressed scan.
 - **Only PDFs (within the company's size limit, not password-protected) can be uploaded**, because every forensic check works
-  on the PDF itself. There is no page-count limit and no virus scan.
+  on the PDF itself. A PDF may have at most 100 pages by default (your platform operator can change this for your
+  company); a longer one must be split. There is no virus scan.
 - **A failed check contributes nothing to the score, silently.** If a check errors out, the case still
   scores — the failure is visible in the audit log and the check's own card, but no rule fires because
   of it.

@@ -15,19 +15,31 @@ import {
   UserIcon,
 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 
-import { listCases } from "@/api/cases"
+import { getCaseSummary, listAllCases, listCasesPage } from "@/api/cases"
 import { CompanyPicker } from "@/components/CompanyPicker"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
 import { Nav } from "@/design-system/Nav"
+import { downloadCsv, toCsv } from "@/lib/csv"
 import type { UserRole } from "@/types/auth"
-import { CASE_TYPE_LABELS, type CaseListItem } from "@/types/case"
+import {
+  CASE_TYPE_LABELS,
+  type CaseListItem,
+  type CasePageQuery,
+  type CaseStatusGroup,
+  type CaseType,
+} from "@/types/case"
+
+const PAGE_SIZE = 50
 
 interface QueueCase {
   id: string
   caseNumber: string
+  deleted: boolean
+  deletedAt: string | null
+  createdAt: string
   company: string
   timeAgo: string
   type: string
@@ -125,6 +137,9 @@ function mapApiCaseToQueueCase(c: CaseListItem): QueueCase {
   return {
     id: c.id,
     caseNumber: c.case_number,
+    deleted: Boolean(c.deleted_at),
+    deletedAt: c.deleted_at ?? null,
+    createdAt: c.created_at,
     company: submitterName,
     timeAgo,
     type: CASE_TYPE_LABELS[c.case_type] || c.case_type,
@@ -163,10 +178,11 @@ const QUEUE_TABS: Partial<Record<UserRole, { view: QueueView; label: string }[]>
   ],
 }
 
-function inView(c: QueueCase, view: QueueView): boolean {
-  if (view === "actionable") return c.canAct
-  if (view === "l2") return c.l2
-  return true
+// The tab as GET /cases/page filters.
+function viewQuery(view: QueueView): CasePageQuery {
+  if (view === "actionable") return { actionable: true }
+  if (view === "l2") return { assigned_tier: "l2" }
+  return {}
 }
 
 export function CaseQueuePage() {
@@ -177,54 +193,92 @@ export function CaseQueuePage() {
   const [view, setView] = React.useState<QueueView | null>(null)
   const activeView: QueueView = view ?? tabs[0]?.view ?? "all"
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("")
-  const [typeFilter, setTypeFilter] = React.useState("")
-  const [flagFilter, setFlagFilter] = React.useState("")
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  // "Deleted" (platform admins): only the cases a platform admin deleted;
+  // every other status filter is about live cases. "Escalated" is a tier
+  // filter, not a status (see QueueCase.escalated).
+  const [statusFilter, setStatusFilter] = React.useState<CaseStatusGroup | "">("")
+  const [typeFilter, setTypeFilter] = React.useState<CaseType | "">("")
+  const [flagFilter, setFlagFilter] = React.useState<CasePageQuery["risk"] | "">("")
+  const [page, setPage] = React.useState(0)
+  const [exporting, setExporting] = React.useState(false)
 
-  const { data: apiCases, isLoading } = useQuery({
-    queryKey: ["cases", token, acting.companyId],
-    queryFn: () => listCases(token as string, {}, acting.platformCompanyParam),
-    // A platform admin's queue is one company at a time (never a mixed list).
-    enabled: Boolean(token && acting.companyId),
+  // Don't hit the API on every keystroke.
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim())
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
+  // Filtering, search and paging all happen on the server.
+  const query: CasePageQuery = {
+    ...viewQuery(activeView),
+    q: debouncedSearch || undefined,
+    status_group: statusFilter || undefined,
+    case_type: typeFilter || undefined,
+    risk: flagFilter || undefined,
+  }
+  // A platform admin's queue is one company at a time (never a mixed list).
+  const enabled = Boolean(token && acting.companyId)
+
+  const { data: casePage, isLoading, isFetching } = useQuery({
+    queryKey: ["cases", "page", token, acting.companyId, query, page],
+    queryFn: () =>
+      listCasesPage(token as string, { ...query, limit: PAGE_SIZE, offset: page * PAGE_SIZE }, acting.platformCompanyParam),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+  // The metric cards and tab counts: live cases, whatever the filters.
+  const { data: summary } = useQuery({
+    queryKey: ["cases", "summary", token, acting.companyId],
+    queryFn: () => getCaseSummary(token as string, {}, acting.platformCompanyParam),
+    enabled,
   })
 
-  const allCases = React.useMemo(() => {
-    if (!apiCases) return []
-    return apiCases.map(mapApiCaseToQueueCase)
-  }, [apiCases])
+  const pageCases = React.useMemo(() => (casePage?.items ?? []).map(mapApiCaseToQueueCase), [casePage])
+  const total = casePage?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filtered = Boolean(debouncedSearch || statusFilter || typeFilter || flagFilter)
 
-  const filteredCases = React.useMemo(() => {
-    return allCases.filter((c) => {
-      if (!inView(c, activeView)) return false
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        const matchId = c.caseNumber.toLowerCase().includes(q)
-        const matchCompany = c.company.toLowerCase().includes(q)
-        if (!matchId && !matchCompany) return false
-      }
-      // "Escalated" is a tier filter, not a status (see QueueCase.escalated).
-      if (statusFilter === "Escalated") {
-        if (!c.escalated) return false
-      } else if (statusFilter && c.status !== statusFilter) return false
-      if (typeFilter && c.typeCategory !== typeFilter) return false
-      if (flagFilter && c.flag !== flagFilter) return false
-      return true
-    })
-  }, [allCases, activeView, searchQuery, statusFilter, typeFilter, flagFilter])
+  const activeCasesCount = summary?.total ?? 0
+  const highRiskCount = summary?.high_risk_open ?? 0
+  const escalatedCount = summary?.escalated ?? 0
+  const awaitingReviewCount = summary?.awaiting_review ?? 0
+  const clearedCount = summary?.approved ?? 0
+  const autoClearedRate = activeCasesCount > 0 ? Math.round((clearedCount / activeCasesCount) * 1000) / 10 : null
+  const tabCount = (v: QueueView) =>
+    v === "actionable" ? summary?.actionable : v === "l2" ? summary?.l2 : summary?.total
 
-  const activeCasesCount = allCases.length
-  const openCases = allCases.filter((c) => c.status === "Analyzing" || c.status === "Awaiting Review")
-  const highRiskCount = openCases.filter((c) => c.flag === "High risk").length
-  const escalatedCount = openCases.filter((c) => c.escalated).length
-  const awaitingReviewCount = allCases.filter((c) => c.status === "Awaiting Review").length
-  const clearedCount = allCases.filter((c) => c.status === "Approved").length
-  const autoClearedRate = allCases.length > 0 ? Math.round((clearedCount / allCases.length) * 1000) / 10 : null
+  // Every case matching the current tab, search and filters (all pages).
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      const all = (await listAllCases(token as string, query, acting.platformCompanyParam)).map(mapApiCaseToQueueCase)
+      const isAdmin = acting.isPlatformAdmin
+      const header = [
+        "Case ID", "Type", "Documents", "Risk", "Risk score", "Status", "Escalated to L2",
+        "Submitted by", "Submitted at (UTC)", ...(isAdmin ? ["Deleted at (UTC)"] : []),
+      ]
+      const rows = all.map((c) => [
+        c.caseNumber, c.type, c.docCount, c.flag, c.score, c.status, c.escalated ? "Yes" : "No",
+        c.company, c.createdAt, ...(isAdmin ? [c.deletedAt ?? ""] : []),
+      ])
+      const company = (acting.companyName ?? "cases").replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "") || "cases"
+      downloadCsv(`${company}-cases-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(header, rows))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const resetFilters = () => {
     setSearchQuery("")
+    setDebouncedSearch("")
     setStatusFilter("")
     setTypeFilter("")
     setFlagFilter("")
+    setPage(0)
   }
 
   const renderTypeIcon = (category: QueueCase["typeCategory"]) => {
@@ -272,11 +326,14 @@ export function CaseQueuePage() {
               <span className="text-rose-600 font-semibold">{highRiskCount} High risk</span>
             </div>
             <button
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               type="button"
+              onClick={() => void exportCsv()}
+              disabled={total === 0 || exporting}
+              title={total === 0 ? "No cases to export" : `Export the ${total} matching case(s)`}
             >
               <DownloadIcon className="w-3.5 h-3.5 text-slate-400" />
-              <span>Export CSV</span>
+              <span>{exporting ? "Exporting…" : "Export CSV"}</span>
             </button>
           </div>
         </div>
@@ -356,7 +413,7 @@ export function CaseQueuePage() {
           {tabs.length > 0 && (
             <div role="tablist" aria-label="Queue view" className="flex gap-1 border-b border-slate-100 px-3 pt-2 sm:px-5 overflow-x-auto no-scrollbar scroll-smooth">
               {tabs.map((t) => {
-                const count = allCases.filter((c) => inView(c, t.view)).length
+                const count = tabCount(t.view)
                 const selected = activeView === t.view
                 return (
                   <button
@@ -364,14 +421,17 @@ export function CaseQueuePage() {
                     type="button"
                     role="tab"
                     aria-selected={selected}
-                    onClick={() => setView(t.view)}
+                    onClick={() => {
+                      setView(t.view)
+                      setPage(0)
+                    }}
                     className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-semibold shrink-0 whitespace-nowrap transition ${
                       selected ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                   >
                     {t.view === "l2" && <FlameIcon className="size-3.5 text-rose-500" />}
                     {t.label}
-                    <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-bold text-slate-600">{count}</span>
+                    <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-bold text-slate-600">{count ?? "…"}</span>
                   </button>
                 )
               })}
@@ -399,16 +459,20 @@ export function CaseQueuePage() {
               <div className="relative w-full sm:w-auto">
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as CaseStatusGroup | "")
+                    setPage(0)
+                  }}
                   aria-label="Filter by status"
                   className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
                   <option value="">Status: All Statuses</option>
-                  <option value="Analyzing">Status: Analyzing</option>
-                  <option value="Awaiting Review">Status: Awaiting Review</option>
-                  <option value="Escalated">Status: Escalated (L2)</option>
-                  <option value="Approved">Status: Approved</option>
-                  <option value="Rejected">Status: Rejected</option>
+                  <option value="analyzing">Status: Analyzing</option>
+                  <option value="awaiting_review">Status: Awaiting Review</option>
+                  <option value="escalated">Status: Escalated (L2)</option>
+                  <option value="approved">Status: Approved</option>
+                  <option value="rejected">Status: Rejected</option>
+                  {acting.isPlatformAdmin && <option value="deleted">Status: Deleted</option>}
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
@@ -417,16 +481,17 @@ export function CaseQueuePage() {
               <div className="relative w-full sm:w-auto">
                 <select
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  aria-label="Filter by document type"
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value as CaseType | "")
+                    setPage(0)
+                  }}
+                  aria-label="Filter by case type"
                   className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
                   <option value="">Type: All Types</option>
-                  <option value="invoice">Type: Commercial Invoice</option>
-                  <option value="contract">Type: Vendor Contract</option>
-                  <option value="bank">Type: Bank Statement</option>
-                  <option value="identity">Type: Identity Proof</option>
-                  <option value="tax">Type: Tax Clearance</option>
+                  {Object.entries(CASE_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>Type: {label}</option>
+                  ))}
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
@@ -435,15 +500,18 @@ export function CaseQueuePage() {
               <div className="relative w-full col-span-2 sm:col-span-1 sm:w-auto">
                 <select
                   value={flagFilter}
-                  onChange={(e) => setFlagFilter(e.target.value)}
+                  onChange={(e) => {
+                    setFlagFilter(e.target.value as CasePageQuery["risk"] | "")
+                    setPage(0)
+                  }}
                   aria-label="Filter by risk tier"
                   className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
                 >
                   <option value="">Risk: All Tiers</option>
-                  <option value="High risk">Risk: High</option>
-                  <option value="Medium risk">Risk: Medium</option>
-                  <option value="Low risk">Risk: Low</option>
-                  <option value="Analyzing">Risk: Analyzing</option>
+                  <option value="high">Risk: High</option>
+                  <option value="medium">Risk: Medium</option>
+                  <option value="low">Risk: Low</option>
+                  <option value="pending">Risk: Analyzing</option>
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
@@ -481,18 +549,18 @@ export function CaseQueuePage() {
                       Loading cases...
                     </td>
                   </tr>
-                ) : filteredCases.length === 0 ? (
+                ) : pageCases.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
-                      {allCases.length === 0
-                        ? "No cases have been submitted yet."
-                        : activeView === "l2" && !allCases.some((c) => c.l2)
-                          ? "No cases have been escalated to L2."
-                        : "No cases match the selected filters."}
+                      {!filtered && activeView === "l2"
+                        ? "No cases have been escalated to L2."
+                        : !filtered && summary?.total === 0
+                          ? "No cases have been submitted yet."
+                          : "No cases match the selected filters."}
                     </td>
                   </tr>
                 ) : (
-                  filteredCases.map((row) => (
+                  pageCases.map((row) => (
                     <tr
                       key={row.id}
                       onClick={() => navigate(`/cases/${row.id}`)}
@@ -507,6 +575,11 @@ export function CaseQueuePage() {
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-900 group-hover:text-blue-600 transition flex items-center gap-1.5 text-xs">
                             {row.caseNumber}
+                            {row.deleted && (
+                              <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                                Deleted
+                              </span>
+                            )}
                             {row.escalated && (
                               <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-100 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-rose-700">
                                 <FlameIcon className="size-2.5" />
@@ -614,10 +687,29 @@ export function CaseQueuePage() {
           </div>
 
           {/* Table Footer */}
-          <div className="p-4 sm:px-6 sm:py-3.5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-xs text-slate-500">
-            <div>
-              Showing <span className="font-semibold text-slate-800">{filteredCases.length}</span> of{" "}
-              <span className="font-semibold text-slate-800">{allCases.length}</span> cases
+          <div className="p-4 sm:px-6 sm:py-3.5 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div className="text-center sm:text-left">
+              {total === 0 ? (
+                "0 cases"
+              ) : (
+                <>
+                  Showing{" "}
+                  <span className="font-semibold text-slate-800">
+                    {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + pageCases.length}
+                  </span>{" "}
+                  of <span className="font-semibold text-slate-800">{total.toLocaleString()}</span> cases
+                </>
+              )}
+              {isFetching && !isLoading && <span className="ml-2 text-slate-400">updating…</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Previous
+              </button>
+              <span className="tabular-nums">Page {page + 1} of {pageCount}</span>
+              <button type="button" disabled={page + 1 >= pageCount} onClick={() => setPage((p) => p + 1)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Next
+              </button>
             </div>
           </div>
         </div>

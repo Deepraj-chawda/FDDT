@@ -10,13 +10,14 @@ import {
 import { Link, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 
-import { getCase, getCaseAuditLog, getSignatureMatches } from "@/api/cases"
+import { getCase, getCaseAuditLog, getDocumentFileUrl, getSignatureMatches } from "@/api/cases"
 import { useAuth } from "@/hooks/useAuth"
 import { Nav } from "@/design-system/Nav"
 import { InfoChip } from "@/design-system/InfoChip"
 import { SeverityFinding } from "@/design-system/SeverityFinding"
 import { ActivityTimeline } from "@/components/case/ActivityTimeline"
 import { CaseDecisionPanel } from "@/components/case/CaseDecisionPanel"
+import { CaseDeleteControl } from "@/components/case/CaseDeleteControl"
 import { CaseReportExport } from "@/components/case/CaseReportExport"
 import { RiskBadge, TierBadge } from "@/components/case/CaseBadges"
 import { DocumentChecksPanel, getCheckOverlays } from "@/components/case/DocumentChecksPanel"
@@ -159,6 +160,16 @@ export function CaseDetailPage() {
   const viewerUrl =
     activeDoc && viewerFile?.docId === activeDoc.id ? viewerFile.url : activeDoc?.file_url
 
+  // The viewer failed (e.g. the kept URL expired, or the fetch dropped): mint a
+  // fresh signed URL; the new URL remounts the viewer (its key below).
+  const activeDocId = activeDoc?.id
+  const retryViewer = React.useCallback(() => {
+    if (!caseId || !token || !activeDocId) return
+    getDocumentFileUrl(caseId, activeDocId, token)
+      .then(({ file_url }) => setViewerFile({ docId: activeDocId, url: file_url }))
+      .catch((error) => console.error("Couldn't refresh the document URL:", error))
+  }, [caseId, token, activeDocId])
+
   // Filter signature matches to those comparing AGAINST the active document
   // (i.e. document_id = activeDoc.id — the target, not the reference source).
   const activeDocSignatureMatches: SignatureMatch[] = activeDoc
@@ -177,6 +188,12 @@ export function CaseDetailPage() {
   const activeDocCrossFindings = activeDoc
     ? (caseDetail?.cross_document_findings ?? []).filter((f) => f.document_ids?.includes(activeDoc.id))
     : []
+
+  const crossDocumentFindings = caseDetail?.cross_document_findings
+  const activeOverlays = React.useMemo(
+    () => (activeDoc ? getCheckOverlays(activeDoc.checks, crossDocumentFindings ?? [], activeDoc.id) : []),
+    [activeDoc, crossDocumentFindings],
+  )
 
   if (isCaseError) {
     return (
@@ -230,6 +247,7 @@ export function CaseDetailPage() {
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {canExport && caseId && token && <CaseReportExport caseId={caseId} token={token} />}
+            {isSupportView && caseDetail && token && <CaseDeleteControl caseDetail={caseDetail} token={token} />}
             {caseDetail && <TierBadge tier={caseDetail.assigned_tier} />}
           </div>
         </div>
@@ -240,6 +258,13 @@ export function CaseDetailPage() {
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-900">
             <span className="font-semibold">Support view — read-only.</span> You are viewing another company's
             case as a platform admin. This access is recorded in the platform audit log (the company does not see it).
+          </div>
+        )}
+        {isSupportView && caseDetail?.deleted_at && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-2.5 text-xs text-rose-900">
+            <span className="font-semibold">Deleted case.</span> Deleted on{" "}
+            {new Date(caseDetail.deleted_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}. The
+            company cannot see it. Use Restore case to bring it back.
           </div>
         )}
 
@@ -426,7 +451,12 @@ export function CaseDetailPage() {
 
                   {/* PDF viewer with real ELA / copy-move overlays drawn on top */}
                   <div className="mt-3">
-                    <PdfOverlayViewer fileUrl={viewerUrl ?? activeDoc.file_url} overlays={getCheckOverlays(activeDoc.checks, caseDetail?.cross_document_findings ?? [], activeDoc.id)} />
+                    <PdfOverlayViewer
+                      key={`${activeDoc.id}:${viewerUrl}`}
+                      fileUrl={viewerUrl ?? activeDoc.file_url}
+                      overlays={activeOverlays}
+                      onRetry={retryViewer}
+                    />
                   </div>
 
                   {/* Extracted fields */}
@@ -654,7 +684,7 @@ export function CaseDetailPage() {
           </section>
         </div>
 
-        <ActivityTimeline entries={auditLog ?? []} isLoading={isAuditLoading} />
+        <ActivityTimeline entries={auditLog ?? []} isLoading={isAuditLoading} showDetails={isSupportView} />
       </main>
 
       <footer className="mt-auto border-t border-slate-200 bg-white py-3 px-6 text-center text-xs text-slate-400">

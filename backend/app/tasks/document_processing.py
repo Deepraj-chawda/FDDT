@@ -30,6 +30,7 @@ from app.services.check_store import save_check
 from app.services.extraction_service import classify_and_extract
 from app.services.multi_invoice import extract_invoices
 from app.services.field_locator_service import attach_field_locations
+from app.services.forensics.analysis_integrity import FINDING_INJECTION, analyze_analysis_integrity
 from app.services.forensics.font_consistency import analyze_font_consistency
 from app.services.forensics.spelling import analyze_spelling
 from app.services.line_item_parsing import enrich_extracted_fields
@@ -114,6 +115,21 @@ def _run_font_consistency(db, document: Document, pdf_bytes: bytes | None, ocr_p
     )
 
 
+def _run_analysis_integrity(db, document: Document, ocr_text: str | None, processing_error: str | None = None) -> None:
+    """The analysis integrity check (app/services/forensics/analysis_integrity.py):
+    instructions aimed at the AI in the document's text, and (on a failed
+    extraction) why the analysis is incomplete. Best effort, like the others."""
+    try:
+        result = analyze_analysis_integrity(ocr_text=ocr_text, processing_error=processing_error)
+    except Exception as exc:  # noqa: BLE001
+        _store_outcome(db, document, DocumentCheckType.analysis_integrity, "analysis_integrity", error=exc)
+        return
+    _store_outcome(
+        db, document, DocumentCheckType.analysis_integrity, "analysis_integrity",
+        result=result, finding=FINDING_INJECTION,
+    )
+
+
 def _run_spelling_check(
     db, document: Document, pdf_bytes: bytes | None, ocr_pages: list[OCRPage], extracted_fields: dict
 ) -> None:
@@ -163,6 +179,7 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
         document.processing_status = DocumentProcessingStatus.processing
         db.commit()
 
+        ocr_text: str | None = None  # kept for the integrity check if a later step fails
         try:
             storage = get_storage_service_for_task()
             document_url = storage.get_download_url(
@@ -170,6 +187,7 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
             )
 
             ocr_result = get_ocr_service().analyze_url(document_url)
+            ocr_text = ocr_result.text
             analysis = classify_and_extract(get_llm_service(), ocr_result.text)
 
             document.document_type = analysis.document_type
@@ -224,6 +242,7 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
             # scored without it.
             _run_font_consistency(db, document, pdf_bytes, ocr_result.pages)
             _run_spelling_check(db, document, pdf_bytes, ocr_result.pages, extracted_fields)
+            _run_analysis_integrity(db, document, ocr_result.text)
             from app.services.check_store import sanitize_null_bytes
 
             document.extracted_fields = sanitize_null_bytes(extracted_fields)
@@ -263,6 +282,11 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
                     document_id=doc_to_fail.id,
                     event_data={"error": str(exc)[:_ERROR_MESSAGE_MAX_LENGTH]},
                 )
+                # Before scoring is requested below: a failed extraction must
+                # raise the risk (incomplete analysis, or a suspected prompt
+                # injection the model refused), never read as clean. The full
+                # message: Azure's content-filter verdict is past the truncation.
+                _run_analysis_integrity(db, doc_to_fail, ocr_text, str(exc) or type(exc).__name__)
                 db.commit()
 
                 # A failed document still counts toward "every document in the

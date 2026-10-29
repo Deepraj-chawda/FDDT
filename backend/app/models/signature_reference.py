@@ -14,7 +14,7 @@ logic runs against them yet). `is_library=False` rows are scoped to
 """
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship

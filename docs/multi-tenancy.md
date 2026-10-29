@@ -10,7 +10,7 @@ company's data; the platform operator's own team (platform admins) sits outside 
 | `user` | exactly one | submit cases/documents, track own cases |
 | `reviewer_l1` | exactly one | review the company's queue; approve / reject / escalate (L1 tier) |
 | `reviewer_l2` | exactly one | everything L1 can, plus escalated (L2) cases, plus the company's own **Settings › Issuer Registry** and **Settings › Risk Rules** |
-| `platform_admin` | **none** | create companies; create every user and assign company + role; edit the **platform risk-rule template** new companies start from; billing & usage dashboard; processing-queue monitor; **read-only, audited** support access to any company's cases, audit log and settings (and may edit a company's issuer registry/risk rules on its behalf, also audited) |
+| `platform_admin` | **none** | create companies; create every user and assign company + role; edit the **platform risk-rule template** new companies start from; billing & usage dashboard; processing-queue monitor; soft-delete / restore any company's case (the company never sees a deleted case, nor that it existed); **read-only, audited** support access to any company's cases, audit log and settings (and may edit a company's issuer registry/risk rules on its behalf, also audited) |
 
 - Company roles are ranked (`has_rank` / `hasRank`); `platform_admin` is deliberately *not* on that ladder,
   so it never inherits "reviewer" powers — it cannot approve, reject, escalate, upload, create cases or
@@ -28,9 +28,14 @@ company's data; the platform operator's own team (platform admins) sits outside 
   `signature_references`, `signature_matches`, `case_reports`, `audit_log`.
   - NOT NULL everywhere except `users` (NULL = platform admin; a CHECK constraint enforces
     `role = 'platform_admin' ⇔ company_id IS NULL`) and `audit_log` (NULL = platform-level event such as
-    *company created*, *template edited*, *usage reconciled*, *platform-admin access*). *User created /
-    updated* for a company user is written into **that company's** log; the company sees the actor as
-    "Platform team" (the platform admin's own user row is invisible to a company session).
+    *company created*, *template edited*, *usage reconciled*, and **everything a platform admin does**:
+    support access, *user created / updated*, *password reset*, and issuer-registry / risk-rule /
+    threshold edits made for a company). Those rows carry `platform_admin: true` and the company in
+    `event_data.company_id`; only platform admins see them (in the platform log, and in that company's
+    log when they open it). Companies and their users see nothing about platform admins.
+    A platform admin's settings edit is visible to the company as a change (a rule's new version, new
+    threshold values) but never names the admin: the "changed by" is left blank, and nothing labels it
+    as a platform action.
   - Extracted fields are a column on `documents` and duplicate-detection hashes live in
     `document_page_hashes` — both covered by those tables' `company_id`.
 - `risk_rules`, `risk_settings` (tier thresholds) and `issuer_registry` are **per company**. Rule uniqueness
@@ -50,7 +55,8 @@ company's data; the platform operator's own team (platform admins) sits outside 
 
 ### 1. Application layer (`app/db/tenancy.py`, `app/api/auth.py`, `app/api/tenant_access.py`)
 
-- The JWT carries `role`, `company_id` (null for platform admins) and `is_platform_admin`. Every request
+- The JWT carries `role`, `company_id` (null for platform admins), `is_platform_admin` and `ver` (see
+  [architecture/authentication.md](architecture/authentication.md)). Every request
   re-reads the user from the database; if the token's company or platform flag no longer matches (user
   moved to another company, role changed across the platform boundary) the token is refused (401), and a
   suspended company's users are refused too.

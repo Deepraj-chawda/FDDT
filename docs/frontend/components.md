@@ -103,7 +103,10 @@ Tailwind (class-variance-authority, `cn()` from `lib/utils`).
   the ladder), `ROLE_LABELS` ("Reviewer L1" … "Platform Admin") and `ROLE_OPTIONS` (role pickers). Gate UI
   on `hasRank` / `is_platform_admin`, never on lists of role names.
 - `hooks/useAuth.tsx` — `AuthProvider`/`useAuth()` exposing `token`, `user`, `isLoadingUser`, `login`,
-  `logout`; token in `localStorage`; a token the backend rejects is cleared.
+  `logout`. On load it restores the session from the refresh cookie.
+- `lib/session.ts` — the session: access token in memory only, renewed ~1 minute before expiry and after
+  a 401 (`withSession`), refreshes serialised across tabs (Web Lock), sign-out broadcast to every tab
+  ([authentication](../architecture/authentication.md)).
 
 ## Data layer
 - `api/client.ts` — `apiFetch<T>(path, {token, …})` (JSON, Bearer header, `ApiError(status, message,

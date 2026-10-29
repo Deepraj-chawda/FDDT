@@ -10,9 +10,10 @@ export interface Company {
   is_active: boolean
   created_at: string
   user_count: number
-  /** Per-company upload limits (MB), a platform-admin capacity lever. */
+  /** Per-company upload limits (MB; pages per PDF), a platform-admin capacity lever. */
   max_file_size_mb: number
   max_zip_size_mb: number
+  max_file_pages: number
 }
 
 export interface CompanyUpdatePayload {
@@ -20,6 +21,7 @@ export interface CompanyUpdatePayload {
   is_active?: boolean
   max_file_size_mb?: number
   max_zip_size_mb?: number
+  max_file_pages?: number
 }
 
 export const listCompanies = (token: string) => apiFetch<Company[]>("/platform/companies", { token })

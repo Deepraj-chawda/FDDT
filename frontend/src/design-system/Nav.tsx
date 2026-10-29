@@ -74,15 +74,17 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
   const [changingPassword, setChangingPassword] = React.useState(false)
   const displayName = user?.full_name || user?.email || ""
 
-  const handleSignOut = React.useCallback(() => {
-    logout()
+  const handleSignOut = React.useCallback(async () => {
+    await logout()
     navigate("/login", { replace: true })
   }, [logout, navigate])
 
-  // Close mobile drawer when route changes
-  React.useEffect(() => {
+  // Close mobile drawer when route changes (adjusted during render)
+  const [drawerPath, setDrawerPath] = React.useState(location.pathname)
+  if (location.pathname !== drawerPath) {
+    setDrawerPath(location.pathname)
     setMobileOpen(false)
-  }, [location.pathname])
+  }
 
   // Close mobile drawer on Escape key
   React.useEffect(() => {

@@ -1,8 +1,8 @@
 import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, ShieldCheckIcon } from "lucide-react"
+import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon } from "lucide-react"
 import { useForm } from "react-hook-form"
-import { Navigate, useLocation, useNavigate } from "react-router-dom"
+import { Navigate, useLocation } from "react-router-dom"
 import { z } from "zod"
 
 import { ApiError } from "@/api/client"
@@ -11,14 +11,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/useAuth"
 import { APP_FULL_NAME, APP_NAME } from "@/lib/appInfo"
+import type { CurrentUser } from "@/types/auth"
 
 // Rebuilt against stitch_docauth_document_review_platform/docauth_sign_in
 // — centered auth card, navy submit button, icon-in-field inputs. Kept
 // from the reference: layout, spacing, card treatment. Deliberately
 // dropped, not overlooked:
 //   - "Trust this device" / hardware-binding checkbox — this app's auth
-//     is a plain JWT in localStorage (see hooks/useAuth.tsx), no device-
-//     trust or expiry concept exists to back a real control.
+//     signs in for a fixed session (short-lived in-memory token + httpOnly
+//     refresh cookie, see lib/session.ts); no device-trust concept exists
+//     to back a real control.
 //   - SAML/Okta SSO button — SPECIFICATION.md section 2 names SSO as a
 //     "possible later upgrade, not part of the initial build"; a live-
 //     looking button that does nothing on click would be worse than not
@@ -36,9 +38,22 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+// Where every sign-in lands. Platform admins have no Dashboard (it is a
+// company view), so theirs is the case queue.
+function homePath(user: CurrentUser): string {
+  return user.is_platform_admin ? "/" : "/dashboard"
+}
+
+// The deep link ProtectedRoute sent us from, if any — only an in-app path
+// ("/cases/…"), never "//host" or a URL, so it can't redirect off-site.
+function returnPath(state: unknown): string | null {
+  const from = (state as { from?: unknown } | null)?.from
+  if (typeof from !== "string" || !from.startsWith("/") || from.startsWith("//")) return null
+  return from.startsWith("/login") ? null : from
+}
+
 export function LoginPage() {
-  const { token, login } = useAuth()
-  const navigate = useNavigate()
+  const { token, user, login, isLoadingUser } = useAuth()
   const location = useLocation()
   const [formError, setFormError] = React.useState<string | null>(null)
   const [showPassword, setShowPassword] = React.useState(false)
@@ -52,17 +67,22 @@ export function LoginPage() {
     defaultValues: { email: "", password: "" },
   })
 
-  // Already authenticated — don't show the login form again.
+  // Still restoring a session from the refresh cookie: show nothing yet.
+  if (!token && isLoadingUser) return null
+
+  // Signed in: back to the link that was opened without a session, if any;
+  // otherwise the home page (the Dashboard; platform admins, who have no
+  // Dashboard, their case queue) — never the page that was open before
+  // signing out (ProtectedRoute passes no link then).
   if (token) {
-    const from = (location.state as { from?: string } | null)?.from ?? "/"
-    return <Navigate to={from} replace />
+    if (!user) return null // profile still loading
+    return <Navigate to={returnPath(location.state) ?? homePath(user)} replace />
   }
 
   const onSubmit = async (values: LoginFormValues) => {
     setFormError(null)
     try {
-      await login(values)
-      navigate("/", { replace: true })
+      await login(values) // the render above then redirects home
     } catch (err) {
       setFormError(
         err instanceof ApiError ? err.message : "Something went wrong. Please try again."
@@ -143,21 +163,6 @@ export function LoginPage() {
               {errors.password && <p className="mt-1.5 text-sm text-destructive">{errors.password.message}</p>}
             </div>
 
-            <div className="flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                id="trustDevice"
-                defaultChecked
-                className="mt-0.5 size-4 rounded border-border text-accent focus:ring-accent"
-              />
-              <div>
-                <label htmlFor="trustDevice" className="text-sm font-medium text-foreground cursor-pointer">
-                  Trust this device for 30 days
-                </label>
-                <p className="text-xs text-muted-foreground">Enforces hardware cryptographic binding</p>
-              </div>
-            </div>
-
             {formError && (
               <p role="alert" className="text-sm text-destructive">
                 {formError}
@@ -172,53 +177,12 @@ export function LoginPage() {
               {isSubmitting ? "Signing in…" : `Sign in to ${APP_NAME}`}
               {!isSubmitting && <ArrowRightIcon className="size-4" />}
             </Button>
-
-            <div className="relative flex items-center justify-center py-2">
-              <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
-              <span className="relative bg-card px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Or Corporate SSO
-              </span>
-            </div>
-            <button
-              type="button"
-              disabled
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium text-foreground transition hover:bg-secondary/60 disabled:opacity-70"
-            >
-              <ShieldCheckIcon className="size-4 text-accent" />
-              Sign in with SAML / Okta SSO
-            </button>
-
-            <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-              <span className="size-2 rounded-full bg-success" />
-              <span className="font-semibold text-foreground">FIPS 140-2</span>
-              <span>·</span>
-              <span>SHA-256 Verified Storage</span>
-            </div>
           </form>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheckIcon className="size-3.5 text-accent" />
-            SOC 2 Type II Certified
-          </span>
-          <span>·</span>
-          <span>256-bit TLS Encryption</span>
-          <span>·</span>
-          <span>Zero-knowledge logs</span>
-        </div>
       </main>
 
-      <footer className="flex flex-wrap items-center justify-center gap-4 pb-3 pt-8 text-xs text-muted-foreground">
-        <span className="cursor-pointer hover:text-foreground">Terms of Service</span>
-        <span className="cursor-pointer hover:text-foreground">Privacy Policy</span>
-        <span className="cursor-pointer hover:text-foreground">Forensic Architecture Whitepaper</span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-success" />
-          Systems Operational
-        </span>
-      </footer>
-      <p className="pb-2 text-center text-[11px] text-muted-foreground">
+      <p className="pb-2 pt-8 text-center text-[11px] text-muted-foreground">
         © {new Date().getFullYear()} {APP_NAME} — {APP_FULL_NAME}. All rights reserved.
       </p>
     </div>

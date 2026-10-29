@@ -81,9 +81,9 @@ def test_a_clean_document_passes_without_asking_the_model():
 
 def test_names_codes_and_acronyms_are_not_candidates():
     judge = FakeJudge()
-    fields = {"additional_fields": [{"field_name": "student_name", "value": "Deepraj Chawda"}]}
+    fields = {"additional_fields": [{"field_name": "student_name", "value": "Ravindra Kulkarni"}]}
     analyze_spelling(
-        [_page("Student Deepraj Chawda Grade KG2 TRN 100234567800003 ref INV-2024/0042 email a.b@school.ae GEMS iPhone")],
+        [_page("Student Ravindra Kulkarni Grade KG2 TRN 100234567800003 ref INV-2024/0042 email a.b@school.ae GEMS iPhone")],
         extracted_fields=fields,
         judge=judge,
     )

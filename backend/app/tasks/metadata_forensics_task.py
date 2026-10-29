@@ -20,7 +20,7 @@ from sqlalchemy import select
 from app.db import tenancy
 from app.db.session import SessionLocal
 from app.models.document import Document
-from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
+from app.models.document_check import DocumentCheckStatus, DocumentCheckType
 from app.services.audit_service import record_event
 from app.services.check_store import save_check
 from app.services.forensics.metadata_forensics import analyze_pdf_metadata

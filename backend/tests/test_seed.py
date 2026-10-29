@@ -55,3 +55,42 @@ def test_reset_restores_the_seed_password_and_reactivates(run_seed, db_session):
     run_seed(reset=True)
     admin = _admin(db_session)
     assert verify_password("Seeded-Pass-1", admin.hashed_password) and admin.is_active
+
+
+# Outside local/test the published default password is never SET (a new
+# deployment or --reset); a running deployment's existing admin is untouched.
+
+
+@pytest.mark.parametrize("password", [seed._DEFAULT_PASSWORD, "short"])
+def test_refuses_to_create_an_admin_with_a_default_or_weak_password_outside_dev(
+    run_seed, db_session, monkeypatch, password
+):
+    monkeypatch.setattr(seed.settings, "environment", "production")
+    monkeypatch.setattr(seed, "SEED_PASSWORD", password)
+    with pytest.raises(SystemExit):
+        run_seed()
+    assert db_session.query(User).filter(User.email == "root@example.com").one_or_none() is None
+
+
+def test_refuses_a_reset_to_the_default_outside_dev(run_seed, db_session, monkeypatch):
+    run_seed()
+    monkeypatch.setattr(seed.settings, "environment", "production")
+    monkeypatch.setattr(seed, "SEED_PASSWORD", seed._DEFAULT_PASSWORD)
+    with pytest.raises(SystemExit):
+        run_seed(reset=True)
+    assert verify_password("Seeded-Pass-1", _admin(db_session).hashed_password)
+
+
+def test_an_existing_admin_is_left_alone_outside_dev_even_with_the_default(run_seed, db_session, monkeypatch):
+    run_seed()
+    monkeypatch.setattr(seed.settings, "environment", "production")
+    monkeypatch.setattr(seed, "SEED_PASSWORD", seed._DEFAULT_PASSWORD)
+    run_seed()  # what every restart of a running deployment does: no error, no change
+    assert verify_password("Seeded-Pass-1", _admin(db_session).hashed_password)
+
+
+def test_a_strong_password_is_used_outside_dev(run_seed, db_session, monkeypatch):
+    monkeypatch.setattr(seed.settings, "environment", "production")
+    monkeypatch.setattr(seed, "SEED_PASSWORD", "a-long-random-admin-password")
+    run_seed()
+    assert verify_password("a-long-random-admin-password", _admin(db_session).hashed_password)

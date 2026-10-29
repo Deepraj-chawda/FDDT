@@ -17,6 +17,9 @@ Every SQLAlchemy session is in exactly one of three states:
              app role with `app.current_company_id` set at the start of every
              transaction, so the database applies the same filter
              independently.
+  Deleted cases (a platform admin's soft delete, `cases.deleted_at`) are
+             filtered out the same way, unless the session opted in with
+             `include_deleted_cases` (platform admins acting on a company).
 * platform — the explicit, RLS-bypassing platform path (`bind_platform`), for
              sign-in lookups and platform-admin operations only. No automatic
              filter: platform code passes company ids explicitly.
@@ -33,10 +36,12 @@ from typing import Any
 from sqlalchemy import event
 from sqlalchemy.orm import ORMExecuteState, Session, with_loader_criteria
 
+from app.models.case import Case
 from app.models.company import TenantScopedMixin
 
 _MODE = "tenancy_mode"
 _COMPANY = "tenancy_company_id"
+_INCLUDE_DELETED_CASES = "tenancy_include_deleted_cases"
 _COMPANY_MODE = "company"
 _PLATFORM_MODE = "platform"
 
@@ -106,6 +111,7 @@ def bind_company(session: Session, company_id: Any) -> Session:
         _evict_other_companies(session, cid)
     session.info[_MODE] = _COMPANY_MODE
     session.info[_COMPANY] = cid
+    session.info.pop(_INCLUDE_DELETED_CASES, None)  # opt in again after every bind
     return session
 
 
@@ -113,6 +119,13 @@ def bind_platform(session: Session) -> Session:
     _check_rebind(session, _PLATFORM_MODE, None)
     session.info[_MODE] = _PLATFORM_MODE
     session.info[_COMPANY] = None
+    return session
+
+
+def include_deleted_cases(session: Session) -> Session:
+    """Let a company-bound session see soft-deleted cases — platform admins
+    only (to view and restore them). Company users never get this."""
+    session.info[_INCLUDE_DELETED_CASES] = True
     return session
 
 
@@ -164,6 +177,10 @@ def _apply_tenant_filter(state: ORMExecuteState) -> None:
             include_aliases=True,
         )
     )
+    if not state.session.info.get(_INCLUDE_DELETED_CASES):
+        state.statement = state.statement.options(
+            with_loader_criteria(Case, Case.deleted_at.is_(None), include_aliases=True)
+        )
 
 
 @event.listens_for(Session, "before_flush")

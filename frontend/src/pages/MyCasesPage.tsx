@@ -10,12 +10,22 @@ import {
   SearchIcon,
 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 
-import { listCases } from "@/api/cases"
+import { getCaseSummary, listCasesPage } from "@/api/cases"
 import { useAuth } from "@/hooks/useAuth"
 import { Nav } from "@/design-system/Nav"
-import { CASE_TYPE_LABELS, type CaseListItem } from "@/types/case"
+import { CASE_TYPE_LABELS, type CaseListItem, type CaseStatusGroup } from "@/types/case"
+
+const PAGE_SIZE = 50
+
+// The status filter as GET /cases/page's status groups.
+const STATUS_GROUPS: Record<MyCaseItem["status"], CaseStatusGroup> = {
+  Cleared: "approved",
+  "In Progress": "in_progress",
+  "Awaiting Review": "pending_review",
+  "Action Required": "action_required",
+}
 
 interface MyCaseItem {
   id: string
@@ -60,41 +70,50 @@ function mapApiToMyCase(c: CaseListItem): MyCaseItem {
 
 export function MyCasesPage() {
   const navigate = useNavigate()
-  const { token, user } = useAuth()
+  const { token } = useAuth()
   const [search, setSearch] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("")
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState<MyCaseItem["status"] | "">("")
+  const [page, setPage] = React.useState(0)
 
-  const { data: apiCases, isLoading } = useQuery({
-    queryKey: ["cases", token],
-    queryFn: () => listCases(token as string),
+  // Don't hit the API on every keystroke.
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim())
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Only the caller's own submissions; filtered, searched and paged on the server.
+  const { data: casePage, isLoading, isFetching } = useQuery({
+    queryKey: ["cases", "mine", token, debouncedSearch, statusFilter, page],
+    queryFn: () =>
+      listCasesPage(token as string, {
+        mine: true,
+        q: debouncedSearch || undefined,
+        status_group: statusFilter ? STATUS_GROUPS[statusFilter] : undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      }),
+    enabled: Boolean(token),
+    placeholderData: keepPreviousData,
+  })
+  const { data: summary } = useQuery({
+    queryKey: ["cases", "summary", "mine", token],
+    queryFn: () => getCaseSummary(token as string, { mine: true }),
     enabled: Boolean(token),
   })
 
-  const allMyCases = React.useMemo(() => {
-    if (!apiCases) return []
-    const userCases = apiCases.filter(
-      (c) => !user?.id || c.submitted_by?.id === user.id || c.submitted_by?.email === user.email
-    )
-    return userCases.map(mapApiToMyCase)
-  }, [apiCases, user])
+  const filteredCases = React.useMemo(() => (casePage?.items ?? []).map(mapApiToMyCase), [casePage])
+  const total = casePage?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const filteredCases = React.useMemo(() => {
-    return allMyCases.filter((c) => {
-      if (search.trim()) {
-        const q = search.toLowerCase()
-        if (!c.caseNumber.toLowerCase().includes(q) && !c.filename.toLowerCase().includes(q)) {
-          return false
-        }
-      }
-      if (statusFilter && c.status !== statusFilter) return false
-      return true
-    })
-  }, [allMyCases, search, statusFilter])
-
-  const totalSubmitted = allMyCases.length
-  const underReviewCount = allMyCases.filter((c) => c.status === "Awaiting Review" || c.status === "In Progress").length
-  const clearedCount = allMyCases.filter((c) => c.status === "Cleared").length
-  const actionRequiredCount = allMyCases.filter((c) => c.status === "Action Required").length
+  const totalSubmitted = summary?.total ?? 0
+  const clearedCount = summary?.approved ?? 0
+  const actionRequiredCount = summary?.action_required ?? 0
+  // Awaiting review + in progress: everything not cleared or needing action.
+  const underReviewCount = totalSubmitted - clearedCount - actionRequiredCount
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
@@ -201,7 +220,7 @@ export function MyCasesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-50/60 focus:bg-white text-xs sm:text-[13px] border border-slate-200/90 rounded-full text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
-              placeholder="Search by Case ID or filename..."
+              placeholder="Search by Case ID..."
               type="text"
             />
           </div>
@@ -210,7 +229,10 @@ export function MyCasesPage() {
             <div className="relative flex-1 sm:flex-initial">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as MyCaseItem["status"] | "")
+                  setPage(0)
+                }}
                 className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
               >
                 <option value="">Status: All Statuses</option>
@@ -260,7 +282,7 @@ export function MyCasesPage() {
                 {!isLoading && filteredCases.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                      {allMyCases.length === 0
+                      {totalSubmitted === 0 && !debouncedSearch && !statusFilter
                         ? "You haven't submitted any cases yet."
                         : "No cases match the selected filters."}
                     </td>
@@ -329,6 +351,21 @@ export function MyCasesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-3 text-xs text-slate-500">
+            <div className="text-center sm:text-left">
+              {total === 0 ? "0 cases" : <>Showing <span className="font-semibold text-slate-800">{page * PAGE_SIZE + 1}–{page * PAGE_SIZE + filteredCases.length}</span> of <span className="font-semibold text-slate-800">{total.toLocaleString()}</span></>}
+              {isFetching && !isLoading && <span className="ml-2 text-slate-400">updating…</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Previous
+              </button>
+              <span className="tabular-nums">Page {page + 1} of {pageCount}</span>
+              <button type="button" disabled={page + 1 >= pageCount} onClick={() => setPage((p) => p + 1)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         </section>
       </main>

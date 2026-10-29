@@ -280,14 +280,58 @@ def test_company_users_never_see_platform_admin_access(client, db_session, tenan
     assert client.get("/audit-log?event_type=platform_admin_access", headers=tenants["a"]["headers"]["reviewer_l2"]).json()["total"] == 0
 
 
-def test_company_log_names_platform_actions_platform_team(client, tenants):
-    """The `tenants` fixture's users were created by a platform admin, whose
-    user row a company session cannot see. The company's log must not show
-    those events as automated ("System pipeline") nor reveal the admin."""
-    log = client.get("/audit-log?event_type=user_created", headers=tenants["a"]["headers"]["reviewer_l2"]).json()
-    assert log["total"] >= 1
-    assert all(item["actor_name"] == "Platform team" for item in log["items"])
-    assert all(item["actor_email"] is None for item in log["items"])
+def test_company_never_sees_platform_admin_user_management(client, tenants, platform_admin_headers):
+    """The `tenants` fixture's users were created by a platform admin. Those
+    rows are platform-only: no company user sees them (nor the event type),
+    while the platform admin finds them in that company's log."""
+    for role, h in tenants["a"]["headers"].items():
+        if role == "user":
+            continue  # submitters can't read the company log at all
+        log = client.get("/audit-log", headers=h).json()
+        assert all(item["event_type"] != "user_created" for item in log["items"]), role
+        assert all(item["actor_name"] != "Platform team" for item in log["items"]), role
+        assert "user_created" not in client.get("/audit-log/event-types", headers=h).json(), role
+
+    a_id = tenants["a"]["id"]
+    admin_view = client.get(
+        f"/audit-log?event_type=user_created&company_id={a_id}", headers=platform_admin_headers
+    ).json()
+    assert admin_view["total"] == 3
+    assert all(item["event_data"]["platform_admin"] is True for item in admin_view["items"])
+    assert all(item["actor_email"] for item in admin_view["items"])
+
+
+def test_platform_admin_settings_changes_are_platform_only(client, db_session, tenants, platform_admin_headers):
+    """A platform admin editing a company's issuer registry / thresholds:
+    the change applies to the company, but its audit row is platform-only
+    and the company sees no trace of who made it."""
+    a_id, a_l2 = tenants["a"]["id"], tenants["a"]["headers"]["reviewer_l2"]
+    created = client.post(
+        f"/settings/issuers?company_id={a_id}", headers=platform_admin_headers, json={"name": "Admin Issuer"}
+    )
+    assert created.status_code == 201, created.text
+    res = client.put(
+        f"/settings/risk-thresholds?company_id={a_id}", headers=platform_admin_headers,
+        json={"medium_threshold": 20, "high_threshold": 50},
+    )
+    assert res.status_code == 200, res.text
+
+    # The company sees the change itself, but not who made it, nor any event.
+    assert any(i["name"] == "Admin Issuer" for i in client.get("/settings/issuers", headers=a_l2).json())
+    thresholds = client.get("/settings/risk-thresholds", headers=a_l2).json()
+    assert thresholds["medium_threshold"] == 20 and thresholds["updated_by_name"] is None
+    company_events = {i["event_type"] for i in client.get("/audit-log", headers=a_l2).json()["items"]}
+    assert not company_events & {"issuer_created", "risk_thresholds_updated"}
+
+    tenancy.bind_platform(db_session)
+    rows = db_session.execute(
+        select(AuditLog).where(AuditLog.event_type.in_(("issuer_created", "risk_thresholds_updated")))
+    ).scalars().all()
+    assert len(rows) == 2
+    assert all(r.company_id is None and r.event_data["company_id"] == a_id for r in rows)
+
+    admin_view = client.get(f"/audit-log?company_id={a_id}", headers=platform_admin_headers).json()
+    assert {"issuer_created", "risk_thresholds_updated"} <= {i["event_type"] for i in admin_view["items"]}
 
 
 def test_platform_admin_access_is_read_only(client, tenants, platform_admin_headers):
@@ -480,13 +524,16 @@ def test_new_rows_are_stamped_with_the_session_company(db_session, seeded_user):
 
 
 def test_storage_refuses_to_sign_another_companys_blob():
+    from app.core.config import settings
+
     a, b = uuid.uuid4(), uuid.uuid4()
-    url = f"https://acct.blob.core.windows.net/documents/companies/{a}/cases/{uuid.uuid4()}/documents/x.pdf"
+    container = settings.azure_storage_container_name  # whatever the environment configures
+    url = f"https://acct.blob.core.windows.net/{container}/companies/{a}/cases/{uuid.uuid4()}/documents/x.pdf"
     ensure_company_blob(url, a)
     with pytest.raises(CrossTenantBlobError):
         ensure_company_blob(url, b)
     # Pre-multi-tenancy paths carry no company and stay readable (their rows are scoped).
-    ensure_company_blob(f"https://acct.blob.core.windows.net/documents/{uuid.uuid4()}/legacy.pdf", b)
+    ensure_company_blob(f"https://acct.blob.core.windows.net/{container}/{uuid.uuid4()}/legacy.pdf", b)
 
 
 def test_duplicate_detection_never_matches_across_companies(db_session, tenants, sample_document_pages):

@@ -8,7 +8,7 @@ import {
 import { Link, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 
-import { listCases } from "@/api/cases"
+import { getCaseSummary, listCasesPage } from "@/api/cases"
 import { CompanyPicker } from "@/components/CompanyPicker"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
@@ -21,40 +21,37 @@ export function DashboardPage() {
   const { token } = useAuth()
   const acting = useActingCompany()
 
-  const { data: apiCases, isLoading } = useQuery({
-    queryKey: ["cases", token, acting.companyId],
-    queryFn: () => listCases(token as string, {}, acting.platformCompanyParam),
-    // A platform admin's queue is one company at a time (never a mixed list).
-    enabled: Boolean(token && acting.companyId),
+  // A platform admin's dashboard is one company at a time (never a mixed list).
+  const enabled = Boolean(token && acting.companyId)
+  // Counts over every live case, computed on the server.
+  const { data: summary } = useQuery({
+    queryKey: ["cases", "summary", token, acting.companyId],
+    queryFn: () => getCaseSummary(token as string, {}, acting.platformCompanyParam),
+    enabled,
   })
-
-  const cases = apiCases ?? []
-  const totalCases = cases.length
-  const documentsInQueue = cases.reduce((acc, c) => acc + c.document_count, 0)
-  const isOpen = (c: (typeof cases)[number]) => c.status !== "approved" && c.status !== "rejected" && c.status !== "closed"
-  const highRiskCount = cases.filter((c) => c.flag?.flag === "high").length
-  const mediumRiskCount = cases.filter((c) => c.flag?.flag === "medium").length
-  const lowRiskCount = cases.filter((c) => c.flag?.flag === "low").length
-  const pendingCount = cases.filter((c) => c.flag?.flag === "pending").length
-  const escalatedCount = cases.filter((c) => c.assigned_tier === "l2" && isOpen(c)).length
-  const clearedCount = cases.filter(
-    (c) => c.status === "auto_approved" || c.status === "approved" || c.status === "closed"
-  ).length
-
   // Open cases the user can act on (a Reviewer L1 doesn't see L2-escalated
   // ones here); escalated first, then highest risk score, most recent first
-  // within a tie. Uses the real assessment tier/score from the risk-scoring
-  // engine.
-  const priorityQueue = cases
-    .filter((c) => isOpen(c) && c.can_act)
-    .sort((a, b) => {
-      const esc = Number(b.assigned_tier === "l2") - Number(a.assigned_tier === "l2")
-      if (esc !== 0) return esc
-      const scoreDiff = (b.flag?.score ?? -1) - (a.flag?.score ?? -1)
-      if (scoreDiff !== 0) return scoreDiff
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
-    .slice(0, 5)
+  // within a tie (the server's `sort=priority`).
+  const { data: priorityPage, isLoading: isPriorityLoading } = useQuery({
+    queryKey: ["cases", "priority", token, acting.companyId],
+    queryFn: () =>
+      listCasesPage(
+        token as string,
+        { actionable: true, status_group: "open", sort: "priority", limit: 5 },
+        acting.platformCompanyParam,
+      ),
+    enabled,
+  })
+
+  const totalCases = summary?.total ?? 0
+  const documentsInQueue = summary?.documents ?? 0
+  const highRiskCount = summary?.risk.high ?? 0
+  const mediumRiskCount = summary?.risk.medium ?? 0
+  const lowRiskCount = summary?.risk.low ?? 0
+  const pendingCount = summary?.risk.pending ?? 0
+  const escalatedCount = summary?.escalated ?? 0
+  const clearedCount = summary?.approved ?? 0
+  const priorityQueue = priorityPage?.items ?? []
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
@@ -195,13 +192,15 @@ export function DashboardPage() {
 
               {/* Queue Items List */}
               <div className="mt-4 divide-y divide-slate-100">
-                {isLoading && (
+                {isPriorityLoading && (
                   <p className="py-6 text-center text-xs text-slate-400">Loading cases...</p>
                 )}
-                {!isLoading && priorityQueue.length === 0 && (
-                  <p className="py-6 text-center text-xs text-slate-400">No cases submitted yet.</p>
+                {!isPriorityLoading && priorityQueue.length === 0 && (
+                  <p className="py-6 text-center text-xs text-slate-400">
+                    {totalCases === 0 ? "No cases submitted yet." : "No open cases waiting on you."}
+                  </p>
                 )}
-                {!isLoading && priorityQueue.map((c) => (
+                {!isPriorityLoading && priorityQueue.map((c) => (
                   <div
                     key={c.id}
                     onClick={() => navigate(`/cases/${c.id}`)}

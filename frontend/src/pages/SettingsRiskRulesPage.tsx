@@ -52,13 +52,14 @@ function ThresholdsCard() {
   const [error, setError] = React.useState<string | null>(null)
   const [ok, setOk] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
-    if (data) {
-      setMedium(String(data.medium_threshold))
-      setHigh(String(data.high_threshold))
-      setCap(String(data.metadata_score_cap))
-    }
-  }, [data])
+  // Fill the form from each new server copy (adjusted during render).
+  const [loadedData, setLoadedData] = React.useState(data)
+  if (data && data !== loadedData) {
+    setLoadedData(data)
+    setMedium(String(data.medium_threshold))
+    setHigh(String(data.high_threshold))
+    setCap(String(data.metadata_score_cap))
+  }
 
   const m = Number(medium)
   const h = Number(high)
@@ -195,7 +196,7 @@ function HistoryModal({ rule, onClose }: { rule: RiskRule; onClose: () => void }
                 <td className="py-2.5 pr-3 font-mono">{v.weight > 0 ? `+${v.weight}` : v.weight}</td>
                 <td className="py-2.5 pr-3 capitalize">{v.severity}</td>
                 <td className="py-2.5 pr-3">{v.is_active ? "Yes" : "No"}</td>
-                <td className="py-2.5 pr-3">{v.updated_by_name ?? <span className="text-slate-400">Initial seed</span>}</td>
+                <td className="py-2.5 pr-3">{v.updated_by_name ?? (v.version === 1 ? <span className="text-slate-400">Initial seed</span> : <span className="text-slate-300">—</span>)}</td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-slate-500">{formatWhen(v.effective_from)}</td>
                 <td className="py-2.5 text-slate-600">{v.change_note ?? <span className="text-slate-300">—</span>}</td>
               </tr>
@@ -220,13 +221,17 @@ function RuleRow({ rule, onHistory }: { rule: RiskRule; onHistory: (rule: RiskRu
   const [error, setError] = React.useState<string | null>(null)
   const [savedVersion, setSavedVersion] = React.useState<number | null>(null)
 
-  // A new version arrived from the server (after a save): reset the draft to it.
-  React.useEffect(() => {
+  // A new version arrived from the server (after a save): reset the draft to
+  // it (adjusted during render).
+  const ruleVersion = `${rule.id}|${rule.weight}|${rule.severity}|${rule.is_active}`
+  const [draftVersion, setDraftVersion] = React.useState(ruleVersion)
+  if (ruleVersion !== draftVersion) {
+    setDraftVersion(ruleVersion)
     setWeight(String(rule.weight))
     setSeverity(rule.severity)
     setActive(rule.is_active)
     setNote("")
-  }, [rule.id, rule.weight, rule.severity, rule.is_active])
+  }
 
   const w = Number(weight)
   const weightValid = weight.trim() !== "" && Number.isFinite(w) && w >= -100 && w <= 100

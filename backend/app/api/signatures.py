@@ -24,7 +24,6 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.api.auth import require_company_role
 from app.api.case_access import load_visible_case

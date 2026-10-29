@@ -8,7 +8,7 @@ definitions, so it cannot drift from the code:
 | Interactive docs (Swagger UI) | `http://localhost:8000/docs` while the backend runs |
 | ReDoc | `http://localhost:8000/redoc` |
 | Machine-readable schema | `http://localhost:8000/openapi.json` |
-| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 37 paths / 46 operations / 68 schemas) |
+| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 42 paths / 52 operations / 70 schemas) |
 
 Every operation carries a `summary`, a `description` (rules, side effects, role requirements) and its
 error responses; every request field has a description. Import `openapi.json` into Postman,
@@ -36,8 +36,10 @@ live `/openapi.json`.
 
 ## Conventions
 
-- **Auth:** `Authorization: Bearer <JWT>`. Tokens live 8 h by default (`JWT_ACCESS_TOKEN_EXPIRE_MINUTES`)
-  and carry `role`, `company_id` and `is_platform_admin`. The user is re-read from the database on every
+- **Auth:** `Authorization: Bearer <JWT>`. Access tokens live 15 minutes by default
+  (`JWT_ACCESS_TOKEN_EXPIRE_MINUTES`); the session is renewed with `POST /auth/refresh` (refresh token in
+  an httpOnly cookie — see [authentication](../architecture/authentication.md)). Tokens carry `role`,
+  `company_id`, `is_platform_admin` and `ver`. The user is re-read from the database on every
   request; a token whose company or platform flag no longer matches, or whose company is suspended, is
   refused. A missing/invalid/expired token or an inactive user is **401**; a valid user with the wrong
   role is **403**.
@@ -47,11 +49,13 @@ live `/openapi.json`.
   everything the roles below it can; routes name the lowest role they admit. On a case escalated to L2
   (`assigned_tier` = `l2`) a `reviewer_l1` can still `GET` it but gets **403** from approve/reject/escalate.
 - **`platform_admin`** belongs to no company and is not on that ladder. It manages companies, users, the
-  rule template, billing and the queue monitor, and has **read-only, audited** access to any company's
+  rule template, billing and the queue monitor, may soft-delete and restore any company's case
+  (`DELETE /cases/{id}`, `POST /cases/{id}/restore`), and has **read-only, audited** access to any company's
   data by passing `company_id` (query parameter) on the company endpoints that accept it — `GET /cases`,
   `/audit-log`, `/settings/*` — or simply opening a case by id. It can never approve, reject, escalate,
   upload, create cases or generate reports (403), but may edit a company's issuer registry, risk rules
-  and thresholds on its behalf (audited in that company's log).
+  and thresholds on its behalf. Everything a platform admin does is audited **platform-only**
+  (`company_id` NULL): no company user ever sees an admin's access or changes.
 - **A resource of another company is a 404**, and so is a case that is not yours for a `user` — ids
   cannot be probed.
 - **Ids** are UUIDs. **Timestamps** are ISO-8601 with timezone.
@@ -95,6 +99,8 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 |---|---|---|
 | `POST /cases` | Create a case | company users |
 | `GET /cases` | List cases (the case queue); filters `status`, `case_type`, `assigned_tier`, `actionable`; each item has `can_act` | company users (`user` sees only own); PA read with `company_id` |
+| `GET /cases/page` | One page of cases (`limit` ≤ 200, `offset`) with `total`; filters `status_group`, `risk`, `case_type`, `assigned_tier`, `actionable`, `mine`, search `q` (case number, submitter name/email), `sort=priority`. Used by the case queue, dashboard and My Cases | same as `GET /cases` |
+| `GET /cases/summary` | Counts for the queue, dashboard and My Cases cards (status groups, risk tiers, documents, tab counts); `mine=true` for own submissions. A `user` gets no risk breakdown | same as `GET /cases` |
 | `GET /cases/{case_id}` | Get case detail (documents, checks, findings, assessment, actions) | company users (`user` sees a reduced view); PA read |
 | `GET /cases/{case_id}/audit-log` | Get a case's activity timeline | own case for `user`, reviewers; PA read |
 
@@ -160,7 +166,7 @@ admin passing `company_id` (audited). Users are platform-admin only.
 |---|---|
 | `GET /platform/companies` | List companies |
 | `POST /platform/companies` | Create a company (seeds its risk rules from the template and default thresholds) |
-| `PATCH /platform/companies/{company_id}` | Rename / suspend / reactivate a company, or change its upload limits (`max_file_size_mb`, `max_zip_size_mb`; audited old → new) |
+| `PATCH /platform/companies/{company_id}` | Rename / suspend / reactivate a company, or change its upload limits (`max_file_size_mb`, `max_zip_size_mb`, `max_file_pages`; audited old → new) |
 | `GET /platform/usage` | Billing & usage per company (`period` or a custom date range) |
 | `POST /platform/usage/reconcile` | Recompute the usage counters now |
 | `GET /platform/queues` | Processing-queue monitor (depth, waits, workers, limiter counters, outstanding per company) |

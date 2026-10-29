@@ -57,7 +57,7 @@ def companies():
     with owner.begin() as conn:
         for key in ("A", "B"):
             company, user, case = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-            conn.execute(text("INSERT INTO companies (id, name, is_active, max_file_size_mb, max_zip_size_mb) VALUES (:id, :n, true, 10, 300)"),
+            conn.execute(text("INSERT INTO companies (id, name, is_active, max_file_size_mb, max_zip_size_mb, max_file_pages) VALUES (:id, :n, true, 10, 300, 100)"),
                          {"id": company, "n": f"PgBouncer probe {key} {tag}"})
             conn.execute(text(
                 "INSERT INTO users (id, company_id, email, hashed_password, role, is_active, created_at, updated_at) "

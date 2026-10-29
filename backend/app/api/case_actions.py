@@ -141,7 +141,7 @@ def approve_case(
             assessment_id=assessment.id,
         )
     except InvalidCaseTransition as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc))
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     return _decision(db, case, action, actor)
 
 
@@ -170,7 +170,7 @@ def reject_case(
     try:
         action = workflow_service.reject_case(db, case, actor, reason=payload.reason)
     except InvalidCaseTransition as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc))
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     return _decision(db, case, action, actor)
 
 
@@ -201,5 +201,5 @@ def escalate_case(
     try:
         action = workflow_service.escalate_case(db, case, actor, reason=payload.reason)
     except InvalidCaseTransition as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc))
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     return _decision(db, case, action, actor)

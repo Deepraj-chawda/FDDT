@@ -17,7 +17,7 @@ most services are built lazily, so a missing value surfaces when first used.
 | `DATABASE_PLATFORM_USER` / `DATABASE_PLATFORM_PASSWORD` | `fddt_platform` / `fddt_platform_local` | The role for sign-in, platform-admin screens and usage reconciliation (all rows through the `platform_all` policy; no BYPASSRLS) | Same | Login and platform screens fail |
 | `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Celery broker | The Redis in `docker-compose.yml` | Uploads succeed but nothing is processed; documents stay `pending` |
 | `CELERY_RESULT_BACKEND` | `redis://localhost:6379/1` | Celery results | Same Redis, DB 1 | Worker errors on result storage |
-| `JWT_SECRET_KEY` | `changeme-in-.env` | Signs login tokens (HS256) | Generate a long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"` | **Works with an insecure default — always change it**; changing it logs everyone out |
+| `JWT_SECRET_KEY` | `changeme-in-.env` | Signs access tokens (HS256) | Generate a long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"` | Outside `ENVIRONMENT=local/dev/test` the API **refuses to start** with the default or anything under 32 characters; changing it logs everyone out |
 | `AZURE_STORAGE_CONNECTION_STRING` | *(none)* | Blob Storage account for originals, signature crops and reports | Azure portal → Storage account → *Access keys* → connection string | Upload and file-url endpoints return **503** with an explanatory message |
 | `AZURE_STORAGE_CONTAINER_NAME` | `documents` | Blob container (must be **private**) | Create it in the storage account | Uploads fail |
 | `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` | *(none)* | OCR/layout (`prebuilt-layout`) | Azure portal → Document Intelligence resource → *Keys and Endpoint* | Every document ends `failed` at extraction |
@@ -37,8 +37,16 @@ not call Azure.
 | Variable | Default | Purpose |
 |---|---|---|
 | `ENVIRONMENT` | `local` | Label shown in `/health` and the OpenAPI description |
-| `JWT_ALGORITHM` | `HS256` | JWT algorithm |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `480` (8 h) | Login token lifetime |
+| `JWT_ALGORITHM` | `HS256` | JWT algorithm: `HS256`, `HS384` or `HS512` (anything else is refused at startup) |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | `fddt-api` / `fddt-web` | `iss` / `aud` claims, checked on every request |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access-token lifetime (1–60). The session lives on through the refresh token |
+| `REFRESH_TOKEN_IDLE_DAYS` | `7` | A sign-in ends after this many days without use |
+| `REFRESH_TOKEN_ABSOLUTE_DAYS` | `30` | A sign-in ends after this many days in any case |
+| `REFRESH_TOKEN_REUSE_GRACE_SECONDS` | `20` | Window in which a just-rotated refresh token is not treated as stolen (two tabs refreshing at once) |
+| `REFRESH_COOKIE_NAME` | `fddt_refresh` | Refresh-token cookie name |
+| `REFRESH_COOKIE_PATH` | `/api/auth` | Browser-visible path of the auth routes; the cookie is sent there only |
+| `REFRESH_COOKIE_SECURE` | `true` | Secure flag on the cookie; keep `true` everywhere (browsers accept it on `http://localhost`) |
+| `API_DOCS_ENABLED` | on, except `ENVIRONMENT=production` | Serve `/docs`, `/redoc`, `/openapi.json` |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | Azure OpenAI REST API version |
 | `AZURE_OPENAI_REQUEST_TIMEOUT_SECONDS` | `60.0` | Per-call LLM timeout. Kept short on purpose: a hung call holds a worker thread (and its rate-limiter reservation) |
 | `AZURE_DOCUMENT_INTELLIGENCE_MAX_CALLS_PER_SECOND` | `10.0` | Global cap on Document Intelligence calls (Azure's default S0 limit is 15 TPS) |
@@ -46,6 +54,7 @@ not call Azure.
 | `DATABASE_POOLER_HOST` / `DATABASE_POOLER_PORT` | *(unset)* / `6432` | When set, the two app roles connect through **PgBouncer** (transaction pooling) and each process keeps no pool of its own. Recommended in production ([processing-queues.md](../processing-queues.md#database-connections)) |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `5` / `10` | SQLAlchemy pool per role per process when connecting **directly** (no PgBouncer) |
 | `DEFAULT_MAX_FILE_SIZE_MB` / `DEFAULT_MAX_ZIP_SIZE_MB` | `10` / `300` | Upload limits a **new** company is created with. Limits are per company (`companies.max_file_size_mb` / `max_zip_size_mb`, changed by a platform admin under Platform › Companies); changing these defaults never changes an existing company. The frontend reads the company's real limits from `GET /auth/me/upload-limits` |
+| `DEFAULT_MAX_FILE_PAGES` | `100` | Page limit per PDF a **new** company is created with (`companies.max_file_pages`, changed by a platform admin like the size limits; `file_too_many_pages`, 413). Forensics renders every page into worker memory at 200 DPI (~11 MB a page), so higher limits need more worker RAM |
 | `BULK_UPLOAD_MAX_ENTRIES` | `25000` | Safety cap on entries (files + folders) in one zip. A 300 MB zip of small born-digital PDFs holds about 11,000 entries |
 | `BULK_UPLOAD_CASE_WARNING_THRESHOLD` | `100` | Above this many cases the UI warns; the zip is still accepted |
 | `DEFAULT_COMPANY_NAME` | `Default Company` | Name of the company the multi-tenancy migration assigns pre-existing data to (used once, by the migration) |
@@ -60,7 +69,7 @@ not call Azure.
 | `STUCK_DOCUMENT_BATCH_SIZE` | `200` | Most documents re-queued per run |
 | `LOGIN_MAX_FAILED_ATTEMPTS` / `LOGIN_LOCKOUT_MINUTES` | `5` / `15` | Sign-in throttling (`app/services/login_throttle.py`, Redis): after this many failed sign-ins for one email address, it is refused (HTTP 429 + `Retry-After`) for this many minutes. Counted per address (unknown addresses too), cleared by a successful sign-in. `0` disables |
 | `LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE` | `20` | Sign-in attempts of any outcome per client IP per minute (best effort: behind the proxy chain a client can influence `X-Forwarded-For`). `0` disables. Both limits fail open if Redis is unreachable |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@example.com` / `ChangeMe123!` | Read by `seed.py` (not by the app): the platform admin it creates when the account does not exist. An existing account is left unchanged unless `seed.py --reset` is run. Set both in production |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@example.com` / `ChangeMe123!` | Read by `seed.py` (not by the app): the platform admin it creates when the account does not exist. An existing account is left unchanged unless `seed.py --reset` is run. Set both in production: outside local/test, `seed.py` refuses to create or reset the admin with the default password or one under 12 characters (an existing admin is never touched) |
 | `CELERY_POOL` | per queue | Read by `start-worker.sh`: overrides the pool type (`threads` for extraction/vision, `prefork` for forensics) |
 | `CELERY_BEAT_SCHEDULE_FILE` | `/tmp/celerybeat-schedule` | Read by `start-beat.sh` (beat + the one-slot worker for `housekeeping_queue`) |
 | `ISSUER_FUZZY_MATCH_THRESHOLD` | `85.0` | rapidfuzz WRatio score (0–100) an extracted issuer must reach to match the registry ([05](../pipeline/05-issuer-verification.md)) |
@@ -101,7 +110,8 @@ Read by `docker-compose.yml` from the shell or a root `.env`; defaults shown.
 |---|---|---|
 | `VITE_API_BASE_URL` | `/api` | Base URL the SPA calls (build time). The default relies on a proxy that maps `/api/*` → the API with the prefix stripped — the Vite dev server locally, the ingress in production ([production-deployment.md](production-deployment.md)). Setting it to a different origin instead requires CORS on the backend, which currently has **no** CORS middleware |
 
-No other frontend variables exist. Login state is a JWT in `localStorage`.
+No other frontend variables exist. The session is an in-memory access token plus an httpOnly refresh
+cookie ([authentication](../architecture/authentication.md)) — nothing in `localStorage`.
 
 ## Secrets checklist
 

@@ -203,11 +203,11 @@ logs or calling `celery_app.send_task`. The queue comes from `TASK_QUEUES` in `t
   `signature_comparison_completed`, `risk_assessment_completed`, `case_status_changed`,
   `case_approved`, `case_rejected`, `case_escalated`, `case_report_generated`, the settings events
   `issuer_created/updated/deactivated/reactivated`, `risk_rule_created/updated`,
-  `risk_thresholds_updated`, `user_created/updated` (written into the **user's company's** log, actor
-  shown to the company as "Platform team"; a platform admin account's own creation is platform-level),
-  and the platform-level events (`company_id` NULL, visible only to platform admins)
-  `company_created/updated`, `risk_rule_template_created/updated`, `usage_stats_reconciled` and
-  `platform_admin_access`. A failed forensic task writes `<check>_failed`
+  `risk_thresholds_updated` (in the company's log when its own reviewer made the change; platform-only
+  when a platform admin did), and the platform-level events (`company_id` NULL, visible only to platform admins)
+  `company_created/updated`, `risk_rule_template_created/updated`, `usage_stats_reconciled`,
+  `user_created/updated`, `user_password_reset`, `platform_admin_access`, and any settings change a
+  platform admin made for a company (the company is in `event_data.company_id`). A failed forensic task writes `<check>_failed`
   (e.g. `tampering_checks_failed`). A rejected upload writes no event.
   The three decision events carry `actor_role` (the actor's role at the time, e.g. `reviewer_l1`);
   `case_escalated` also carries `from_tier` / `to_tier` (`l1` → `l2`) and the required `reason`.

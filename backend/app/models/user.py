@@ -23,7 +23,7 @@ role was migrated to `platform_admin`.
 """
 import enum
 
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -92,6 +92,11 @@ class User(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(UserRole, name="user_role"), default=UserRole.user, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Carried in every access token (`ver`); bumping it (password change or
+    # reset, sign-out everywhere, deactivation, role/company change) makes
+    # every token already issued to this account invalid at once. See
+    # app/services/refresh_tokens.py `revoke_all_sessions`.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
     submitted_cases = relationship(
         "Case", back_populates="submitted_by", foreign_keys="Case.submitted_by_user_id"

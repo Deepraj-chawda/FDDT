@@ -253,6 +253,7 @@ class AuditEventResponse(BaseModel):
     document_id: uuid.UUID | None
     document_filename: str | None
     event_data: dict | None
+    case_deleted: bool = False
 
 
 class AuditPage(BaseModel):

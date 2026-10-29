@@ -39,3 +39,40 @@ def record_event(
     )
     db.add(entry)
     return entry
+
+
+def record_platform_event(
+    system_db: Session,
+    event_type: str,
+    *,
+    admin,
+    company=None,
+    company_id: uuid.UUID | None = None,
+    case_id: uuid.UUID | None = None,
+    event_data: dict[str, Any] | None = None,
+) -> AuditLog:
+    """Append one PLATFORM-ONLY audit row for something a platform admin did
+    (created a user, edited a company's risk rules...). Written through the
+    platform session with company_id NULL, so no company session can ever
+    read it — Row-Level Security hides NULL-company rows from the app role.
+    The company it concerns goes in event_data.company_id, which is how a
+    platform admin's view of that company's log finds it (app/api/audit.py).
+    `company` (a Company) or `company_id` names it; neither = platform-level."""
+    target_id = company.id if company is not None else company_id
+    data = {
+        **(event_data or {}),
+        "platform_admin": True,
+        "admin_email": admin.email,
+        "admin_name": admin.full_name,
+        "company_id": str(target_id) if target_id is not None else None,
+    }
+    if company is not None:
+        data["company_name"] = company.name
+    return record_event(
+        system_db,
+        event_type,
+        case_id=case_id,
+        actor_user_id=admin.id,
+        event_data=data,
+        company_id=None,  # platform-only: invisible to every company session
+    )

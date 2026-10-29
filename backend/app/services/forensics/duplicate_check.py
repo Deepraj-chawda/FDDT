@@ -172,15 +172,20 @@ def find_matches(
     if not prior_rows:
         return []
 
+    # Parse each prior hash once, not once per page of this document.
+    prior_hashes = [imagehash.hex_to_hash(row[0].phash) for row in prior_rows]
+
     matches: list[PageMatch] = []
     for page_number, hex_hash in enumerate(page_hashes, start=1):
         this_hash = imagehash.hex_to_hash(hex_hash)
         best: PageMatch | None = None
-        for hash_row, filename, case_id, case_number, file_hash, submitter_name, submitter_email in prior_rows:
+        for prior_hash, (hash_row, filename, case_id, case_number, file_hash, submitter_name, submitter_email) in zip(
+            prior_hashes, prior_rows
+        ):
             # imagehash's `-` returns numpy.int64 (not JSON-serializable
             # into the result jsonb column) — cast to a plain int here,
             # the one place the value originates.
-            distance = int(this_hash - imagehash.hex_to_hash(hash_row.phash))
+            distance = int(this_hash - prior_hash)
             if distance <= effective_threshold and (best is None or distance < best.distance):
                 best = PageMatch(
                     page=page_number,

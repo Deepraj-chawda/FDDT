@@ -17,18 +17,35 @@ accounts is platform-level work.
 import os
 import sys
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import system_session
 from app.models.user import User, UserRole
 
 # Defaults are for local development; override via env for any shared/demo environment.
 SEED_EMAIL = os.environ.get("SEED_ADMIN_EMAIL", "admin@example.com")
-SEED_PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD", "ChangeMe123!")
+_DEFAULT_PASSWORD = "ChangeMe123!"
+SEED_PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD", _DEFAULT_PASSWORD)
+
+
+def _refuse_default_password() -> None:
+    """Outside local/test, never SET the admin password to the published
+    default (an existing account is left alone, so this only stops a new
+    deployment or a --reset from creating a known platform-admin login)."""
+    if settings.is_dev_environment:
+        return
+    if SEED_PASSWORD == _DEFAULT_PASSWORD or len(SEED_PASSWORD) < 12:
+        sys.exit(
+            f"seed.py: refusing to set the platform admin password for ENVIRONMENT={settings.environment!r}: "
+            "set SEED_ADMIN_PASSWORD to a strong value (at least 12 characters, not the default)."
+        )
 
 
 def main(reset: bool = False) -> None:
     with system_session() as db:
         user = db.query(User).filter(User.email == SEED_EMAIL).one_or_none()
+        if user is None or reset:
+            _refuse_default_password()
         if user is None:
             user = User(
                 email=SEED_EMAIL,

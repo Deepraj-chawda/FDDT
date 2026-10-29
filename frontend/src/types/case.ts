@@ -145,6 +145,9 @@ export interface CaseListItem {
   // Whether the current user may approve/reject/escalate given the tier
   // (false for a Reviewer L1 on an L2 case — read-only). Server-computed.
   can_act: boolean
+  // Platform admins only: when a platform admin deleted the case. Company
+  // users never receive a deleted case at all.
+  deleted_at?: string | null
 }
 
 export type DocumentProcessingStatus = "pending" | "processing" | "complete" | "failed"
@@ -230,6 +233,7 @@ export type DocumentCheckType =
   | "font_consistency"
   | "ghost_content"
   | "spelling_consistency"
+  | "analysis_integrity"
   // Not a real backend/app/models/document_check.py row — synthesized in
   // frontend/src/components/case/DocumentChecksPanel.tsx from the case's
   // cross_document_findings (case-level, not per-document) so it reads
@@ -267,6 +271,7 @@ export const DOCUMENT_CHECK_TYPE_LABELS: Record<DocumentCheckType, string> = {
   font_consistency: "Font consistency",
   ghost_content: "Deleted / replaced content (ghost text)",
   spelling_consistency: "Spelling (English)",
+  analysis_integrity: "Analysis integrity",
   cross_document_consistency: "Cross-document consistency",
 }
 
@@ -474,6 +479,58 @@ export interface CaseDetail extends CaseListItem {
 export interface CaseListFilters {
   status?: CaseStatus
   case_type?: CaseType
+}
+
+// GET /cases/page's status groups (backend/app/api/cases.py). "deleted":
+// platform admins' soft-deleted cases; every other group is live cases.
+export type CaseStatusGroup =
+  | "analyzing"
+  | "awaiting_review"
+  | "approved"
+  | "rejected"
+  | "open"
+  | "escalated"
+  | "deleted"
+  | "in_progress"
+  | "action_required"
+  | "pending_review"
+
+export interface CasePageQuery {
+  limit?: number
+  offset?: number
+  q?: string
+  status_group?: CaseStatusGroup
+  risk?: "high" | "medium" | "low" | "pending"
+  case_type?: CaseType
+  assigned_tier?: CaseTier
+  actionable?: boolean
+  mine?: boolean
+  sort?: "default" | "priority"
+}
+
+export interface CaseListPage {
+  items: CaseListItem[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// GET /cases/summary: counts over every live case the caller can see.
+export interface CaseListSummary {
+  total: number
+  documents: number
+  analyzing: number
+  awaiting_review: number
+  approved: number
+  rejected: number
+  open: number
+  escalated: number
+  high_risk_open: number
+  in_progress: number
+  action_required: number
+  risk: { high: number; medium: number; low: number; pending: number }
+  actionable: number
+  l2: number
 }
 
 // One audit_log row scoped to a case (backend/app/api/cases.py's

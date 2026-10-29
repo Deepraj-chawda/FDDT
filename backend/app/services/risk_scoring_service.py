@@ -78,6 +78,7 @@ _FINDING_CHECK_TYPES = {
     "visual_inconsistency_review",
     "font_consistency",
     "spelling_consistency",
+    "analysis_integrity",
 }
 
 # Findings that are deliberately never scored: they are notes DERIVED from

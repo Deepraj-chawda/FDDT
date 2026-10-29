@@ -18,7 +18,7 @@ from app.models.user import UserRole
 from app.services import bulk_upload_service
 from app.tasks.bulk_upload_task import ingest_bulk_upload
 from tests.conftest import headers_for, make_company, make_user
-from tests.sample_files import make_zip
+from tests.sample_files import make_pdf, make_zip
 
 MB = 1024 * 1024
 
@@ -175,7 +175,7 @@ def test_a_change_applies_to_the_next_upload_without_signing_in_again(
     assert _upload(client, plain_headers, case_id, pdf_15mb).status_code == 201
     limits = client.get("/auth/me/upload-limits", headers=plain_headers).json()
     assert limits == {
-        "max_file_size_mb": 20, "max_zip_size_mb": 300,
+        "max_file_size_mb": 20, "max_zip_size_mb": 300, "max_file_pages": 100,
         "max_file_size_bytes": 20 * MB, "max_zip_size_bytes": 300 * MB,
     }
 
@@ -231,3 +231,42 @@ def test_limits_must_be_positive_but_have_no_ceiling(client, company, platform_a
 
 def test_platform_admins_have_no_upload_limits_of_their_own(client, platform_admin_headers):
     assert client.get("/auth/me/upload-limits", headers=platform_admin_headers).status_code == 404
+
+def test_the_page_cap_is_per_company_set_by_a_platform_admin_and_audited(
+    client, db_session, company, plain_headers, platform_admin_headers
+):
+    assert client.get("/auth/me/upload-limits", headers=plain_headers).json()["max_file_pages"] == 100
+    response = _patch(client, platform_admin_headers, company.id, max_file_pages=250)
+    assert response.status_code == 200 and response.json()["max_file_pages"] == 250
+    assert client.get("/auth/me/upload-limits", headers=plain_headers).json()["max_file_pages"] == 250
+    state = tenancy.snapshot(db_session)
+    tenancy.bind_platform(db_session)  # platform-only event
+    try:
+        event = db_session.execute(
+            select(AuditLog).where(AuditLog.event_type == "company_updated")
+        ).scalars().one()
+    finally:
+        tenancy.restore(db_session, state)
+    assert event.event_data["changes"]["max_file_pages"] == {"from": 100, "to": 250}
+    assert _patch(client, platform_admin_headers, company.id, max_file_pages=0).status_code == 422
+
+
+def test_the_bulk_path_enforces_the_companys_page_cap(
+    client, db_session, fake_storage, company, plain_headers, platform_admin_headers, ingest_calls, monkeypatch
+):
+    _patch(client, platform_admin_headers, company.id, max_file_pages=2)
+    monkeypatch.setattr(bulk_upload_service, "enqueue_document_pipeline", lambda d, c: None)
+    data = make_zip({"case-1/short.pdf": make_pdf(pages=2), "case-1/long.pdf": make_pdf(pages=3)})
+    bulk = _post_zip(client, plain_headers, data)
+    assert bulk.status_code == 202
+    state = tenancy.snapshot(db_session)
+    tenancy.bind_company(db_session, company.id)
+    try:
+        bulk_upload_service.ingest(db_session, fake_storage, uuid.UUID(bulk.json()["id"]), company.id)
+    finally:
+        tenancy.restore(db_session, state)
+    files = {
+        f["name"]: f for f in client.get(f"/bulk-uploads/{bulk.json()['id']}", headers=plain_headers).json()["cases"][0]["files"]
+    }
+    assert files["short.pdf"]["status"] == "accepted"
+    assert files["long.pdf"]["code"] == "file_too_many_pages"

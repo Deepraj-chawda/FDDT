@@ -23,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db import tenancy
 from app.db.session import SessionLocal
-from app.models.document import Document, DocumentProcessingStatus
+from app.models.document import Document
 from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
 from app.models.signature_match import ComparisonScope, SignatureMatch, SignatureMatchResult
 from app.models.signature_reference import SignatureReference

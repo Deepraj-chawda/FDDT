@@ -11,8 +11,8 @@
         "tags": [
           "auth"
         ],
-        "summary": "Log in and obtain a JWT",
-        "description": "Exchanges email + password for a bearer token (HS256; lifetime from JWT_ACCESS_TOKEN_EXPIRE_MINUTES). The token carries `role`, `company_id` (null for a platform admin) and `is_platform_admin`. An unknown email, a wrong password, a deactivated account and a suspended company all return the same 401 so accounts cannot be enumerated. Throttled (app/services/login_throttle.py): after LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for LOGIN_LOCKOUT_MINUTES, and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE attempts per minute; both answer 429 with a Retry-After header.",
+        "summary": "Sign in",
+        "description": "Exchanges email + password for a short-lived access token (JWT, HS256, lifetime JWT_ACCESS_TOKEN_EXPIRE_MINUTES, default 15) in the body, and starts a session: a refresh token is set as an httpOnly, Secure, SameSite=Strict cookie (REFRESH_COOKIE_NAME, path REFRESH_COOKIE_PATH) used by `POST /auth/refresh`. The token carries `role`, `company_id` (null for a platform admin), `is_platform_admin` and `ver`. An unknown email, a wrong password, a deactivated account and a suspended company all return the same 401 (in the same time) so accounts cannot be enumerated. Throttled (app/services/login_throttle.py): after LOGIN_MAX_FAILED_ATTEMPTS failures an email address is refused for LOGIN_LOCKOUT_MINUTES, and each client IP gets LOGIN_MAX_ATTEMPTS_PER_IP_PER_MINUTE attempts per minute; both answer 429 with a Retry-After header.",
         "operationId": "login_auth_login_post",
         "requestBody": {
           "content": {
@@ -52,6 +52,75 @@
             }
           }
         }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Renew the session",
+        "description": "Exchanges the refresh-token cookie for a new access token and ROTATES the cookie (the old refresh token stops working). A refresh token that was already rotated and is presented again means it was copied: that whole sign-in is ended and the event is audited (`refresh_token_reuse_detected`). Requires the `X-Requested-With: fddt-web` header. No bearer token needed.",
+        "operationId": "refresh_session_auth_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session: sign in again (the cookie is cleared)."
+          },
+          "403": {
+            "description": "The `X-Requested-With` header is missing."
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign out",
+        "description": "Ends this sign-in: its refresh tokens are revoked and the cookie is cleared. The current access token lapses on its own within minutes; the client must discard it. Requires the `X-Requested-With: fddt-web` header. Always 204.",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "The `X-Requested-With` header is missing."
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign out everywhere",
+        "description": "Ends every sign-in of the caller's account on every device: all refresh tokens are revoked and every access token already issued stops working immediately.",
+        "operationId": "logout_everywhere_auth_logout_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/auth/me": {
@@ -123,7 +192,7 @@
           "auth"
         ],
         "summary": "Change my password",
-        "description": "Any signed-in user (every role) changes their own password by giving the current one. The new password (8-128 characters, different from the current one) is stored hashed and the change is recorded in the audit log (never the password). A forgotten password cannot be reset here: a platform admin resets it (`POST /settings/users/{id}/reset-password`). Tokens already issued stay valid until they expire.",
+        "description": "Any signed-in user (every role) changes their own password by giving the current one. The new password (8-128 characters, different from the current one) is stored hashed and the change is recorded in the audit log (never the password). A forgotten password cannot be reset here: a platform admin resets it (`POST /settings/users/{id}/reset-password`). Every sign-in of the account, on every device, is ended; this one continues with the new access token and refresh cookie returned.",
         "operationId": "change_my_password_auth_me_password_post",
         "requestBody": {
           "content": {
@@ -136,8 +205,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "The current password is wrong, or the new one equals it."
@@ -344,7 +420,7 @@
           "cases"
         ],
         "summary": "Get case detail",
-        "description": "Everything the case detail page needs in one call: documents (with signed download URLs, extracted fields and per-document check results), cross-document findings, forensic findings, the latest risk assessment, pipeline progress (`pipeline.complete` / `pipeline.pending`) and reviewer actions. A submitter does not receive the risk assessment and sees only approve/reject actions. A case of another company, or owned by someone else, is a 404, not a 403, so ids cannot be probed. A platform admin may read any company's case; each such access is written to that company's audit log.",
+        "description": "Everything the case detail page needs in one call: documents (with signed download URLs, extracted fields and per-document check results), cross-document findings, forensic findings, the latest risk assessment, pipeline progress (`pipeline.complete` / `pipeline.pending`) and reviewer actions. A submitter does not receive the risk assessment and sees only approve/reject actions. A case of another company, or owned by someone else, is a 404, not a 403, so ids cannot be probed. A platform admin may read any company's case (including a deleted one); each such access is written to the platform-only audit log.",
         "operationId": "get_case_detail_cases__case_id__get",
         "security": [
           {
@@ -379,6 +455,75 @@
           },
           "404": {
             "description": "No such case (or, for a `user`, not one they submitted)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Delete a case (platform admin only)",
+        "description": "Soft delete: the case disappears for its company everywhere — case lists, the case page, bulk uploads, the audit log, duplicate and linked-case checks — as if it never existed. Its documents, results and files are kept, and `POST /cases/{case_id}/restore` brings it back. Recorded only in the platform audit log (`case_deleted`).",
+        "operationId": "delete_case_cases__case_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeleteCaseRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Platform admins only."
+          },
+          "404": {
+            "description": "No such case."
+          },
+          "409": {
+            "description": "The case is already deleted."
           },
           "422": {
             "description": "Validation Error",
@@ -438,6 +583,60 @@
           },
           "404": {
             "description": "No such case (or, for a `user`, not one they submitted)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/{case_id}/restore": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Restore a deleted case (platform admin only)",
+        "description": "Undoes `DELETE /cases/{case_id}`. Recorded only in the platform audit log (`case_restored`).",
+        "operationId": "restore_case_cases__case_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Platform admins only."
+          },
+          "404": {
+            "description": "No such case."
+          },
+          "409": {
+            "description": "The case is not deleted."
           },
           "422": {
             "description": "Validation Error",
@@ -2173,7 +2372,7 @@
           "settings"
         ],
         "summary": "Change a user's role, company or active flag",
-        "description": "Partial update of `role`, `company_id` and/or `is_active`. A platform admin cannot change their own role or deactivate themselves (this also guarantees a platform admin always remains). Changing a user's company or role invalidates their existing tokens (they must sign in again). There is no self-service signup and no password-reset endpoint. Platform admin only.",
+        "description": "Partial update of `role`, `company_id` and/or `is_active`. A platform admin cannot change their own role or deactivate themselves (this also guarantees a platform admin always remains). Any change ends every sign-in of the user (sessions and access tokens): they must sign in again. There is no self-service signup and no password-reset endpoint. Platform admin only.",
         "operationId": "update_user_settings_users__user_id__patch",
         "security": [
           {
@@ -2237,7 +2436,7 @@
           "settings"
         ],
         "summary": "Reset user password (platform admin only)",
-        "description": "Resets the password for any user account. The new password is stored hashed. Only platform admins have access to this action. Action is logged in the audit trail.",
+        "description": "Resets the password for any user account. The new password is stored hashed. Only platform admins have access to this action. Every sign-in of the account is ended (all its sessions and access tokens). Action is logged in the audit trail.",
         "operationId": "reset_user_password_settings_users__user_id__reset_password_post",
         "security": [
           {
@@ -4027,6 +4226,19 @@
             "title": "Can Act",
             "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Does not reflect status — a decided case is still `can_act` but every action is a 409."
           },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At",
+            "description": "Platform admins only: when the case was deleted. Company users never see a deleted case at all."
+          },
           "documents": {
             "items": {
               "$ref": "#/components/schemas/CaseDocumentSummary"
@@ -4297,6 +4509,19 @@
             "type": "boolean",
             "title": "Can Act",
             "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Does not reflect status — a decided case is still `can_act` but every action is a 409."
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At",
+            "description": "Platform admins only: when the case was deleted. Company users never see a deleted case at all."
           }
         },
         "type": "object",
@@ -4858,6 +5083,25 @@
         ],
         "title": "CurrentUserResponse"
       },
+      "DeleteCaseRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the case is deleted (platform audit log only)."
+          }
+        },
+        "type": "object",
+        "title": "DeleteCaseRequest"
+      },
       "DocumentCheckSummary": {
         "properties": {
           "id": {
@@ -5278,6 +5522,7 @@
           },
           "password": {
             "type": "string",
+            "maxLength": 1024,
             "title": "Password",
             "description": "Account password."
           }
@@ -6186,18 +6431,24 @@
           "access_token": {
             "type": "string",
             "title": "Access Token",
-            "description": "JWT. Send as `Authorization: Bearer <token>`."
+            "description": "Short-lived JWT. Send as `Authorization: Bearer <token>`. Keep it in memory only; the session is renewed with `POST /auth/refresh` (refresh token in an httpOnly cookie)."
           },
           "token_type": {
             "type": "string",
             "title": "Token Type",
             "description": "Always `bearer`.",
             "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "description": "Seconds until the access token expires."
           }
         },
         "type": "object",
         "required": [
-          "access_token"
+          "access_token",
+          "expires_in"
         ],
         "title": "TokenResponse"
       },

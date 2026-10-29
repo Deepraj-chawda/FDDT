@@ -1,4 +1,5 @@
-import { apiFetch } from "@/api/client"
+import { API_BASE_URL, ApiError, apiFetch } from "@/api/client"
+import { withSession } from "@/lib/session"
 import { withCompany } from "@/api/platform"
 import type { UserRole } from "@/types/auth"
 import type {
@@ -119,6 +120,23 @@ export function listAuditEvents(token: string, query: AuditQuery = {}) {
   params.set("limit", String(query.limit ?? 100))
   if (query.offset) params.set("offset", String(query.offset))
   return apiFetch<AuditPage>(`/audit-log?${params.toString()}`, { token })
+}
+
+/** Every event matching the filters (no row limit) as one CSV file, built
+ * and streamed by the server (GET /audit-log/export). */
+export function exportAuditLog(query: Omit<AuditQuery, "limit" | "offset">): Promise<Blob> {
+  const params = new URLSearchParams()
+  if (query.company_id) params.set("company_id", query.company_id)
+  if (query.event_type) params.set("event_type", query.event_type)
+  if (query.q?.trim()) params.set("q", query.q.trim())
+  return withSession(async (bearer) => {
+    const response = await fetch(`${API_BASE_URL}/audit-log/export?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${bearer}` },
+      credentials: "same-origin",
+    })
+    if (!response.ok) throw new ApiError(response.status, response.statusText || "Export failed")
+    return response.blob()
+  })
 }
 
 export const listAuditEventTypes = (token: string, companyId?: string | null) =>

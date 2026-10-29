@@ -58,7 +58,7 @@ hosted** (a design rule of the platform).
 | Layer | Technology | Used for |
 |---|---|---|
 | API | FastAPI 0.121, Pydantic 2, Uvicorn | REST endpoints, validation, OpenAPI |
-| Auth | PyJWT (HS256), bcrypt | Email/password login, 8 h bearer tokens carrying `role`, `company_id`, `is_platform_admin` |
+| Auth | PyJWT (HS256), bcrypt | Email/password login; 15-minute bearer tokens carrying `role`, `company_id`, `is_platform_admin`, `ver`; rotating httpOnly refresh-token cookie ([authentication.md](authentication.md)) |
 | Database | PostgreSQL 16, SQLAlchemy 2, Alembic, psycopg2 | Persistence, migrations (25), Row-Level Security per company |
 | Connection pooling | PgBouncer (transaction mode) | Multiplexes API + worker connections onto ≤ 60 server connections |
 | Queue | Celery 5.4 + Redis 7 | Three queues (extraction / vision / forensics), fair-share priorities, beat jobs |
@@ -230,6 +230,8 @@ What each capability area does today, and what is intentionally outside the curr
   comparison results (`GET …/signature-matches`), unlike the risk assessment, which is withheld.
 - **Uploads are validated before storage** (PDF only, within the company's size limit, not corrupted, not password-protected),
   so a malformed file never reaches Blob Storage, a worker or an Azure API.
-- Tokens are stored in `localStorage` and there is no server-side logout, refresh or password-reset
-  endpoint. `JWT_SECRET_KEY` defaults to `changeme-in-.env` — production must set it (see
-  [deployment/production-deployment.md](../deployment/production-deployment.md)).
+- Sessions: a 15-minute access token kept in memory plus a rotating refresh token in an httpOnly,
+  SameSite=Strict cookie, with reuse detection, sign-out, sign-out everywhere and instant revocation on
+  password or account changes — see [authentication.md](authentication.md). There is no self-service
+  password reset (a platform admin resets). Outside local/test the API refuses to start with a weak
+  `JWT_SECRET_KEY`.

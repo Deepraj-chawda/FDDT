@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.db import tenancy
 from app.db.session import SessionLocal
 from app.models.document import Document
-from app.models.document_check import DocumentCheck, DocumentCheckStatus, DocumentCheckType
+from app.models.document_check import DocumentCheckStatus, DocumentCheckType
 from app.models.signature_reference import SignatureReference
 from app.services.audit_service import record_event
 from app.services.check_store import save_check

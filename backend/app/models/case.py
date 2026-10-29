@@ -8,6 +8,11 @@ submitted -> under_automated_review -> pending_manual_review / auto_approved
 
 `assigned_tier` records which reviewer tier owns the case (see CaseTier).
 
+`deleted_at` / `deleted_by_user_id`: a platform admin's soft delete. A deleted
+case is invisible to every company session — app/db/tenancy.py filters it out
+of every query, joins included — so companies never see it existed. Its data
+and files are kept, and a platform admin can restore it.
+
 `external_ref_id` is a nullable placeholder column (see SPECIFICATION.md section 4
 note) for a possible future external case-management integration — it is
 not used by anything yet.
@@ -15,7 +20,9 @@ not used by anything yet.
 import enum
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String
+from datetime import datetime
+
+from sqlalchemy import DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -103,6 +110,10 @@ class Case(TenantScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Base):
         PG_UUID(as_uuid=True), ForeignKey("bulk_uploads.id"), nullable=True, index=True
     )
     reference_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
 
     submitted_by = relationship(
         "User", back_populates="submitted_cases", foreign_keys=[submitted_by_user_id]

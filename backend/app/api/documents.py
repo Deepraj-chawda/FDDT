@@ -95,7 +95,8 @@ async def upload_document(
     load_visible_case(db, case_id, current_user)
     # This company's limit, read fresh on every request (a platform admin's
     # change applies to the next upload, no new sign-in needed).
-    max_bytes = company_upload_limits(db, company_id).max_file_bytes
+    limits = company_upload_limits(db, company_id)
+    max_bytes = limits.max_file_bytes
     # End the read transaction: reading the body and uploading the blob can
     # take seconds, and no DB connection should be held meanwhile.
     db.commit()
@@ -110,7 +111,7 @@ async def upload_document(
             check_size(file.size if file.size is not None else len(content), max_bytes)
         # Parsing a 10 MB PDF is CPU work — keep it off the event loop.
         validated = await run_in_threadpool(
-            validate_upload, content, file.filename, max_bytes=max_bytes
+            validate_upload, content, file.filename, max_bytes=max_bytes, max_pages=limits.max_file_pages
         )
     except UploadRejected as rejection:
         raise HTTPException(status_code=rejection.status_code, detail=rejection.detail()) from None

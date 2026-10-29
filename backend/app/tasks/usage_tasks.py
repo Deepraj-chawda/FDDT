@@ -85,3 +85,16 @@ def log_queue_metrics() -> None:
                 "queue_alert %s",
                 json.dumps({**metrics, "alert": "oldest_waiting_exceeded", "threshold_seconds": threshold}, sort_keys=True),
             )
+
+
+@celery_app.task(name="purge_expired_refresh_tokens")
+def purge_expired_refresh_tokens() -> int:
+    """Daily: drop refresh-token rows whose sign-in ended over 30 days ago
+    (app/services/refresh_tokens.py). Recent ones stay for reuse detection."""
+    from app.services.refresh_tokens import purge_expired
+
+    with system_session() as db:
+        removed = purge_expired(db)
+        db.commit()
+    logger.info("refresh_tokens_purged count=%s", removed)
+    return removed
