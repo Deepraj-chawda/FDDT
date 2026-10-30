@@ -29,7 +29,7 @@ export const ROLE_OPTIONS: { value: UserRole; label: string; help: string }[] = 
   {
     value: "reviewer_l2",
     label: ROLE_LABELS.reviewer_l2,
-    help: "Everything a Reviewer L1 can, plus escalated cases and the company's Issuer Registry and Risk Rules",
+    help: "Approves and rejects any case, including escalated ones; manages the company's Issuer Registry and Risk Rules",
   },
   {
     value: "platform_admin",

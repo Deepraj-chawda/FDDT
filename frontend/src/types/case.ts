@@ -143,7 +143,8 @@ export interface CaseListItem {
   document_count: number
   flag: CaseFlag
   // Whether the current user may approve/reject/escalate given the tier
-  // (false for a Reviewer L1 on an L2 case — read-only). Server-computed.
+  // (false for a Reviewer L1 on an L2 case — read-only; a Reviewer L2 never
+  // escalates, whatever this says). Server-computed.
   can_act: boolean
   // Platform admins only: when a platform admin deleted the case. Company
   // users never receive a deleted case at all.

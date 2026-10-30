@@ -14,10 +14,11 @@ disabled buttons and confirmation step are conveniences, not the guard:
               something the system couldn't), but anything above "low"
               requires a written justification, which is stored.
   reject    - a reason is required.
-  escalate  - moves the case to the L2 tier (`assigned_tier` = "l2"); it never
-              changes `status`. One-directional: there is no de-escalation,
-              an L2 reviewer resolves it with approve/reject. A reason is
-              required.
+  escalate  - Reviewer L1 only (403 for a `reviewer_l2`, who has no tier to hand
+              a case up to and resolves it directly). Moves the case to the L2
+              tier (`assigned_tier` = "l2"); it never changes `status`.
+              One-directional: there is no de-escalation, an L2 reviewer
+              resolves it with approve/reject. A reason is required.
 
 Every action writes a `case_actions` row (the reviewer-facing history) and
 an `audit_log` row (via the workflow event subscriber) — the same table the
@@ -33,7 +34,7 @@ from app.api.auth import get_tenant_db, require_company_role
 from app.api.case_access import ensure_can_act, scoped_company_id
 from app.models.case import Case, CaseStatus, RiskTier
 from app.models.case_action import CaseAction
-from app.models.user import User, UserRole, role_label
+from app.models.user import User, UserRole, has_rank, role_label
 from app.schemas.case import (
     ApproveRequest,
     CaseActionSchema,
@@ -179,14 +180,14 @@ def reject_case(
     response_model=CaseDecisionResponse,
     summary="Escalate a case",
     description=(
-        "Company reviewers only (platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is "
+        "`reviewer_l1` only (`reviewer_l2` and platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is "
         "unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is "
         "no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. "
-        "Escalating an already-escalated or decided case is a 409."
+        "Escalating a decided case is a 409."
     ),
     responses={
         401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
-        403: {"description": "Requires a company reviewer role; a `reviewer_l1` also gets 403 on a case escalated to L2."},
+        403: {"description": "Requires the `reviewer_l1` role, on a case not yet escalated to L2."},
         404: {"description": "No such case in your company."},
         409: {"description": "Invalid state transition (e.g. already decided)."},
     },
@@ -198,6 +199,9 @@ def escalate_case(
     db: Session = Depends(get_tenant_db),
 ) -> CaseDecisionResponse:
     case = _get_case(db, case_id, actor)
+    # After the lookup, so another company's case is still a 404.
+    if has_rank(actor.role, UserRole.reviewer_l2):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "A Reviewer L2 resolves cases directly and cannot escalate them.")
     try:
         action = workflow_service.escalate_case(db, case, actor, reason=payload.reason)
     except InvalidCaseTransition as exc:

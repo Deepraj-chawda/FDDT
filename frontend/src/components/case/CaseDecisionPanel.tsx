@@ -3,8 +3,9 @@
  * escalate, plus the case's decision history.
  *
  * Who sees what:
- *  - Reviewer L1 / L2 / admin: the three actions — except a Reviewer L1 on a
- *    case escalated to L2 (`can_act` false), who gets a read-only view.
+ *  - Reviewer L1: the three actions — except on a case escalated to L2
+ *    (`can_act` false), which is a read-only view.
+ *  - Reviewer L2: approve and reject only; there is no higher tier to escalate to.
  *  - user (submitter): read-only history (their case's approve/reject notes
  *    — e.g. why it was rejected). The backend never sends them escalation
  *    notes, and 403s the action endpoints regardless of this UI.
@@ -222,6 +223,7 @@ export function CaseDecisionPanel({
   const { assessment, pipeline } = caseDetail
   // Company reviewers only — a platform admin's access is read-only.
   const isReviewer = hasRank(role, "reviewer_l1")
+  const canEscalate = !hasRank(role, "reviewer_l2")
   const decided = caseDetail.status === "approved" || caseDetail.status === "rejected" || caseDetail.status === "closed"
   const escalated = caseDetail.assigned_tier === "l2"
   const tier = assessment?.tier
@@ -346,7 +348,7 @@ export function CaseDecisionPanel({
             </div>
           )}
 
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          <div className={cn("mt-3 grid grid-cols-1 gap-2 lg:grid-cols-1", canEscalate ? "sm:grid-cols-3 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-2")}>
             <Button
               type="button"
               disabled={!canApprove || approve.isPending}
@@ -366,24 +368,27 @@ export function CaseDecisionPanel({
               <XCircleIcon className="size-4" />
               Reject
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={escalated}
-              onClick={() => openDialog("escalate")}
-              className="gap-1.5"
-              title={escalated ? "Already escalated to L2" : "Hand this case to a Reviewer L2"}
-            >
-              <FlameIcon className="size-4" />
-              {escalated ? "Escalated" : "Escalate"}
-            </Button>
+            {canEscalate && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openDialog("escalate")}
+                className="gap-1.5"
+                title="Hand this case to a Reviewer L2"
+              >
+                <FlameIcon className="size-4" />
+                Escalate
+              </Button>
+            )}
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
             {tier && tier !== "low"
               ? `This case is ${tier} risk — approving it requires a written justification.`
               : escalated
                 ? "Escalated to L2 — resolve it with Approve or Reject."
-                : "Escalating hands the case to a Reviewer L2; Reviewer L1s keep read-only access."}
+                : canEscalate
+                  ? "Escalating hands the case to a Reviewer L2; Reviewer L1s keep read-only access."
+                  : null}
           </p>
           {error && dialog === null && (
             <p role="alert" className="mt-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">

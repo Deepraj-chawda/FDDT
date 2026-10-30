@@ -187,13 +187,22 @@ def test_escalate_requires_a_reason(client, reviewer_headers, scored_case, body)
     assert client.post(f"/cases/{case.id}/escalate", json=body, headers=reviewer_headers).status_code == 422
 
 
-def test_escalate_twice_or_after_decision_is_rejected(client, reviewer_headers, l2_reviewer_headers, scored_case):
+def test_escalate_after_decision_is_rejected(client, reviewer_headers, scored_case):
     case = scored_case("low")
-    assert client.post(f"/cases/{case.id}/escalate", json=ESCALATE, headers=l2_reviewer_headers).status_code == 200
-    assert client.post(f"/cases/{case.id}/escalate", json=ESCALATE, headers=l2_reviewer_headers).status_code == 409
-    other = scored_case("low")
-    client.post(f"/cases/{other.id}/approve", json={}, headers=reviewer_headers)
-    assert client.post(f"/cases/{other.id}/escalate", json=ESCALATE, headers=reviewer_headers).status_code == 409
+    client.post(f"/cases/{case.id}/approve", json={}, headers=reviewer_headers)
+    assert client.post(f"/cases/{case.id}/escalate", json=ESCALATE, headers=reviewer_headers).status_code == 409
+
+
+def test_l2_cannot_escalate(client, reviewer_headers, l2_reviewer_headers, scored_case, db_session):
+    case, escalated = scored_case("low"), scored_case("low")
+    client.post(f"/cases/{escalated.id}/escalate", json=ESCALATE, headers=reviewer_headers)
+
+    assert client.post(f"/cases/{case.id}/escalate", json=ESCALATE, headers=l2_reviewer_headers).status_code == 403
+    assert client.post(f"/cases/{escalated.id}/escalate", json=ESCALATE, headers=l2_reviewer_headers).status_code == 403
+
+    body = client.get(f"/cases/{case.id}", headers=l2_reviewer_headers).json()
+    assert body["assigned_tier"] == "l1" and body["actions"] == []
+    assert _events(db_session, case.id, "case_escalated") == []
 
 
 def test_l1_loses_actions_but_keeps_read_access_on_an_escalated_case(client, reviewer_headers, scored_case):

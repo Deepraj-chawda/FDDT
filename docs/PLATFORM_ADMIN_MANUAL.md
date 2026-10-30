@@ -130,7 +130,7 @@ graph TD
    - **Permissions**: Full access to the company review queue, operational dashboard, risk scoring breakdown, automated check details, visual overlays, and decision actions (Approve, Reject, Escalate to L2). Can export forensic PDF audit reports.
 3. **`reviewer_l2` (Senior Reviewer / Company Supervisor)**:
    - **Belongs to**: A specific company (`company_id NOT NULL`).
-   - **Permissions**: All Reviewer L1 privileges, plus final decision authority on cases escalated to L2. Manages the company's **Issuer Registry** (trusted vendors) and **Risk Rules** (tuning weights and tier threshold boundaries).
+   - **Permissions**: All Reviewer L1 privileges except Escalate, plus final decision authority on cases escalated to L2. Manages the company's **Issuer Registry** (trusted vendors) and **Risk Rules** (tuning weights and tier threshold boundaries).
 4. **`platform_admin` (System Administrator)**:
    - **Belongs to**: Outside all companies (`company_id IS NULL`).
    - **Permissions**: System-wide governance, company provisioning, user management, password resets, queue monitoring, usage tracking, and system audit history.

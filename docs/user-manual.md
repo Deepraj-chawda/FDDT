@@ -20,7 +20,7 @@ what the tool does **not** do, so nobody relies on it for more than it promises.
 |---|---|
 | **User** (submitter) | Submit a case with supporting documents, track its status, see the reviewer's decision. Never sees the risk score, tier or triggered reasons — only a neutral "In review" flag — so the checks that catch fraud are never exposed to the person submitting the documents. |
 | **Reviewer L1** | Everything a user can do, plus: the full review queue and dashboard, every case's automated findings and risk score, approve / reject / escalate, audit history, and exporting the per-case forensic report. Once a case is escalated to L2, a Reviewer L1 can still open and read it but can no longer approve, reject or re-escalate it. |
-| **Reviewer L2** | Everything a Reviewer L1 can do, plus: approve or reject cases that have been escalated to L2, and manage **your company's** Issuer Registry and Risk Rules (Settings). |
+| **Reviewer L2** | Everything a Reviewer L1 can do except escalate, plus: approve or reject cases that have been escalated to L2, and manage **your company's** Issuer Registry and Risk Rules (Settings). |
 | **Platform Admin** | Belongs to no company. Creates companies and every user account, edits the default rule set new companies start from, sees billing & usage per company and the processing-queue monitor. Can **read** any company's cases, audit log and settings for support — every such view is recorded in a platform-only log — but can never approve, reject, escalate, upload, create cases or export reports. |
 
 Every rule above is enforced by the backend on every request, not just hidden in the interface — reaching
@@ -218,7 +218,8 @@ actions too. Platform admins can never act on a case.
   system couldn't, but that reasoning is recorded with the decision and shown in the audit history.
 - **Reject.** Always requires a reason. It's stored, shown in the audit trail, and visible to the
   submitter.
-- **Escalate.** Requires a reason. This hands the case to the **Reviewer L2** tier — it does **not**
+- **Escalate.** Reviewer L1 only; a Reviewer L2 has no higher tier to hand a case to and decides it
+  directly. Requires a reason. This hands the case to the **Reviewer L2** tier — it does **not**
   change the case's status. Escalation is one-way: there is no "send back to L1". A Reviewer L2 resolves
   the case with the ordinary Approve / Reject. From then on, Reviewer L1s see the case
   read-only.

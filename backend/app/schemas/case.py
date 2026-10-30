@@ -72,6 +72,7 @@ class CaseListItem(BaseModel):
     can_act: bool = Field(
         description="Whether the caller may approve/reject/escalate this case given its tier. "
         "False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). "
+        "Escalate is further limited to `reviewer_l1`, so a `reviewer_l2` can only approve or reject. "
         "Does not reflect status — a decided case is still `can_act` but every action is a 409."
     )
     deleted_at: datetime | None = Field(

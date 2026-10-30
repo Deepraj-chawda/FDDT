@@ -61,8 +61,8 @@ Workflow & Case Management, and Audit & Governance.
   tenant check are mandatory on every endpoint. Company roles, ranked:
   `user` (0: submits documents/claims, tracks own case status),
   `reviewer_l1` (1: reviews the company's queue, approves/rejects/escalates
-  in the L1 tier), `reviewer_l2` (2: everything L1 can, plus cases escalated
-  to L2, plus the company's own Settings › Issuer Registry and Risk Rules).
+  in the L1 tier), `reviewer_l2` (2: everything L1 can except escalate, plus cases
+  escalated to L2, plus the company's own Settings › Issuer Registry and Risk Rules).
   Permission checks gate on a minimum rank (`require_company_role` /
   `has_rank`, `hasRank` in the frontend), never on lists of role names.
   `platform_admin` belongs to NO company and is not on the rank ladder:
@@ -222,7 +222,8 @@ Upload → Blob Storage (original, hashed) + Postgres record
   submitted → pending_manual_review → approved / rejected. The enum also
   defines under_automated_review, auto_approved, escalated,
   under_investigation and closed for future use; nothing enters them today.
-- **Escalation:** sets `cases.assigned_tier` from `l1` to `l2` (reason
+- **Escalation:** a `reviewer_l1` action (a `reviewer_l2` gets 403) that
+  sets `cases.assigned_tier` from `l1` to `l2` (reason
   required; within the case's company). One-directional — there is no de-escalation; an L2 reviewer
   resolves it with the ordinary approve/reject. On an L2 case a
   `reviewer_l1` keeps read access (every GET) but every action endpoint

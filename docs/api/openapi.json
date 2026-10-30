@@ -1086,7 +1086,7 @@
           "case-actions"
         ],
         "summary": "Escalate a case",
-        "description": "Company reviewers only (platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. Escalating an already-escalated or decided case is a 409.",
+        "description": "`reviewer_l1` only (`reviewer_l2` and platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. Escalating a decided case is a 409.",
         "operationId": "escalate_case_cases__case_id__escalate_post",
         "security": [
           {
@@ -1130,7 +1130,7 @@
             "description": "Missing, invalid or expired bearer token, or the user is inactive."
           },
           "403": {
-            "description": "Requires a company reviewer role; a `reviewer_l1` also gets 403 on a case escalated to L2."
+            "description": "Requires the `reviewer_l1` role, on a case not yet escalated to L2."
           },
           "404": {
             "description": "No such case in your company."
@@ -4645,7 +4645,7 @@
           "can_act": {
             "type": "boolean",
             "title": "Can Act",
-            "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Does not reflect status — a decided case is still `can_act` but every action is a 409."
+            "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Escalate is further limited to `reviewer_l1`, so a `reviewer_l2` can only approve or reject. Does not reflect status — a decided case is still `can_act` but every action is a 409."
           },
           "deleted_at": {
             "anyOf": [
@@ -4929,7 +4929,7 @@
           "can_act": {
             "type": "boolean",
             "title": "Can Act",
-            "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Does not reflect status — a decided case is still `can_act` but every action is a 409."
+            "description": "Whether the caller may approve/reject/escalate this case given its tier. False for submitters, and for a `reviewer_l1` on an L2-assigned case (read-only). Escalate is further limited to `reviewer_l1`, so a `reviewer_l2` can only approve or reject. Does not reflect status — a decided case is still `can_act` but every action is a 409."
           },
           "deleted_at": {
             "anyOf": [

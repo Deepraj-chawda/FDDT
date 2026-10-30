@@ -9,7 +9,7 @@ company's data; the platform operator's own team (platform admins) sits outside 
 |---|---|---|
 | `user` | exactly one | submit cases/documents, track own cases |
 | `reviewer_l1` | exactly one | review the company's queue; approve / reject / escalate (L1 tier) |
-| `reviewer_l2` | exactly one | everything L1 can, plus escalated (L2) cases, plus the company's own **Settings › Issuer Registry** and **Settings › Risk Rules** |
+| `reviewer_l2` | exactly one | everything L1 can except escalate, plus escalated (L2) cases, plus the company's own **Settings › Issuer Registry** and **Settings › Risk Rules** |
 | `platform_admin` | **none** | create companies; create every user and assign company + role; edit the **platform risk-rule template** new companies start from; billing & usage dashboard; processing-queue monitor; soft-delete / restore any company's case (the company never sees a deleted case, nor that it existed); **read-only, audited** support access to any company's cases, audit log and settings (and may edit a company's issuer registry/risk rules on its behalf, also audited) |
 
 - Company roles are ranked (`has_rank` / `hasRank`); `platform_admin` is deliberately *not* on that ladder,

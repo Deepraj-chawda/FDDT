@@ -52,7 +52,7 @@ Within your company, three distinct user roles exist to enforce separation of du
 | :--- | :--- | :--- |
 | **User** *(Submitter)* | Document Intake & Tracking | • **New Case**: Submit individual cases with PDF files and optional signature references.<br>• **Bulk Upload**: Upload a zip file containing multiple case folders.<br>• **My Cases**: Track status (*Under review*, *Cleared*, *Action required*) of own submissions.<br>• **Case Detail (Submitter View)**: View uploaded documents and extracted fields without risk scoring details. |
 | **Reviewer L1** *(Analyst)* | Initial Verification & Risk Triage | • *All User capabilities*, plus:<br>• **Dashboard**: High-level case volume and risk distribution metrics.<br>• **Review Queue**: Filter cases by risk tier, document category, and status.<br>• **Full Case Detail**: View risk scores (0–100), triggered fraud reasons, and automated forensic checks.<br>• **Visual Overlay Viewer**: Inspect bounding box anomalies directly on document pages.<br>• **Decision Actions**: Approve, Reject, or Escalate cases.<br>• **Export Report**: Download full forensic audit reports. |
-| **Reviewer L2** *(Senior Reviewer)* | Final Adjudication & Company Governance | • *All Reviewer L1 capabilities*, plus:<br>• **Escalated Cases Resolution**: Final approve/reject authority on complex cases escalated by L1 analysts.<br>• **Issuer Registry**: Add, edit, verify, or deactivate trusted vendors and issuers for your company.<br>• **Company Risk Rules**: Customize fraud rule weights and adjust Low/Medium/High risk tier score thresholds. |
+| **Reviewer L2** *(Senior Reviewer)* | Final Adjudication & Company Governance | • *All Reviewer L1 capabilities except Escalate*, plus:<br>• **Escalated Cases Resolution**: Final approve/reject authority on complex cases escalated by L1 analysts.<br>• **Issuer Registry**: Add, edit, verify, or deactivate trusted vendors and issuers for your company.<br>• **Company Risk Rules**: Customize fraud rule weights and adjust Low/Medium/High risk tier score thresholds. |
 
 ---
 
@@ -248,7 +248,7 @@ In the top-right header of the Case Detail screen, three decision actions are av
 2. **Reject**:
    - Use when fraudulent alteration or non-compliance is identified.
    - Select a mandatory **Rejection Reason** category and provide notes detailing the decision.
-3. **Escalate**:
+3. **Escalate** (Reviewer L1 only):
    - Use when a case is complex, high-value, or requires supervisor adjudication.
    - Adds an escalation note and routes the case directly to the **Reviewer L2** queue.
 
@@ -263,7 +263,7 @@ Click **Export report** at any time on the Case Detail page to generate an offic
 
 ## 6. Reviewer L2 (Senior Reviewer / Supervisor) Guide
 
-Reviewer L2 users have all analyst privileges plus senior decision authority and configuration control over their company's risk parameters.
+Reviewer L2 users have all analyst privileges except Escalate (they decide cases directly, with **Approve** or **Reject**) plus senior decision authority and configuration control over their company's risk parameters.
 
 ### Managing Escalated Cases
 

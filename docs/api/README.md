@@ -109,7 +109,7 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 |---|---|---|
 | `POST /cases/{case_id}/approve` | Approve a case (justification required above low risk) | reviewer; L2 case: `reviewer_l2` |
 | `POST /cases/{case_id}/reject` | Reject a case (reason required) | reviewer; L2 case: `reviewer_l2` |
-| `POST /cases/{case_id}/escalate` | Escalate a case to the L2 tier (reason required; one-way; 409 if already L2) | reviewer on an L1 case |
+| `POST /cases/{case_id}/escalate` | Escalate a case to the L2 tier (reason required; one-way) | `reviewer_l1` on an L1 case |
 
 ### Documents — tag `documents`
 | Method & path | Summary | Access |
