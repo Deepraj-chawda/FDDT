@@ -33,7 +33,6 @@ current build, and those outside its scope, are collected in the table in
 | Understand the production design on Azure (architecture, service tiers, costs) | [deployment/production-deployment.md](deployment/production-deployment.md) |
 | See the remaining pre-production gaps | [deployment/azure-migration-notes.md](deployment/azure-migration-notes.md) |
 | See how the Azure demo is deployed | [deployment/azure-demo-deployment.md](deployment/azure-demo-deployment.md) |
-| Read what changed in the multi-tenancy / queues work, and why | [MULTI_TENANCY_CHANGE_REPORT.md](MULTI_TENANCY_CHANGE_REPORT.md) |
 
 ## Contents
 
@@ -88,10 +87,6 @@ limitations and the risk rules it feeds.
   checklist
 - [Azure migration notes](deployment/azure-migration-notes.md) — what is Azure-ready and the remaining gaps
 - [Azure demo deployment](deployment/azure-demo-deployment.md) — the low-cost demo topology and operating notes
-
-### Change records
-- [MULTI_TENANCY_CHANGE_REPORT.md](MULTI_TENANCY_CHANGE_REPORT.md) — every change, decision and problem in
-  the multi-tenancy, processing-queue and follow-up work
 
 ## Ground rules the design follows
 
