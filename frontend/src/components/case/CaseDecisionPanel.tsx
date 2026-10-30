@@ -9,6 +9,7 @@
  *  - user (submitter): read-only history (their case's approve/reject notes
  *    — e.g. why it was rejected). The backend never sends them escalation
  *    notes, and 403s the action endpoints regardless of this UI.
+ *  - platform admin: the same read-only card, worded for support access.
  *
  * Every rule is enforced server-side (backend/app/api/case_actions.py); the
  * disabled states and dialogs here just make it obvious to the reviewer:
@@ -280,7 +281,9 @@ export function CaseDecisionPanel({
             ? "This case has been approved."
             : caseDetail.status === "rejected"
               ? "This case was rejected. The reviewer's reason is below."
-              : "Your case is with the review team. You'll see the decision here."}
+              : role === "platform_admin"
+                ? "This case is awaiting a decision from the company's reviewers. Platform admin access is read-only."
+                : "Your case is with the review team. You'll see the decision here."}
         </p>
         <DecisionHistory actions={caseDetail.actions} />
       </div>
