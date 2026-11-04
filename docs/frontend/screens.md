@@ -126,7 +126,9 @@ through child components, the decision endpoints and report endpoints.
 - *Right:* score/tier and the explainable findings (`SeverityFinding` per triggered reason, from
   `assessment.triggered_reasons`: its short `title` and `short` line, the stored reason behind **Why?**), `CaseDecisionPanel`, and `CaseReportExport` (reviewers only).
 - *Bottom:* `ActivityTimeline` (the case's audit trail, newest first).
-**Roles:** everyone can open a case they may see (a foreign case is a 404 → "Case not found"). A `user`
+**Roles:** everyone can open a case they may see (a foreign case is a 404 → "Case not found"; a 422 — the
+id in the URL isn't a valid case id — shows the same). Any other failure (a 500, a network error) shows
+"Couldn't load this case" with the error code and a **Retry** button, since retrying may succeed. A `user`
 receives no assessment, no tier and only approve/reject actions; decision and report controls are
 reviewer only. A platform admin gets an amber **"Support view — read-only"** banner and no decision or
 report controls. The header shows an "Escalated · L2" badge on an L2 case; when the API returns
