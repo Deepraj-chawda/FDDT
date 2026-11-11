@@ -50,6 +50,17 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        # Never spool a response to a temp file. A case detail is often ~0.7 MB; once
+        # it outgrew the in-memory buffers (~64 KB) nginx tried /var/cache/nginx/proxy_temp,
+        # that failed in the container, and the response was cut off mid-body (browser:
+        # ERR_HTTP2_PROTOCOL_ERROR 200). With this nginx streams the rest straight through.
+        proxy_max_temp_file_size 0;
+        # JSON compresses ~10x; less to send and less time for the stream to break.
+        gzip on;
+        gzip_proxied any;
+        gzip_types application/json;
+        gzip_min_length 1024;
+        gzip_vary on;
     }
 
     # nginx's default mime.types has no .mjs entry; browsers refuse to run module scripts
