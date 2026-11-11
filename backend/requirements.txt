@@ -27,6 +27,9 @@ openai==1.109.1
 
 # --- Async task queue (Redis broker) ---
 celery==5.4.0
+# kombu is Celery's Redis transport. Pinned: left to float, a rebuild picked up a kombu
+# that requires redis-py >= 6.1 and every worker died at startup (VersionMismatch).
+kombu==5.4.2
 redis==5.2.1
 
 # --- Issuer registry fuzzy matching ---
