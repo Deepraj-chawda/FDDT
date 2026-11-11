@@ -57,17 +57,22 @@ layout first. Ask before guessing: a wrong name fails the run, it does not damag
 
 ### 0.2 Note which database version production is on
 
-The migration job can print it without changing anything (`alembic current` only reads):
+Read it from the logs of the last migration run; nothing needs to run. (Don't override the job's command with
+`az containerapp job start --command`: the CLI then demands `--image` and starts the container without the
+job's environment variables, so it can't reach the database.)
+
+Open **portal › fddt-migrate › Execution history** → the newest *Succeeded* execution → **Console logs**. Find
+the last line like `Running upgrade f3b7d1e8a4c5 -> a2d6f9c3e7b4, …`: the id after `->` is the version. If
+the portal shows nothing, query Log Analytics:
 
 ```bash
-az containerapp job start -g $RG -n fddt-migrate --container-name migrate \
-  --command "sh" --args "-c" "alembic current"
+LAW=$(az monitor log-analytics workspace list -g $RG --query "[0].customerId" -o tsv)
+az monitor log-analytics query -w $LAW --timespan P90D --analytics-query \
+  "ContainerAppConsoleLogs_CL | where ContainerJobName_s == 'fddt-migrate' and Log_s has 'Running upgrade' | project TimeGenerated, Log_s | order by TimeGenerated desc | take 5" -o table
 ```
 
-Wait 1–2 minutes, then open **portal › fddt-migrate › Execution history** → the newest execution →
-**Console logs** (logs arrive 2–5 minutes late). The last line is a revision id, e.g. `a2d6f9c3e7b4 (head)`.
 **Write it down.** The first pipeline release migrates from there to the newest version (step 7 lists what
-changes). If the log shows an error instead, fix that first (runbook step 13 lists the usual errors).
+changes). This step is informational: if the logs have expired, skip it; the release works from any version.
 
 ### 0.3 Take a backup you can name
 
@@ -75,8 +80,8 @@ Azure PostgreSQL already keeps automatic backups (point-in-time restore, 7+ days
 backup now, so there is a named restore point from before the first pipeline run:
 
 ```bash
-az postgres flexible-server backup create -g $RG -n $PG --backup-name before-first-cicd
-az postgres flexible-server backup list -g $RG -n $PG -o table      # the new backup is listed
+az postgres flexible-server backup create -g $RG -s $PG -n before-first-cicd   # -s server, -n backup name
+az postgres flexible-server backup list -g $RG -s $PG -o table                 # the new backup is listed
 ```
 
 If your CLI says the command does not exist, update it (`az upgrade`) or skip it: the automatic backups and

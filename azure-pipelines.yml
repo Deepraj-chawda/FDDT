@@ -2,8 +2,8 @@
 #
 #   CI      every push and pull request: frontend lint + type-check + build, backend pytest
 #           (including the PostgreSQL RLS suite and the Redis rate-limiter tests).
-#   Build   main only: `az acr build` both images, tagged with the short commit SHA.
-#   Deploy  main only, after the approval on the `fddt-production` environment:
+#   Build   master only: `az acr build` both images, tagged with the short commit SHA.
+#   Deploy  master only, after the approval on the `fddt-production` environment:
 #           migration job -> API -> workers + beat -> web -> smoke test.
 #           Same order as "Release" in docs/deployment/azure-production-runbook.md.
 #
@@ -12,12 +12,12 @@
 
 trigger:
   branches:
-    include: [main]
+    include: [master]
   paths:
     exclude: [docs/**, docs-pdf/**, '*.md']
 
 # Pull requests: Azure Repos ignores a `pr:` block. PR builds come from the Build validation branch policy
-# on main (docs/deployment/azure-devops-cicd.md, step 6).
+# on master (docs/deployment/azure-devops-cicd.md, step 6).
 
 variables:
   # Name of the Azure Resource Manager service connection. It must be a literal here (not in the variable
@@ -96,7 +96,7 @@ stages:
   - stage: Build
     displayName: Build images
     dependsOn: CI
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     variables:
       - group: fddt-production        # RG, ACR, APP_HOST
     jobs:
@@ -120,7 +120,7 @@ stages:
   - stage: Deploy
     displayName: Deploy to production
     dependsOn: Build
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     variables:
       - group: fddt-production
     jobs:
