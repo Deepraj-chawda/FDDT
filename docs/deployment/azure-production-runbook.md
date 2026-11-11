@@ -1504,6 +1504,8 @@ echo "https://$WEB_FQDN"
 | `API_UPSTREAM` | `http://fddt-api` | nginx strips `/api` and forwards to the API; `Host` = `fddt-api` (Container Apps routes by host) |
 | `UPLOAD_BODY_LIMIT` | `11m` | Single uploads. Must be ≥ the **largest per-company file limit** + ~1 MB multipart overhead |
 | `BULK_UPLOAD_BODY_LIMIT` | `301m` | Bulk zip uploads (streamed, unbuffered). Must be ≥ the largest per-company zip limit |
+| `proxy_set_header Connection ""` | on both `/api` locations | **Required.** nginx otherwise sends `Connection: close` upstream, and the Container Apps ingress in front of `fddt-api` then truncates large responses (a case detail cut at ~64 KB: browser `ERR_HTTP2_PROTOCOL_ERROR 200`, "Couldn't load this case") |
+| `gzip` | `application/json` on `/api/` | A 350 KB case detail goes out as ~67 KB |
 | Proxy timeouts | 300 s | The Container Apps ingress itself caps a request at **240 s**. A 300 MB zip therefore needs ≥ ~10 Mbit/s of client upload bandwidth |
 | `.mjs` MIME type | `application/javascript` | Needed for the pdf.js worker |
 

@@ -32,6 +32,7 @@ server {
         proxy_request_buffering off;
         proxy_pass ${API_UPSTREAM}/bulk-uploads;
         proxy_http_version 1.1;
+        proxy_set_header Connection "";   # see /api/ below
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -44,18 +45,19 @@ server {
     location /api/ {
         proxy_pass ${API_UPSTREAM}/;
         proxy_http_version 1.1;
+        # Do not send "Connection: close" (nginx's default) upstream. The Container Apps
+        # ingress in front of fddt-api truncates large responses to a request carrying it:
+        # a ~350 KB case detail arrived cut at 65-230 KB, the browser showed
+        # ERR_HTTP2_PROTOCOL_ERROR 200 and "Couldn't load this case". Same request without
+        # the header: complete. An empty value removes the header (HTTP/1.1 keep-alive).
+        proxy_set_header Connection "";
         # Route by the upstream app name: Container Apps ingress is host-based.
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
-        # Never spool a response to a temp file. A case detail is often ~0.7 MB; once
-        # it outgrew the in-memory buffers (~64 KB) nginx tried /var/cache/nginx/proxy_temp,
-        # that failed in the container, and the response was cut off mid-body (browser:
-        # ERR_HTTP2_PROTOCOL_ERROR 200). With this nginx streams the rest straight through.
-        proxy_max_temp_file_size 0;
-        # JSON compresses ~10x; less to send and less time for the stream to break.
+        # JSON compresses ~10x (a 515 KB case detail goes out as ~36 KB).
         gzip on;
         gzip_proxied any;
         gzip_types application/json;
