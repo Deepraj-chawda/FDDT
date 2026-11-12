@@ -476,7 +476,7 @@ _SUB_CHECK_SHORT: dict[str, list[tuple[re.Pattern, Any]]] = {
         lambda m: f"dated {_date(m[1])}, but the file was created {_date(m[2])} — {m[3]} days earlier",
     )],
     "amount_in_words_consistency": [(
-        re.compile(r"is (\d[\d,]*(?:\.\d+)?) \(read from the words\), but the (.+?) in figures is (\d[\d,]*(?:\.\d+)?)"),
+        re.compile(r"is (\d[\d,]*(?:\.\d+)?) \((?:read from the words|as read by the extraction model)\), but the (.+?) in figures is (\d[\d,]*(?:\.\d+)?)"),
         lambda m: f"words say {m[1]}, the {m[2]} in figures is {m[3]}",
     )],
     "subtotal_line_item_consistency": [(
@@ -510,14 +510,21 @@ _SUB_CHECK_SHORT: dict[str, list[tuple[re.Pattern, Any]]] = {
 }
 
 
+# Sub-checks whose reason lists one sentence per mismatch (several amounts in
+# words, each against its own figure): every match is condensed, not just the first.
+_SUB_CHECK_ALL_MATCHES = {"amount_in_words_consistency"}
+
+
 def sub_check_item(name: str, sub: dict) -> Item:
     title = _SUB_CHECKS.get(name, (_humanize(name), ""))[0]
     reason = _clean(sub.get("reason"))
     text = None
     for pattern, short in _SUB_CHECK_SHORT.get(name, []):
-        match = pattern.search(str(sub.get("reason") or ""))
-        if match:
-            text = _clean(short(match))
+        matches = list(pattern.finditer(str(sub.get("reason") or "")))
+        if matches:
+            if name not in _SUB_CHECK_ALL_MATCHES:
+                matches = matches[:1]
+            text = "; ".join(_clean(short(match)) for match in matches)
             break
     return _item("medium", title, text or first_sentence(reason, 170), detail=reason,
                  findings=[{"finding": name}], page=None)

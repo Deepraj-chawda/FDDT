@@ -29,7 +29,7 @@ independent sub-checks; the overall result is `flag` if **any** sub-check is `fl
 | `per_invoice_checks` | an invoice of a multi-invoice file fails its own line-item / subtotal / total-and-tax / tax-rate check. A kind of problem the document's own sub-check already flags is listed but not flagged again | one invoice in the file |
 | `total_tax_consistency` | `amount` ≠ `subtotal + tax_amount` (or ≠ `subtotal` when no tax line is shown) | no subtotal |
 | `tax_rate_consistency` | `tax_amount` ≠ taxable base × `tax_rate` (base = subtotal, or total less tax) | no rate or no tax amount |
-| `amount_in_words_consistency` | the amount written in words ≠ the total (or the subtotal) in figures | no amount in words, or it can't be read |
+| `amount_in_words_consistency` | an amount written in words ≠ the figure printed for it — the one in its own row or box, paired from the page layout (`services/amount_words_layout.py`: table rows, inline "AED 20,500 (Twenty Thousand ...)", or the figure in the words' row band with its label). A quotation spelling out its total, VAT and grand total is checked row by row, one sentence per wrong row. Words with no paired figure are compared with the core field their label names (VAT words → `tax_amount`; total words → `amount`, else `subtotal`) | no amount in words, it can't be read, or nothing to compare it with |
 | `reference_number_format` | the reference number is not a plausible identifier (regex `^[A-Za-z0-9](?:[A-Za-z0-9\-/_. #]*[A-Za-z0-9])?$`) | — |
 | `stamp_issuer_consistency` | the text read on the document's stamp does not name the issuer (rapidfuzz `token_set_ratio` < 80, per writing system, with addresses, P.O. boxes, branch numbers, legal forms and UAE place names left out, abbreviations expanded — MBZ = Mohamed Bin Zayed, MBR = Mohammed Bin Rashid, Intl = International, Pvt = Private — and generic words dropped: School, Campus, LLC, Branch, Private) | detection not finished; no stamp text read; no issuer; stamp and issuer share no script |
 | `document_date_vs_file_creation` | the printed `date` is more than 1 day after the PDF's own CreationDate **and** the file was modified on or after that date (an older file edited and re-dated). A file created before its date and never modified since — generated in advance — passes | no date; no CreationDate in `pdf_info` (documents extracted before it was recorded); a CreationDate at or before 2000-01-01 (unset clock) |
@@ -37,8 +37,9 @@ independent sub-checks; the overall result is `flag` if **any** sub-check is `fl
 ### Calculation checks
 
 Extraction returns structured `line_items` (description, quantity, unit price, discount, line total,
-and whether the line counts toward the total) and `amount_in_words` (the words and the number they
-spell), stored in `documents.extracted_fields`. The model is told to copy every number **exactly as
+and whether the line counts toward the total) and `amounts_in_words` (one entry per phrase written
+in words: its label, the words, the number they spell and the figure printed for them — re-paired
+from the OCR layout afterwards), stored in `documents.extracted_fields`. The model is told to copy every number **exactly as
 printed and never recompute** one: the discrepancies are the point. On a real scanned invoice it
 returned `3 × 6,000 = 16,600` as printed, and all three errors on that page were flagged.
 

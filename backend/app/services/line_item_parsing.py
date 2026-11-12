@@ -40,7 +40,9 @@ exactly as the model extracted it. Each line item records its `source`
 ("table", "text_pattern" or "llm") and `status` ("paid", "due" or None), and
 is stored with the rest of `documents.extracted_fields`.
 
-`enrich_extracted_fields` also labels form-template dates and removes
+`enrich_extracted_fields` also pairs each amount written in words with the
+figure printed for it (app/services/amount_words_layout.py, stored as
+`amounts_in_words`), labels form-template dates and removes
 signature ink read as words from person names
 (app/services/extraction_postprocess.py), and records `pdf_info` (Producer, Creator, Title,
 CreationDate and ModDate of the PDF), used by the rescan and document-date
@@ -52,6 +54,8 @@ import copy
 import io
 import re
 from typing import Any
+
+from app.services.amount_words_layout import merge_amounts_in_words, parse_amounts_in_words
 
 _NUMBER = r"\d{1,3}(?:,\s?\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
 _RATE_QTY_RE = re.compile(
@@ -567,6 +571,19 @@ def enrich_extracted_fields(
             item["status"] = status
             if status == "paid":
                 item["counts_toward_total"] = False
+    # Each amount in words paired with the figure printed for it, from the
+    # layout (app/services/amount_words_layout.py); the model's entries fill
+    # in whatever the layout did not find.
+    llm_words = fields.get("amounts_in_words")
+    if not isinstance(llm_words, list):
+        legacy = fields.get("amount_in_words")
+        llm_words = [legacy] if isinstance(legacy, dict) and legacy.get("text") else []
+    try:
+        layout_words = parse_amounts_in_words(ocr_text, ocr_tables, ocr_pages)
+    except Exception:  # noqa: BLE001 - the model's own entries still get checked
+        layout_words = []
+    fields["amounts_in_words"] = merge_amounts_in_words(llm_words, layout_words)
+    fields.pop("amount_in_words", None)
     label_form_template_dates(fields, ocr_text)
     strip_signature_text(fields, ocr_pages, signature_regions)
     info = pdf_info(pdf_bytes)

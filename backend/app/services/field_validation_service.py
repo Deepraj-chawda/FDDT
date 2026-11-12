@@ -47,10 +47,16 @@ returned `details` dict:
     Net / VAT / Total), each column is summed on its own and compared with
     its own total row — Net with "Total Net Price", VAT with "VAT", Total
     with "Total Price" — never one row's Net with another's Total.
-  - amount_in_words_consistency: the amount written out in words equals
-    the total (or the subtotal). English words are read here
-    (app/services/amount_words.py), not taken from the extraction model,
-    which tends to "correct" words that contradict the figures.
+  - amount_in_words_consistency: each amount written out in words equals
+    the figure printed FOR it — the one in its own row or box, paired from
+    the page layout (app/services/amount_words_layout.py) — so a quotation
+    that spells out its total, VAT and grand total is checked row by row,
+    never the VAT words against the grand total. Words with no paired
+    figure are compared with the core field their label names (VAT words
+    with the tax amount; total words with the total or subtotal). English
+    words are read here (app/services/amount_words.py), not taken from the
+    extraction model, which tends to "correct" words that contradict the
+    figures.
   - reference_number_format: the `reference_number` core field looks
     like a plausible reference/invoice number (contains a digit, no
     stray/garbled characters) rather than obviously-malformed
@@ -116,8 +122,8 @@ from typing import Any
 
 from rapidfuzz import fuzz
 
-from app.services.amount_words import parse_english_amount
-from app.services.field_regions import format_field_value, make_located_region, make_region
+from app.services.amount_words import amount_kind, parse_english_amount
+from app.services.field_regions import format_field_value, make_located_region, make_region, valid_box
 from app.services.payment_identifiers import normalize as normalize_identifier
 from app.services.payment_identifiers import validate_iban, validate_uae_trn
 
@@ -665,47 +671,134 @@ def _check_tax_rate_consistency(
     )
 
 
+def amount_word_pairs(extracted_fields: dict[str, Any]) -> list[dict[str, Any]]:
+    """The document's amounts in words — `amounts_in_words` (each with the
+    figure printed for it, app/services/amount_words_layout.py), or the
+    single `amount_in_words` of documents extracted before that existed."""
+    pairs = extracted_fields.get("amounts_in_words")
+    if isinstance(pairs, list):
+        return [p for p in pairs if isinstance(p, dict) and (p.get("text") or "").strip()]
+    legacy = extracted_fields.get("amount_in_words")
+    return [legacy] if isinstance(legacy, dict) and (legacy.get("text") or "").strip() else []
+
+
+# Which core fields an amount in words may state when the layout gave it no
+# figure of its own, by what its label names (app/services/amount_words.py's
+# amount_kind); first match wins the comparison, first candidate the report.
+_WORDS_KIND_FIELDS: dict[str | None, tuple[str, ...]] = {
+    "grand_total": ("amount",),
+    "tax": ("tax_amount",),
+    "subtotal": ("subtotal", "amount"),
+    "total": ("amount", "subtotal"),
+    None: ("amount", "subtotal"),
+}
+_WORDS_KIND_NAMES = {"grand_total": "grand total", "tax": "VAT", "subtotal": "subtotal", "total": "total"}
+_CORE_FIELD_NAMES = {"amount": "total", "subtotal": "subtotal", "tax_amount": "VAT"}
+
+
 def _check_amount_in_words_consistency(
-    core_fields: dict[str, Any], amount_in_words: dict[str, Any] | None
+    core_fields: dict[str, Any], pairs: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    words = amount_in_words or {}
-    text = (words.get("text") or "").strip()
-    if not text:
+    """Each amount written in words against the figure printed FOR it — the
+    one in its own row or box — never against some other total on the page.
+    Words with no paired figure are compared with the core field their label
+    names (VAT words with the tax amount, total words with the total)."""
+    if not pairs:
         return {"status": "skipped", "reason": "No amount written in words."}
-    value, read_by = parse_english_amount(text), "read from the words"
-    if value is None:
-        value, read_by = _num(words.get("value")), "as read by the extraction model"
-    if value is None:
-        return {"status": "skipped", "reason": f"Could not read the amount in words ({text!r})."}
 
-    candidates = [
-        (name, label, _num((core_fields.get(name) or {}).get("value")))
-        for name, label in (("amount", "total"), ("subtotal", "subtotal"))
-    ]
-    candidates = [(name, label, v) for name, label, v in candidates if v is not None]
-    if not candidates:
-        return {"status": "skipped", "reason": "No total to compare the amount in words against."}
-
-    def agrees(figure: float) -> bool:
+    def agrees(value: float, figure: float) -> bool:
         # Words often leave out the fils/cents ("... Five Hundred Only").
         return abs(value - figure) <= _rounding_allowance() or (value.is_integer() and int(figure) == value)
 
-    for _, label, figure in candidates:
-        if agrees(figure):
-            return {"status": "pass", "reason": f"The amount in words ({_money(value)}) matches the {label}."}
-    _, label, figure = candidates[0]
-    return _flag(
-        f"The amount in words, {text!r}, is {_money(value)} ({read_by}), but the {label} in figures is "
-        f"{_money(figure)}.",
-        make_region(
-            core_fields, candidates[0][0],
-            f"Field exception: {label.capitalize()} ({_money(figure)} vs {_money(value)} in words)",
-        ),
-        make_located_region(
-            words, "amount_in_words", "Amount in words", text,
-            f"Field exception: Amount in words ({_money(value)} vs {label} {_money(figure)})",
-        ),
-    )
+    many = len(pairs) > 1
+    checked: list[str] = []
+    mismatches: list[str] = []
+    regions: list[dict[str, Any] | None] = []
+    unreadable: list[str] = []
+    uncompared: list[str] = []
+    for index, pair in enumerate(pairs, 1):
+        text = str(pair.get("text")).strip()
+        value, read_by = parse_english_amount(text), "read from the words"
+        if value is None:
+            value, read_by = _num(pair.get("value")), "as read by the extraction model"
+        if value is None:
+            unreadable.append(text)
+            continue
+        kind = amount_kind(pair.get("label")) or amount_kind(pair.get("figure_label"))
+        what = _WORDS_KIND_NAMES.get(kind, "amount")
+        words_field = f"amount_in_words_{index}" if many else "amount_in_words"
+        figure = _num(pair.get("figure"))
+        if figure is not None:
+            # The figure the page prints for these words.
+            if agrees(value, figure):
+                checked.append(f"{what} {_money(value)}")
+                continue
+            mismatches.append(
+                f"The {what} in words, {text!r}, is {_money(value)} ({read_by}), but the {what} in figures is "
+                f"{_money(figure)}."
+            )
+            regions.append(
+                _figure_region(core_fields, pair, kind, figure, f"Field exception: {what.capitalize()} ({_money(figure)} vs {_money(value)} in words)", words_field)
+            )
+        else:
+            candidates = [
+                (name, _CORE_FIELD_NAMES[name], _num((core_fields.get(name) or {}).get("value")))
+                for name in _WORDS_KIND_FIELDS.get(kind, _WORDS_KIND_FIELDS[None])
+            ]
+            candidates = [(name, label, v) for name, label, v in candidates if v is not None]
+            if not candidates:
+                uncompared.append(text)
+                continue
+            if any(agrees(value, v) for _, _, v in candidates):
+                checked.append(f"{what} {_money(value)}")
+                continue
+            name, label, figure = candidates[0]
+            mismatches.append(
+                f"The {what} in words, {text!r}, is {_money(value)} ({read_by}), but the {label} in figures is "
+                f"{_money(figure)}."
+            )
+            regions.append(
+                make_region(core_fields, name, f"Field exception: {label.capitalize()} ({_money(figure)} vs {_money(value)} in words)")
+            )
+            what = label
+        regions.append(
+            make_located_region(
+                pair, words_field, "Amount in words", text,
+                f"Field exception: Amount in words ({_money(value)} vs {what} {_money(figure)})",
+            )
+        )
+
+    notes = []
+    if unreadable:
+        notes.append("Could not read " + ", ".join(repr(t) for t in unreadable) + ".")
+    if uncompared:
+        notes.append("No figure to compare " + ", ".join(repr(t) for t in uncompared) + " against.")
+    if mismatches:
+        return _flag(" ".join(mismatches + notes), *regions)
+    if not checked:
+        if unreadable and not uncompared:
+            return {"status": "skipped", "reason": f"Could not read the amount in words ({', '.join(repr(t) for t in unreadable)})."}
+        return {"status": "skipped", "reason": "No total to compare the amount in words against. " + " ".join(notes)}
+    if len(checked) == 1 and not notes:
+        return {"status": "pass", "reason": f"The amount in words ({checked[0].split(' ', 1)[1]}) matches the {checked[0].split(' ', 1)[0]}."}
+    return {"status": "pass", "reason": f"All {len(checked)} amounts in words match their figures ({'; '.join(checked)}). " + " ".join(notes)}
+
+
+def _figure_region(
+    core_fields: dict[str, Any], pair: dict[str, Any], kind: str | None, figure: float, caption: str, words_field: str
+) -> dict[str, Any] | None:
+    """The highlight for the figure paired with an amount in words: its own
+    box when the layout located it, else the core field holding that number."""
+    box = valid_box(pair.get("figure_bounding_box"))
+    if box is not None:
+        label = pair.get("figure_label") or pair.get("label") or "Figure"
+        return {"field": f"{words_field}_figure", "label": label, "value": pair.get("figure_raw_text") or _money(figure),
+                "caption": caption, "bounding_box": box}
+    for name in _WORDS_KIND_FIELDS.get(kind, _WORDS_KIND_FIELDS[None]) + ("amount", "subtotal", "tax_amount"):
+        value = _num((core_fields.get(name) or {}).get("value"))
+        if value is not None and abs(value - figure) < 0.005:
+            return make_region(core_fields, name, caption)
+    return None
 
 
 def _check_reference_number_format(core_fields: dict[str, Any]) -> dict[str, Any]:
@@ -1256,7 +1349,7 @@ def validate_fields(
         "total_tax_consistency": _check_total_tax_consistency(core_fields),
         "tax_rate_consistency": _check_tax_rate_consistency(core_fields, line_items, ocr_text),
         "amount_in_words_consistency": _check_amount_in_words_consistency(
-            core_fields, extracted_fields.get("amount_in_words")
+            core_fields, amount_word_pairs(extracted_fields)
         ),
         "reference_number_format": _check_reference_number_format(core_fields),
         "iban_trn_validation": _check_iban_trn_validation(core_fields, additional_fields, ocr_text),

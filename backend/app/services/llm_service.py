@@ -118,12 +118,19 @@ class LineItem(BaseModel):
 
 
 class AmountInWords(BaseModel):
-    """The total written out in words ("Twenty thousand five hundred AED
-    only"), if the document has one. `value` is what the WORDS say — never
-    the numeric total they accompany."""
+    """One amount written out in words ("Twenty thousand five hundred AED
+    only") with the figure the document prints FOR it (the number in the
+    same row or box), if any. `value` is what the WORDS say — never the
+    figure they accompany. A document can carry several (a quotation's
+    total, VAT and grand total each in words); which words go with which
+    figure is re-read from the page layout afterwards
+    (app/services/amount_words_layout.py)."""
 
+    label: str | None = None
     text: str | None
     value: float | None
+    figure: float | None = None
+    figure_raw_text: str | None = None
     confidence: float
 
 
@@ -143,7 +150,7 @@ class DocumentAnalysis(BaseModel):
     tax_rate: NumericFieldValue
     additional_fields: list[AdditionalField]
     line_items: list[LineItem] = []
-    amount_in_words: AmountInWords = AmountInWords(text=None, value=None, confidence=0.0)
+    amounts_in_words: list[AmountInWords] = []
 
     def core_fields_as_dict(self) -> dict[str, dict[str, Any]]:
         """The dict-of-core-fields shape stored in `documents.
@@ -509,21 +516,39 @@ def _analysis_json_schema() -> dict[str, Any]:
                     "additionalProperties": False,
                 },
             },
-            "amount_in_words": {
-                "type": "object",
-                "properties": {
-                    "text": {
-                        "type": ["string", "null"],
-                        "description": "The amount written out in words, exactly as printed. Null if absent.",
+            "amounts_in_words": {
+                "type": "array",
+                "description": "Every amount the document writes out in words, one entry per phrase.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": ["string", "null"],
+                            "description": "The caption printed for these words (\"Total Amount in Words (AED)\", "
+                            "\"VAT Amount in Words\", \"Say\"). Null if none.",
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "ONE amount written out in words, exactly as printed — never two phrases run together.",
+                        },
+                        "value": {
+                            "type": ["number", "null"],
+                            "description": "The number those WORDS spell — even if it disagrees with the figure beside them.",
+                        },
+                        "figure": {
+                            "type": ["number", "null"],
+                            "description": "The figure the document prints FOR these words — the number in the same row "
+                            "or box, or right beside them — as printed, normalized. Null if the words stand alone.",
+                        },
+                        "figure_raw_text": {
+                            "type": ["string", "null"],
+                            "description": "That figure exactly as it appears in the document. Null if none.",
+                        },
+                        "confidence": {"type": "number"},
                     },
-                    "value": {
-                        "type": ["number", "null"],
-                        "description": "The number those WORDS spell — even if it disagrees with the numeric total.",
-                    },
-                    "confidence": {"type": "number"},
+                    "required": ["label", "text", "value", "figure", "figure_raw_text", "confidence"],
+                    "additionalProperties": False,
                 },
-                "required": ["text", "value", "confidence"],
-                "additionalProperties": False,
             },
         },
         "required": [
@@ -538,7 +563,7 @@ def _analysis_json_schema() -> dict[str, Any]:
             "tax_rate",
             "additional_fields",
             "line_items",
-            "amount_in_words",
+            "amounts_in_words",
         ],
         "additionalProperties": False,
     }
@@ -874,10 +899,17 @@ as already paid, informational or excluded from the amount due. Do not \
 list the subtotal, tax or total themselves as line items. Empty list if \
 the document has no charge lines.
 
-5. If the document writes an amount out in words ("Twenty thousand five \
-hundred dirhams only", "فقط خمسة آلاف درهم"), copy those words into \
-amount_in_words.text and put the number THE WORDS spell into \
-amount_in_words.value. All null (confidence 0) if there are none.
+5. List every amount the document writes out in words ("Twenty thousand five \
+hundred dirhams only", "فقط خمسة آلاف درهم") in `amounts_in_words`, one entry \
+per phrase — a quotation may spell out its total, its VAT and its grand total \
+separately, and those are three entries, never one. For each: `label` is the \
+caption printed for it ("Total Amount in Words (AED)", "VAT Amount in Words", \
+"Say"), `text` the words exactly as printed, `value` the number THE WORDS \
+spell, and `figure` the figure the document prints FOR those words — the \
+number in the same row or box, or right beside them (the "29,800" at the end \
+of the row that starts "Total Amount in Words"); null when the words stand \
+alone. Never pair words with a figure from a different row. Empty list if \
+the document has none.
 
 CRITICAL for 4 and 5: copy every number exactly as printed, even when the \
 arithmetic is wrong (a line total that is not quantity x unit price, lines \
