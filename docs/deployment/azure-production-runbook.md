@@ -1857,6 +1857,7 @@ at typical latency.
 | `queue_alert` on **vision** / **extraction**; limiter "throttled" counters high (Platform › Processing queues) | The deployment's TPM is the ceiling | Expected at peaks: documents queue and finish later. If capacity has been freed in the subscription since step 10 (another deployment removed or lowered), raise this deployment's capacity and the caps (below). Otherwise this is the platform's limit |
 | `queue_alert` on **forensics**; forensics replicas at `FOR_MAX` | CPU | Raise `--max-replicas` and/or `--cpu 4 --memory 8Gi` |
 | Forensics OOM-killed (restart count) | Very large/many-page PDFs | Keep ~2 GiB per vCPU: `--cpu 2 --memory 4Gi`, or set `FORENSICS_WORKER_CONCURRENCY=1` with more replicas |
+| A case waits on one check of one document (others finished) | Its worker was killed mid-task (exit 137 in the system log) | Recovered automatically within ~5–10 min (lost-check recovery, `orphaned_tasks_restored` / `stuck_checks_requeued` log lines). Workers no longer OOM on large PDFs: rendering waits for a memory budget |
 | `429` in logs | Caps above the real quota (quota lowered, or different RPM/TPM) | Re-read `rateLimits` (step 10), set caps to 80 % |
 | API p95 slow, CPU high | Too few API replicas | Raise `API_MAX`; check DB CPU |
 | PgBouncer *client connections waiting* > 0 | Pool too small | Raise `pgbouncer.default_pool_size` (e.g. 80), confirm `max_connections` headroom |

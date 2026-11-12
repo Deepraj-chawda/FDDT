@@ -168,4 +168,19 @@ def requeue_stuck(trigger: str = "scheduled") -> dict:
 
 @celery_app.task(name="requeue_stuck_documents")
 def requeue_stuck_documents() -> dict:
-    return requeue_stuck()
+    from app.tasks import task_recovery
+
+    # Orphans first: they otherwise count as "running" and keep the queues
+    # looking busy for the steps below. Each step is independent.
+    result: dict = {}
+    for name, step in (
+        ("orphaned_tasks", task_recovery.restore_orphaned_tasks),
+        ("documents", requeue_stuck),
+        ("checks", task_recovery.requeue_missing_checks),
+    ):
+        try:
+            result[name] = step()
+        except Exception:  # noqa: BLE001 - one failing step must not skip the others
+            logger.exception("stuck-work recovery step %s failed", name)
+            result[name] = {"error": True}
+    return result
