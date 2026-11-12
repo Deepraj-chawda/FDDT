@@ -247,6 +247,27 @@ def estimated_render_bytes(doc: pymupdf.Document) -> int:
     )
 
 
+def render_pdf_page(pdf_bytes: bytes, page_number: int) -> RenderedPage | None:
+    """Render ONE page (1-based; the first page if it doesn't exist) — for
+    callers that need a single page, e.g. cropping a reference signature,
+    where rendering a whole 20-page document would just be waiting."""
+    with pymupdf.open(stream=pdf_bytes, filetype="pdf") as doc:
+        if doc.page_count == 0:
+            return None
+        index = page_number - 1 if 1 <= page_number <= doc.page_count else 0
+        page = doc[index]
+        zoom = RENDER_DPI / 72
+        pixmap = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csRGB, alpha=False)
+        rgb = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, pixmap.n)
+        return RenderedPage(
+            page_number=index + 1,
+            image=cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
+            width=pixmap.width,
+            height=pixmap.height,
+            has_image_content=len(page.get_images(full=True)) > 0,
+        )
+
+
 def render_pdf_pages(pdf_bytes: bytes) -> list[RenderedPage]:
     pages: list[RenderedPage] = []
     with pymupdf.open(stream=pdf_bytes, filetype="pdf") as doc:

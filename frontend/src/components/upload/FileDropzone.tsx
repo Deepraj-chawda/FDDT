@@ -11,6 +11,8 @@ export interface FileWithProgress {
   /** 0-100, or undefined before the upload for this file has started. */
   progress?: number
   error?: string
+  /** The server confirmed the upload (progress 100 only means the bytes were sent). */
+  done?: boolean
 }
 
 interface FileDropzoneProps {
@@ -100,7 +102,7 @@ export function FileDropzone({
 
       {files.length > 0 && (
         <ul className="flex flex-col gap-2">
-          {files.map(({ file, progress, error }, index) => (
+          {files.map(({ file, progress, error, done }, index) => (
             <li
               key={`${file.name}-${file.size}-${index}`}
               className="flex items-center gap-3 rounded-md border bg-card px-3 py-2 text-sm"
@@ -115,6 +117,11 @@ export function FileDropzone({
                 </div>
                 {progress !== undefined && !error && (
                   <Progress value={progress} className="h-1.5" />
+                )}
+                {progress === 100 && !error && (
+                  <p className={done ? "text-[11px] text-success" : "text-[11px] text-muted-foreground"}>
+                    {done ? "Uploaded" : "Processing on the server…"}
+                  </p>
                 )}
                 {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
