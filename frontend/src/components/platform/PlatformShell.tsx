@@ -8,7 +8,7 @@ export type PlatformTab = "companies" | "usage" | "queues" | "users" | "template
 
 const TABS: { id: PlatformTab; label: string; href: string; icon: typeof BuildingIcon }[] = [
   { id: "companies", label: "Companies", href: "/platform/companies", icon: BuildingIcon },
-  { id: "users", label: "Users", href: "/settings/users", icon: UsersIcon },
+  { id: "users", label: "Users", href: "/platform/users", icon: UsersIcon },
   { id: "templates", label: "Rule templates", href: "/platform/rule-templates", icon: SlidersIcon },
   { id: "usage", label: "Billing & usage", href: "/platform/usage", icon: BarChart3Icon },
   { id: "queues", label: "Processing queues", href: "/platform/queues", icon: ActivityIcon },

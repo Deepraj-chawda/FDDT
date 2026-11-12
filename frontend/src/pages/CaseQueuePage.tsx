@@ -172,7 +172,11 @@ function mapApiCaseToQueueCase(c: CaseListItem, riskHidden: boolean): QueueCase 
 // L2-escalated cases one tab away (read-only). A Reviewer L2's default is every
 // case, with open escalations sorted to the top by the API, plus a tab for just
 // the L2 queue. Submitters and admins get the single list.
-type QueueView = "all" | "actionable" | "l2"
+// "l2": every case assigned to L2 (open or decided) — a Reviewer L1 has no
+// "All cases" tab, so this is where they follow their escalations' outcome.
+// "l2_open": the Reviewer L2's work queue — open escalations only, the same
+// cases the "escalated to L2" KPI counts.
+type QueueView = "all" | "actionable" | "l2" | "l2_open"
 
 const QUEUE_TABS: Partial<Record<UserRole, { view: QueueView; label: string }[]>> = {
   reviewer_l1: [
@@ -181,7 +185,7 @@ const QUEUE_TABS: Partial<Record<UserRole, { view: QueueView; label: string }[]>
   ],
   reviewer_l2: [
     { view: "all", label: "All cases" },
-    { view: "l2", label: "Escalated queue (L2)" },
+    { view: "l2_open", label: "Escalated queue (L2)" },
   ],
 }
 
@@ -189,6 +193,7 @@ const QUEUE_TABS: Partial<Record<UserRole, { view: QueueView; label: string }[]>
 function viewQuery(view: QueueView): CasePageQuery {
   if (view === "actionable") return { actionable: true }
   if (view === "l2") return { assigned_tier: "l2" }
+  if (view === "l2_open") return { assigned_tier: "l2", status_group: "open" }
   return {}
 }
 
@@ -223,10 +228,12 @@ export function CaseQueuePage() {
   }, [searchQuery])
 
   // Filtering, search and paging all happen on the server.
+  const tabQuery = viewQuery(activeView)
   const query: CasePageQuery = {
-    ...viewQuery(activeView),
+    ...tabQuery,
     q: debouncedSearch || undefined,
-    status_group: statusFilter || undefined,
+    // A status filter narrows within the tab; without one, the tab's own scope applies.
+    status_group: statusFilter || tabQuery.status_group,
     case_type: typeFilter || undefined,
     risk: flagFilter || undefined,
   }
@@ -263,7 +270,13 @@ export function CaseQueuePage() {
   const clearedCount = summary?.approved ?? 0
   const autoClearedRate = activeCasesCount > 0 ? Math.round((clearedCount / activeCasesCount) * 1000) / 10 : null
   const tabCount = (v: QueueView) =>
-    v === "actionable" ? summary?.actionable : v === "l2" ? summary?.l2 : summary?.total
+    v === "actionable"
+      ? summary?.actionable
+      : v === "l2"
+        ? summary?.l2
+        : v === "l2_open"
+          ? summary?.escalated
+          : summary?.total
 
   // Every case matching the current tab, search and filters (all pages).
   const exportCsv = async () => {
@@ -650,7 +663,7 @@ export function CaseQueuePage() {
                           <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect>
                           </svg>
-                          {row.docCount} doc{row.docCount > 1 ? "s" : ""}
+                          {row.docCount} doc{row.docCount === 1 ? "" : "s"}
                         </span>
                       </td>
 

@@ -33,7 +33,7 @@ cannot read or change anything they are not entitled to.
 | `/audit-history` | AuditHistoryPage | Reviewer L1 and above; platform admins |
 | `/settings` → `/settings/issuer-registry` | SettingsIssuerRegistryPage | Reviewer L2; platform admins (per company) |
 | `/settings/risk-rules` | SettingsRiskRulesPage | Reviewer L2; platform admins (per company) |
-| `/settings/users` | SettingsUsersPage | platform admins only |
+| `/platform/users` | SettingsUsersPage | platform admins only (`/settings/users` redirects here) |
 | `/platform` → `/platform/companies` | PlatformCompaniesPage | platform admins only |
 | `/platform/rule-templates` | PlatformRuleTemplatesPage | platform admins only |
 | `/platform/usage` | PlatformUsagePage | platform admins only |
@@ -179,7 +179,7 @@ active — inserts a new version), `GET …/{rule_id}/history` (per-rule change 
 versions they used.
 **Roles:** Reviewer L2 (own company); platform admins pick a company.
 
-## SettingsUsersPage — `/settings/users`
+## SettingsUsersPage — `/platform/users`
 **Purpose:** manage every account on the platform (there is no self-service sign-up and no
 company-level user management). Lives under the *Platform* tabs (`PlatformShell`).
 **Endpoints:** `GET/POST /settings/users` (via `AddUserModal`), `PATCH /settings/users/{id}` (role,
