@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiFetch, ApiError, parseErrorDetail } from "@/api/client"
+import { API_BASE_URL, apiFetch, ApiError, BACKGROUND_REFRESH_HEADERS, parseErrorDetail } from "@/api/client"
 import { withSession } from "@/lib/session"
 import type {
   AuditLogEntry,
@@ -81,8 +81,12 @@ export function getCaseSummary(
   return apiFetch<CaseListSummary>(`/cases/summary${query ? `?${query}` : ""}`, { token })
 }
 
-export function getCase(caseId: string, token: string): Promise<CaseDetail> {
-  return apiFetch<CaseDetail>(`/cases/${caseId}`, { token })
+/** `background`: an automatic refresh of a case already on screen (polling). */
+export function getCase(caseId: string, token: string, background = false): Promise<CaseDetail> {
+  return apiFetch<CaseDetail>(`/cases/${caseId}`, {
+    token,
+    headers: background ? BACKGROUND_REFRESH_HEADERS : undefined,
+  })
 }
 
 // Platform admins only. Soft delete: the case disappears for its company
@@ -93,6 +97,13 @@ export function deleteCase(caseId: string, reason: string | null, token: string)
     token,
     body: JSON.stringify({ reason }),
   })
+}
+
+// The case's creator only, and only while it has no documents (409 otherwise):
+// withdraws a new case whose every upload was rejected, so it doesn't linger
+// as an empty case in the queue and counts.
+export function discardEmptyCase(caseId: string, token: string): Promise<void> {
+  return apiFetch<void>(`/cases/${caseId}/discard`, { method: "POST", token })
 }
 
 export function restoreCase(caseId: string, token: string): Promise<void> {
@@ -194,8 +205,11 @@ export function getDocumentFileUrl(
 }
 
 /** All in-case signature comparison results for a case (comparison_scope=in_case). */
-export function getSignatureMatches(caseId: string, token: string): Promise<SignatureMatch[]> {
-  return apiFetch<SignatureMatch[]>(`/cases/${caseId}/signature-matches`, { token })
+export function getSignatureMatches(caseId: string, token: string, background = false): Promise<SignatureMatch[]> {
+  return apiFetch<SignatureMatch[]>(`/cases/${caseId}/signature-matches`, {
+    token,
+    headers: background ? BACKGROUND_REFRESH_HEADERS : undefined,
+  })
 }
 
 // ---- Reviewer workflow (reviewers/admin only, and a Reviewer L1 can't act on

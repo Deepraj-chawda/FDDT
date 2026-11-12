@@ -98,3 +98,69 @@ def test_upload_document_storage_failure_is_clean_502(client, auth_headers, fake
     )
     assert response.status_code == 502
     assert "simulated Azure outage" in response.json()["detail"]
+
+
+# --- Discarding an empty case (every upload of a new case was rejected) ---
+
+def test_submitter_discards_their_own_empty_case(client, plain_headers):
+    case = client.post("/cases", json={"case_type": "vendor_invoice"}, headers=plain_headers).json()
+
+    assert client.post(f"/cases/{case['id']}/discard", headers=plain_headers).status_code == 204
+
+    # Gone for the company: case page, lists and counts.
+    assert client.get(f"/cases/{case['id']}", headers=plain_headers).status_code == 404
+    assert all(c["id"] != case["id"] for c in client.get("/cases", headers=plain_headers).json())
+    assert client.get("/cases/summary?mine=true", headers=plain_headers).json()["total"] == 0
+    # ...and it can't be discarded (or uploaded to) twice.
+    assert client.post(f"/cases/{case['id']}/discard", headers=plain_headers).status_code == 404
+    rejected = client.post(
+        f"/cases/{case['id']}/documents",
+        headers=plain_headers,
+        files={"file": ("invoice.pdf", make_pdf("late"), "application/pdf")},
+    )
+    assert rejected.status_code == 404
+
+
+def test_a_case_with_documents_cannot_be_discarded(client, plain_headers, fake_storage):
+    case = client.post("/cases", json={"case_type": "vendor_invoice"}, headers=plain_headers).json()
+    uploaded = client.post(
+        f"/cases/{case['id']}/documents",
+        headers=plain_headers,
+        files={"file": ("invoice.pdf", make_pdf("an invoice"), "application/pdf")},
+    )
+    assert uploaded.status_code == 201
+
+    assert client.post(f"/cases/{case['id']}/discard", headers=plain_headers).status_code == 409
+    assert client.get(f"/cases/{case['id']}", headers=plain_headers).status_code == 200
+
+
+def test_only_the_creator_may_discard_an_empty_case(
+    client, plain_headers, reviewer_headers, platform_admin_headers, other_plain_user
+):
+    from tests.conftest import _headers_for
+
+    case = client.post("/cases", json={"case_type": "vendor_invoice"}, headers=plain_headers).json()
+    url = f"/cases/{case['id']}/discard"
+
+    assert client.post(url, headers=reviewer_headers).status_code == 404
+    assert client.post(url, headers=_headers_for(other_plain_user)).status_code == 404
+    assert client.post(url, headers=platform_admin_headers).status_code == 403
+    assert client.get(f"/cases/{case['id']}", headers=plain_headers).status_code == 200
+
+
+def test_case_list_items_carry_the_uploaded_filenames(client, plain_headers, fake_storage):
+    case = client.post("/cases", json={"case_type": "vendor_invoice"}, headers=plain_headers).json()
+    empty = client.post("/cases", json={"case_type": "vendor_invoice"}, headers=plain_headers).json()
+    for i, name in enumerate(["invoice.pdf", "receipt.pdf", "po.pdf", "delivery-note.pdf"]):
+        uploaded = client.post(
+            f"/cases/{case['id']}/documents",
+            headers=plain_headers,
+            files={"file": (name, make_pdf(f"document {i}"), "application/pdf")},
+        )
+        assert uploaded.status_code == 201
+
+    items = {c["id"]: c for c in client.get("/cases/page?mine=true", headers=plain_headers).json()["items"]}
+    # Upload order, capped at three; the count stays the full count.
+    assert items[case["id"]]["document_names"] == ["invoice.pdf", "receipt.pdf", "po.pdf"]
+    assert items[case["id"]]["document_count"] == 4
+    assert items[empty["id"]]["document_names"] == []

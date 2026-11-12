@@ -18,8 +18,11 @@ import { CASE_STATUS_LABELS } from "@/types/case"
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const acting = useActingCompany()
+  // Submitters never learn risk tiers (the API reports every case of theirs as
+  // unscored), so their dashboard breaks cases down by review status instead.
+  const riskHidden = user?.role === "user"
 
   // A platform admin's dashboard is one company at a time (never a mixed list).
   const enabled = Boolean(token && acting.companyId)
@@ -51,6 +54,22 @@ export function DashboardPage() {
   const pendingCount = summary?.risk.pending ?? 0
   const escalatedCount = summary?.escalated ?? 0
   const clearedCount = summary?.approved ?? 0
+  const rejectedCount = summary?.rejected ?? 0
+  const analyzingCount = summary?.analyzing ?? 0
+  const awaitingReviewCount = summary?.awaiting_review ?? 0
+  const distribution = riskHidden
+    ? ([
+        { label: "Analyzing", count: analyzingCount, barClass: "bg-slate-300", textClass: "text-slate-500" },
+        { label: "Awaiting review", count: awaitingReviewCount, barClass: "bg-amber-500", textClass: "text-amber-500" },
+        { label: "Approved", count: clearedCount, barClass: "bg-emerald-500", textClass: "text-emerald-500" },
+        { label: "Rejected", count: rejectedCount, barClass: "bg-red-500", textClass: "text-red-500" },
+      ] as const)
+    : ([
+        { label: "High risk", count: highRiskCount, barClass: "bg-red-500", textClass: "text-red-500" },
+        { label: "Medium risk", count: mediumRiskCount, barClass: "bg-amber-500", textClass: "text-amber-500" },
+        { label: "Low risk", count: lowRiskCount, barClass: "bg-emerald-500", textClass: "text-emerald-500" },
+        { label: "Analyzing", count: pendingCount, barClass: "bg-slate-300", textClass: "text-slate-500" },
+      ] as const)
   const priorityQueue = priorityPage?.items ?? []
 
   return (
@@ -103,25 +122,39 @@ export function DashboardPage() {
           {/* Card 3: High-risk flagged */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">High-risk flagged</span>
+              <span className="text-xs font-semibold text-slate-500">{riskHidden ? "Awaiting review" : "High-risk flagged"}</span>
               <ShieldAlertIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-3 sm:mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight">{highRiskCount}</div>
-              <div className="text-xs font-medium text-red-500 mt-1">{mediumRiskCount} more at medium risk</div>
-            </div>
+            {riskHidden ? (
+              <div className="mt-3 sm:mt-4">
+                <div className="text-2xl sm:text-3xl font-extrabold text-[#0b1930] tracking-tight">{awaitingReviewCount}</div>
+                <div className="text-xs font-medium text-slate-500 mt-1">{analyzingCount} more still being analyzed</div>
+              </div>
+            ) : (
+              <div className="mt-3 sm:mt-4">
+                <div className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight">{highRiskCount}</div>
+                <div className="text-xs font-medium text-red-500 mt-1">{mediumRiskCount} more at medium risk</div>
+              </div>
+            )}
           </div>
 
           {/* Card 4: Clean cases */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Low-risk cases</span>
+              <span className="text-xs font-semibold text-slate-500">{riskHidden ? "Approved" : "Low-risk cases"}</span>
               <ShieldCheckIcon className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="mt-3 sm:mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">{lowRiskCount}</div>
-              <div className="text-xs font-medium text-slate-500 mt-1">below the medium-risk threshold</div>
-            </div>
+            {riskHidden ? (
+              <div className="mt-3 sm:mt-4">
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">{clearedCount}</div>
+                <div className="text-xs font-medium text-slate-500 mt-1">{rejectedCount} rejected</div>
+              </div>
+            ) : (
+              <div className="mt-3 sm:mt-4">
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">{lowRiskCount}</div>
+                <div className="text-xs font-medium text-slate-500 mt-1">below the medium-risk threshold</div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -135,24 +168,21 @@ export function DashboardPage() {
             <div>
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-[#0b1930]" id="risk-distribution-heading">
-                  Risk tier distribution
+                  {riskHidden ? "Review status" : "Risk tier distribution"}
                 </h2>
                 <span className="text-[10px] font-bold tracking-wider text-slate-400 border border-slate-200 bg-slate-50 px-2 py-0.5 rounded uppercase">
                   {totalCases} total
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Each case's risk tier from the weighted, explainable rules engine. Cases still being analysed are shown separately.
+                {riskHidden
+                  ? "Where each of your cases is in review. Risk scores are shared with the review team only."
+                  : "Each case's risk tier from the weighted, explainable rules engine. Cases still being analysed are shown separately."}
               </p>
 
               {/* Distribution Bars */}
               <div className="mt-6 space-y-5">
-                {([
-                  { label: "High risk", count: highRiskCount, barClass: "bg-red-500", textClass: "text-red-500" },
-                  { label: "Medium risk", count: mediumRiskCount, barClass: "bg-amber-500", textClass: "text-amber-500" },
-                  { label: "Low risk", count: lowRiskCount, barClass: "bg-emerald-500", textClass: "text-emerald-500" },
-                  { label: "Analyzing", count: pendingCount, barClass: "bg-slate-300", textClass: "text-slate-500" },
-                ] as const).map((row) => {
+                {distribution.map((row) => {
                   const pct = totalCases > 0 ? Math.round((row.count / totalCases) * 100) : 0
                   return (
                     <div key={row.label}>
@@ -238,6 +268,8 @@ export function DashboardPage() {
               {documentsInQueue} document{documentsInQueue === 1 ? "" : "s"} analyzed · {escalatedCount} escalated · {clearedCount} cleared
             </p>
           </div>
+          {/* Platform admins have read-only access: no submitting (/cases/new refuses them). */}
+          {!acting.isPlatformAdmin && (
           <div>
             <button
               onClick={() => navigate("/cases/new")}
@@ -248,6 +280,7 @@ export function DashboardPage() {
               <ArrowRightIcon className="w-3.5 h-3.5" />
             </button>
           </div>
+          )}
         </section>
       </main>
     </div>

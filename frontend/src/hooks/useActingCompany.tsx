@@ -23,6 +23,8 @@ interface ActingCompany {
   /** What to send as `company_id`: the pick for platform admins, else null. */
   platformCompanyParam: string | null
   companies: Company[]
+  /** Platform admins: the company list hasn't arrived yet. */
+  companiesLoading: boolean
   setCompanyId: (id: string) => void
 }
 
@@ -41,7 +43,7 @@ export function ActingCompanyProvider({ children }: { children: React.ReactNode 
   const isPlatformAdmin = Boolean(user?.is_platform_admin)
   const [picked, setPicked] = React.useState<string | null>(readStored)
 
-  const { data: companies = [] } = useQuery({
+  const { data: companies = [], isLoading: companiesLoading } = useQuery({
     queryKey: ["companies", token],
     queryFn: () => listCompanies(token as string),
     enabled: isPlatformAdmin && Boolean(token),
@@ -66,6 +68,7 @@ export function ActingCompanyProvider({ children }: { children: React.ReactNode 
         companyName: user?.company_name ?? null,
         platformCompanyParam: null,
         companies: [],
+        companiesLoading: false,
         setCompanyId,
       }
     }
@@ -75,9 +78,10 @@ export function ActingCompanyProvider({ children }: { children: React.ReactNode 
       companyName: companies.find((c) => c.id === valid)?.name ?? null,
       platformCompanyParam: valid,
       companies,
+      companiesLoading,
       setCompanyId,
     }
-  }, [isPlatformAdmin, user, valid, companies, setCompanyId])
+  }, [isPlatformAdmin, user, valid, companies, companiesLoading, setCompanyId])
 
   return <ActingCompanyContext.Provider value={value}>{children}</ActingCompanyContext.Provider>
 }

@@ -51,6 +51,7 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   bulk_upload_received: "Bulk upload received",
   bulk_upload_ingested: "Bulk upload ingested",
   case_report_generated: "Case report generated",
+  case_discarded: "Empty case discarded",
   // sign-in & sessions
   user_signed_in: "Signed in",
   user_signed_out_everywhere: "Signed out everywhere",

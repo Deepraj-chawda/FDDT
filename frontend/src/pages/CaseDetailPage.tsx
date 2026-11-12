@@ -8,7 +8,7 @@ import {
   FileTextIcon,
 } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { getCase, getCaseAuditLog, getDocumentFileUrl, getSignatureMatches } from "@/api/cases"
 import { ApiError, isNetworkError } from "@/api/client"
@@ -86,6 +86,7 @@ export function CaseDetailPage() {
   // access, audited server-side) but never act or generate reports.
   const isSupportView = isPlatformAdmin(user?.role)
   const isReviewerRole = hasRank(user?.role, "reviewer_l1") || isSupportView
+  const queryClient = useQueryClient()
   const canExport = hasRank(user?.role, "reviewer_l1")
 
   const {
@@ -98,7 +99,9 @@ export function CaseDetailPage() {
     failureCount: caseFailureCount,
   } = useQuery({
     queryKey: ["case", caseId, token],
-    queryFn: () => getCase(caseId!, token!),
+    // A refetch of a case already on screen is a background refresh: for a
+    // platform admin it doesn't log another support access per poll.
+    queryFn: () => getCase(caseId!, token!, queryClient.getQueryData(["case", caseId, token]) !== undefined),
     enabled: isReady,
     // A large case (hundreds of KB to a few MB of JSON) occasionally arrives
     // cut short on a flaky connection. That is a network failure, not an API
@@ -148,7 +151,8 @@ export function CaseDetailPage() {
   // at this phase (library-scope comparison not built yet per SPECIFICATION.md §2.3).
   const { data: signatureMatches = [] } = useQuery<SignatureMatch[]>({
     queryKey: ["signatureMatches", caseId, token],
-    queryFn: () => getSignatureMatches(caseId!, token!),
+    queryFn: () =>
+      getSignatureMatches(caseId!, token!, queryClient.getQueryData(["signatureMatches", caseId, token]) !== undefined),
     enabled: isReady,
     // Refetch so results appear after the Celery task completes —
     // comparison is enqueued async after reference creation.
@@ -277,8 +281,13 @@ export function CaseDetailPage() {
                 <span>{caseDetail.submitted_by?.full_name || caseDetail.submitted_by?.email}</span>
                 <span className="text-slate-300">·</span>
                 <span>{documents.length} document{documents.length === 1 ? "" : "s"} attached</span>
-                <span className="text-slate-300">·</span>
-                <RiskBadge tier={caseDetail.risk_tier} compact />
+                {/* A submitter never gets the tier (the API masks it): don't call it "not yet scored". */}
+                {isReviewerRole && (
+                  <>
+                    <span className="text-slate-300">·</span>
+                    <RiskBadge tier={caseDetail.risk_tier} compact />
+                  </>
+                )}
               </p>
             )}
           </div>

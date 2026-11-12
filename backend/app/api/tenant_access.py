@@ -20,6 +20,13 @@ rows from the app role, and the company-facing audit queries also exclude the
 event type explicitly. Company users have no way to see that platform access
 happened; platform admins see every single access (no de-duplication by
 default — PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS=0).
+
+One exception: a page's automatic refresh of data already on screen (the
+case page polling while its checks run) is not a new access. The web app
+marks those requests `X-Background-Refresh: 1`, and such a read is recorded
+only if the same admin has no identical read (same method, path, company)
+in the last BACKGROUND_REFRESH_DEDUP_SECONDS. The header can only ever
+suppress a duplicate: the first read of anything is always recorded.
 """
 from __future__ import annotations
 
@@ -43,6 +50,8 @@ from app.models.user import User
 from app.services.audit_service import record_event, record_platform_event
 
 PLATFORM_ACCESS_EVENT = "platform_admin_access"
+BACKGROUND_REFRESH_HEADER = "X-Background-Refresh"
+BACKGROUND_REFRESH_DEDUP_SECONDS = 15 * 60
 
 
 def _describe(method: str) -> str:
@@ -83,6 +92,8 @@ def _record_platform_access(
     path = request.url.path
     verb = _describe(request.method)
     window = settings.platform_access_audit_dedup_seconds
+    if request.headers.get(BACKGROUND_REFRESH_HEADER) == "1":
+        window = max(window, BACKGROUND_REFRESH_DEDUP_SECONDS)
     if verb == "viewed" and window > 0:
         recent = system_db.execute(
             select(AuditLog.event_data)

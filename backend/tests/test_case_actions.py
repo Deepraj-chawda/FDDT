@@ -414,3 +414,21 @@ def test_submitters_never_see_their_own_risk_tier_score_or_reasons(client, plain
     # ...while a reviewer sees all of it for the very same case.
     seen = client.get(f"/cases/{case.id}", headers=reviewer_headers).json()
     assert seen["risk_tier"] == "high" and seen["assessment"]["score"] == 65 and seen["flag"]["flag"] == "high"
+
+
+def test_a_decided_case_reads_review_complete_to_its_submitter_not_in_review(
+    client, plain_headers, reviewer_headers, scored_case
+):
+    case = scored_case("low")
+    assert client.post(f"/cases/{case.id}/approve", json={}, headers=reviewer_headers).status_code == 200
+    for body in (
+        client.get(f"/cases/{case.id}", headers=plain_headers).json(),
+        next(c for c in client.get("/cases", headers=plain_headers).json() if c["id"] == str(case.id)),
+    ):
+        assert body["risk_tier"] is None
+        assert body["flag"] == {
+            "flag": "pending",
+            "label": "Review complete",
+            "description": "The review team has finished reviewing your case.",
+            "score": None,
+        }

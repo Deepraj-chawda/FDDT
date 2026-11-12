@@ -342,7 +342,7 @@ def _detail(db: Session, user: User, bulk: BulkUpload) -> BulkUploadDetail:
         else:
             counts = doc_counts[case.id]
             case_flag = flags[case.id]
-            flag_schema = _visible_flag(user, CaseFlagSchema.from_case_flag(case_flag))
+            flag_schema = _visible_flag(user, CaseFlagSchema.from_case_flag(case_flag), case.status)
             if case.status in _DECIDED:
                 live = "done"
             elif case_flag.flag != "pending" and counts["finished"] == counts["total"]:

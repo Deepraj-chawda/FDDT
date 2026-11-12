@@ -9,7 +9,7 @@ import {
   PlusIcon,
   SearchIcon,
 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, Navigate, useNavigate } from "react-router-dom"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 
 import { getCaseSummary, listCasesPage } from "@/api/cases"
@@ -19,8 +19,11 @@ import { CASE_TYPE_LABELS, type CaseListItem, type CaseStatusGroup } from "@/typ
 
 const PAGE_SIZE = 50
 
-// The status filter as GET /cases/page's status groups.
-const STATUS_GROUPS: Record<MyCaseItem["status"], CaseStatusGroup> = {
+type StatusFilter = "Cleared" | "In Progress" | "Awaiting Review" | "Action Required"
+
+// The status filter as GET /cases/page's status groups. "Awaiting Review"
+// also covers cases whose automated checks are still running ("Analyzing" rows).
+const STATUS_GROUPS: Record<StatusFilter, CaseStatusGroup> = {
   Cleared: "approved",
   "In Progress": "in_progress",
   "Awaiting Review": "pending_review",
@@ -33,9 +36,17 @@ interface MyCaseItem {
   filename: string
   type: string
   docCount: number
-  status: "Action Required" | "In Progress" | "Awaiting Review" | "Cleared"
-  statusTone: "rose" | "blue" | "amber" | "emerald"
+  status: StatusFilter | "Analyzing"
+  statusTone: "rose" | "blue" | "amber" | "emerald" | "slate"
   submitted: string
+}
+
+// The case's real file name(s): "invoice.pdf", "invoice.pdf + 2 more".
+function describeDocuments(c: CaseListItem): string {
+  const first = c.document_names?.[0]
+  if (!first) return "No documents"
+  const more = c.document_count - 1
+  return more > 0 ? `${first} + ${more} more` : first
 }
 
 function mapApiToMyCase(c: CaseListItem): MyCaseItem {
@@ -51,6 +62,10 @@ function mapApiToMyCase(c: CaseListItem): MyCaseItem {
   } else if (c.status === "rejected" || c.flag?.flag === "high") {
     status = "Action Required"
     statusTone = "rose"
+  } else if (c.status === "submitted" || c.status === "under_automated_review") {
+    // Same word the case queue uses for this state.
+    status = "Analyzing"
+    statusTone = "slate"
   }
 
   const d = new Date(c.created_at)
@@ -59,7 +74,7 @@ function mapApiToMyCase(c: CaseListItem): MyCaseItem {
   return {
     id: c.id,
     caseNumber: c.case_number,
-    filename: `${c.case_number}.pdf`,
+    filename: describeDocuments(c),
     type: CASE_TYPE_LABELS[c.case_type] || c.case_type,
     docCount: c.document_count,
     status,
@@ -70,10 +85,13 @@ function mapApiToMyCase(c: CaseListItem): MyCaseItem {
 
 export function MyCasesPage() {
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
+  // A platform admin submits nothing (read-only, belongs to no company), so
+  // there is no "my cases" for them — the case queue is their home.
+  const isPlatformAdmin = Boolean(user?.is_platform_admin)
   const [search, setSearch] = React.useState("")
   const [debouncedSearch, setDebouncedSearch] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState<MyCaseItem["status"] | "">("")
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter | "">("")
   const [page, setPage] = React.useState(0)
 
   // Don't hit the API on every keystroke.
@@ -96,13 +114,13 @@ export function MyCasesPage() {
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
       }),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && !isPlatformAdmin,
     placeholderData: keepPreviousData,
   })
   const { data: summary } = useQuery({
     queryKey: ["cases", "summary", "mine", token],
     queryFn: () => getCaseSummary(token as string, { mine: true }),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && !isPlatformAdmin,
   })
 
   const filteredCases = React.useMemo(() => (casePage?.items ?? []).map(mapApiToMyCase), [casePage])
@@ -114,6 +132,8 @@ export function MyCasesPage() {
   const actionRequiredCount = summary?.action_required ?? 0
   // Awaiting review + in progress: everything not cleared or needing action.
   const underReviewCount = totalSubmitted - clearedCount - actionRequiredCount
+
+  if (isPlatformAdmin) return <Navigate to="/" replace />
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#EDF2FA] text-slate-900 selection:bg-blue-100 selection:text-blue-900">
@@ -230,7 +250,7 @@ export function MyCasesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => {
-                  setStatusFilter(e.target.value as MyCaseItem["status"] | "")
+                  setStatusFilter(e.target.value as StatusFilter | "")
                   setPage(0)
                 }}
                 className="w-full sm:w-auto appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium pl-3.5 pr-8 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer transition shadow-2xs whitespace-nowrap"
@@ -294,7 +314,7 @@ export function MyCasesPage() {
                       <Link to={`/cases/${row.id}`} className="font-bold text-slate-900 hover:text-blue-600 transition-colors">
                         {row.caseNumber}
                       </Link>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{row.filename}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5 max-w-[16rem] truncate" title={row.filename}>{row.filename}</div>
                     </td>
 
                     <td className="py-4 px-6">
@@ -306,7 +326,7 @@ export function MyCasesPage() {
 
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
-                        {row.docCount} doc{row.docCount > 1 ? "s" : ""}
+                        {row.docCount} doc{row.docCount === 1 ? "" : "s"}
                       </span>
                     </td>
 
@@ -326,6 +346,12 @@ export function MyCasesPage() {
                       {row.statusTone === "amber" && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/50">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          {row.status}
+                        </span>
+                      )}
+                      {row.statusTone === "slate" && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
                           {row.status}
                         </span>
                       )}

@@ -141,6 +141,8 @@ export interface CaseListItem {
   submitted_by: UserSummary
   created_at: string
   document_count: number
+  // Original filenames of the first few documents (upload order, at most 3).
+  document_names: string[]
   flag: CaseFlag
   // Whether the current user may approve/reject/escalate given the tier
   // (false for a Reviewer L1 on an L2 case — read-only; a Reviewer L2 never

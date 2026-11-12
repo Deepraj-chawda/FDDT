@@ -12,6 +12,12 @@ export function isNetworkError(error: unknown): boolean {
   return !(error instanceof ApiError) && error instanceof TypeError
 }
 
+/** Headers for a page's automatic refresh of data already on screen (e.g. the
+ * case page polling while checks run). The backend then doesn't log a fresh
+ * platform-admin access for an identical recent read
+ * (backend/app/api/tenant_access.py). */
+export const BACKGROUND_REFRESH_HEADERS: Record<string, string> = { "X-Background-Refresh": "1" }
+
 export class ApiError extends Error {
   status: number
   /** Machine-readable reason, when the backend sends `detail: {code, message}`

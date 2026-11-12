@@ -414,6 +414,60 @@
         }
       }
     },
+    "/cases/{case_id}/discard": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Discard an empty case (its submitter)",
+        "description": "Withdraws a case that never received a document — e.g. every file of a new case was rejected at upload — so it does not linger in the queue, the counts and the dashboard as an unanalysable case. Only the user who created the case may discard it, and only while it has no documents (409 otherwise). It is a soft delete, the same as a platform admin's `DELETE /cases/{case_id}` (the company no longer sees the case; a platform admin can still restore it), audited as `case_discarded`.",
+        "operationId": "discard_empty_case_cases__case_id__discard_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer token, or the user is inactive."
+          },
+          "403": {
+            "description": "Platform admins have read-only access."
+          },
+          "404": {
+            "description": "No such case, or not one the caller created."
+          },
+          "409": {
+            "description": "The case already has documents."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cases/page": {
       "get": {
         "tags": [
@@ -1015,7 +1069,7 @@
           "case-actions"
         ],
         "summary": "Reject a case",
-        "description": "Company reviewers only (platform admins: 403). A `reason` is required. Rejecting an already-decided case is a 409. Writes a `case_actions` row and an audit event.",
+        "description": "Company reviewers only (platform admins: 403). A `reason` is required. Requires the automated pipeline to have finished and a risk assessment to exist (409 otherwise). Rejecting an already-decided case is a 409. Writes a `case_actions` row and an audit event.",
         "operationId": "reject_case_cases__case_id__reject_post",
         "security": [
           {
@@ -1065,7 +1119,7 @@
             "description": "No such case in your company."
           },
           "409": {
-            "description": "Invalid state transition (e.g. already decided)."
+            "description": "Checks still running, or an invalid state transition (e.g. already decided)."
           },
           "422": {
             "description": "Validation Error",
@@ -1086,7 +1140,7 @@
           "case-actions"
         ],
         "summary": "Escalate a case",
-        "description": "`reviewer_l1` only (`reviewer_l2` and platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. Escalating a decided case is a 409.",
+        "description": "`reviewer_l1` only (`reviewer_l2` and platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. Requires the automated pipeline to have finished and a risk assessment to exist (409 otherwise). Escalating a decided case is a 409.",
         "operationId": "escalate_case_cases__case_id__escalate_post",
         "security": [
           {
@@ -1136,7 +1190,7 @@
             "description": "No such case in your company."
           },
           "409": {
-            "description": "Invalid state transition (e.g. already decided)."
+            "description": "Checks still running, or an invalid state transition (e.g. already decided)."
           },
           "422": {
             "description": "Validation Error",
@@ -1157,7 +1211,7 @@
           "case-reports"
         ],
         "summary": "Generate a case report (PDF)",
-        "description": "Company reviewers only. Renders the per-case forensic report PDF, stores it in Blob Storage under the company's `companies/{company_id}/cases/{case_id}/reports/` prefix, records a `case_reports` row (with the file's SHA-256) and returns it with a signed download URL. Every call creates a new report; earlier ones are kept.",
+        "description": "Company reviewers only. Renders the per-case forensic report PDF, stores it in Blob Storage under the company's `companies/{company_id}/cases/{case_id}/reports/` prefix, records a `case_reports` row (with the file's SHA-256) and returns it with a signed download URL. Every call creates a new report; earlier ones are kept. Requires the case to be fully analysed: the automated pipeline finished and a risk assessment exists (409 otherwise).",
         "operationId": "create_case_report_cases__case_id__reports_post",
         "security": [
           {
@@ -1195,6 +1249,9 @@
           },
           "404": {
             "description": "No such case."
+          },
+          "409": {
+            "description": "Automated checks are still running, or the case has no risk assessment yet."
           },
           "502": {
             "description": "Blob Storage failed while saving or signing the report."
@@ -4639,6 +4696,14 @@
             "type": "integer",
             "title": "Document Count"
           },
+          "document_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Names",
+            "description": "The original filenames of the case's first few documents (upload order, at most 3); `document_count` is the full count."
+          },
           "flag": {
             "$ref": "#/components/schemas/CaseFlagSchema"
           },
@@ -4922,6 +4987,14 @@
           "document_count": {
             "type": "integer",
             "title": "Document Count"
+          },
+          "document_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Names",
+            "description": "The original filenames of the case's first few documents (upload order, at most 3); `document_count` is the full count."
           },
           "flag": {
             "$ref": "#/components/schemas/CaseFlagSchema"

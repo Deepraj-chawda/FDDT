@@ -72,14 +72,22 @@ _SUBMITTER_HIDDEN_KEYS = frozenset({
 _DECIDED = (CaseStatus.approved, CaseStatus.rejected, CaseStatus.closed)
 
 
-def _visible_flag(user: User, flag: CaseFlagSchema) -> CaseFlagSchema:
+def _visible_flag(user: User, flag: CaseFlagSchema, case_status: CaseStatus | None = None) -> CaseFlagSchema:
     """Reviewers/admins get the real risk tier + score. A submitter does NOT:
     seeing which signals fired (and how heavily) on their own submission
     would tell a bad actor exactly what to evade. They only get a neutral
-    "in review" marker; the reviewer's decision and reasons still reach them
-    via the case's approve/reject actions."""
+    marker — "In review" while the case is open, "Review complete" once a
+    decision is in (never the tier); the reviewer's decision and reasons
+    still reach them via the case's approve/reject actions."""
     if user.role != UserRole.user:  # reviewers and platform admins
         return flag
+    if case_status in _DECIDED or case_status == CaseStatus.auto_approved:
+        return CaseFlagSchema(
+            flag="pending",
+            label="Review complete",
+            description="The review team has finished reviewing your case.",
+            score=None,
+        )
     return CaseFlagSchema(
         flag="pending",
         label="In review",
@@ -142,6 +150,51 @@ def create_case(
     db.commit()
     db.refresh(case)
     return case
+
+
+@router.post(
+    "/{case_id}/discard",
+    status_code=204,
+    summary="Discard an empty case (its submitter)",
+    description=(
+        "Withdraws a case that never received a document — e.g. every file of a new case was "
+        "rejected at upload — so it does not linger in the queue, the counts and the dashboard as "
+        "an unanalysable case. Only the user who created the case may discard it, and only while "
+        "it has no documents (409 otherwise). It is a soft delete, the same as a platform admin's "
+        "`DELETE /cases/{case_id}` (the company no longer sees the case; a platform admin can "
+        "still restore it), audited as `case_discarded`."
+    ),
+    responses={
+        401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
+        403: {"description": "Platform admins have read-only access."},
+        404: {"description": "No such case, or not one the caller created."},
+        409: {"description": "The case already has documents."},
+    },
+)
+def discard_empty_case(
+    case_id: uuid.UUID,
+    current_user: User = Depends(require_company_role(UserRole.user)),
+    scope: CaseScope = Depends(get_case_scope),
+) -> None:
+    db = scope.db
+    case = db.execute(
+        select(Case).where(Case.id == case_id, Case.company_id == scope.company_id).with_for_update()
+    ).scalar_one_or_none()
+    # Someone else's case reads as missing, for reviewers too: only its creator withdraws it.
+    if case is None or case.submitted_by_user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Case not found")
+    if db.execute(select(func.count(Document.id)).where(Document.case_id == case.id)).scalar_one():
+        raise HTTPException(status.HTTP_409_CONFLICT, "This case already has documents and can't be discarded.")
+    case.deleted_at = utcnow()
+    case.deleted_by_user_id = current_user.id
+    record_event(
+        db,
+        "case_discarded",
+        case_id=case.id,
+        actor_user_id=current_user.id,
+        event_data={"case_number": case.case_number, "reason": "No document was accepted."},
+    )
+    db.commit()
 
 
 @router.get(
@@ -288,9 +341,39 @@ def _latest_score():
     )
 
 
+_LIST_DOCUMENT_NAMES = 3
+
+
+def _document_names(db: Session, case_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[str]]:
+    """The first few original filenames of each case, in upload order."""
+    names: dict[uuid.UUID, list[str]] = {case_id: [] for case_id in case_ids}
+    if not case_ids:
+        return names
+    ranked = (
+        select(
+            Document.case_id,
+            Document.original_filename,
+            func.row_number()
+            .over(partition_by=Document.case_id, order_by=(Document.created_at, Document.id))
+            .label("n"),
+        )
+        .where(Document.case_id.in_(case_ids))
+        .subquery()
+    )
+    rows = db.execute(
+        select(ranked.c.case_id, ranked.c.original_filename)
+        .where(ranked.c.n <= _LIST_DOCUMENT_NAMES)
+        .order_by(ranked.c.case_id, ranked.c.n)
+    ).all()
+    for case_id, filename in rows:
+        names[case_id].append(filename)
+    return names
+
+
 def _list_items(scope: CompanyScope, rows) -> list[CaseListItem]:
     current_user = scope.ctx.user
     flags_by_case = get_case_flags(scope.db, scope.company_id, [case.id for case, _ in rows])
+    names_by_case = _document_names(scope.db, [case.id for case, _ in rows])
     return [
         CaseListItem(
             id=case.id,
@@ -302,7 +385,10 @@ def _list_items(scope: CompanyScope, rows) -> list[CaseListItem]:
             submitted_by=UserSummary.model_validate(case.submitted_by) if case.submitted_by else None,
             created_at=case.created_at,
             document_count=document_count,
-            flag=_visible_flag(current_user, CaseFlagSchema.from_case_flag(flags_by_case[case.id])),
+            document_names=names_by_case[case.id],
+            flag=_visible_flag(
+                current_user, CaseFlagSchema.from_case_flag(flags_by_case[case.id]), case.status
+            ),
             can_act=can_act_on_case(current_user, case),
             deleted_at=case.deleted_at,
         )
@@ -537,7 +623,7 @@ def get_case_detail(
         created_at=case.created_at,
         document_count=len(documents),
         flag=_visible_flag(
-            current_user, CaseFlagSchema.from_case_flag(get_case_flag(db, case.company_id, case.id))
+            current_user, CaseFlagSchema.from_case_flag(get_case_flag(db, case.company_id, case.id)), case.status
         ),
         can_act=can_act_on_case(current_user, case),
         documents=documents,

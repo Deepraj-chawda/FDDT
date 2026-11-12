@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertTriangleIcon, FileXIcon, InfoIcon } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
@@ -59,23 +59,57 @@ export function BulkUploadDetailPage() {
   const { platformCompanyParam } = useActingCompany()
   const navigate = useNavigate()
   const [filter, setFilter] = React.useState<Filter>("all")
+  const queryClient = useQueryClient()
 
   const { data, error, isLoading } = useQuery({
     queryKey: ["bulk-upload", bulkUploadId, platformCompanyParam],
-    queryFn: () => getBulkUpload(bulkUploadId!, token!, platformCompanyParam),
+    queryFn: () =>
+      getBulkUpload(
+        bulkUploadId!,
+        token!,
+        platformCompanyParam,
+        // A poll of an upload already on screen (no new platform-admin access).
+        queryClient.getQueryData(["bulk-upload", bulkUploadId, platformCompanyParam]) !== undefined,
+      ),
     enabled: Boolean(token && bulkUploadId),
-    // Each case reports its own progress as it goes; stop once nothing can change.
-    refetchInterval: (query) => (query.state.data?.settled ? false : 3000),
+    // Each case reports its own progress as it goes; stop once nothing can
+    // change — or once the upload turned out not to exist (an error is final:
+    // polling a 404 would just flash "Loading…" over the message).
+    refetchInterval: (query) =>
+      query.state.status === "error" || !query.state.data || query.state.data.settled ? false : 3000,
     refetchIntervalInBackground: false,
   })
+
+  if (error && !data) {
+    // 404 (or 422: not a valid id) means missing or not visible to this user,
+    // which the API reports the same way — as with the case page.
+    const status = error instanceof ApiError ? error.status : null
+    const notFound = status === 404 || status === 422
+    return (
+      <div className="min-h-svh bg-background">
+        <Nav active="cases" />
+        <main className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <h1 className="text-lg font-bold text-foreground">
+            {notFound ? "Bulk upload not found" : "Couldn't load this bulk upload"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {notFound
+              ? "This bulk upload doesn't exist, or you don't have access to it."
+              : `Something went wrong while loading it (${status ? `error ${status}` : "network error"}). Try again; if it keeps failing, contact your administrator.`}
+          </p>
+          <Link to="/bulk-uploads" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
+            ← Back to bulk uploads
+          </Link>
+        </main>
+      </div>
+    )
+  }
 
   if (isLoading || !data) {
     return (
       <div className="min-h-svh bg-background">
         <Nav active="cases" />
-        <main className="mx-auto max-w-[1440px] px-6 py-10 text-sm text-muted-foreground">
-          {error ? (error instanceof ApiError ? error.message : "Could not load this bulk upload.") : "Loading…"}
-        </main>
+        <main className="mx-auto max-w-[1440px] px-6 py-10 text-sm text-muted-foreground">Loading…</main>
       </div>
     )
   }
