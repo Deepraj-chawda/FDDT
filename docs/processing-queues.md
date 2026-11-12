@@ -30,8 +30,29 @@
   coming; a long backlog therefore never causes duplicate work. Each re-queue writes a `document_requeued`
   audit row; after `STUCK_DOCUMENT_MAX_REQUEUES` (3) the document is marked `failed` with an explanation.
   Re-running is safe because every step writes idempotently (below). The run logs a WARNING
-  `stuck_documents_requeued {json}` line when it acted. Not covered: a document whose extraction finished
-  but whose other queued checks were lost; those checks stay missing until the document is re-uploaded.
+  `stuck_documents_requeued {json}` line when it acted.
+- **Lost-check recovery** (`app/tasks/task_recovery.py`, same 5-minute job, run first). Tasks are acknowledged
+  late, so while one runs its message sits in the Redis transport's `unacked` hash. If a worker dies mid-task
+  (OOM kill, node loss, a deploy past its grace period) that message would only be handed out again after the
+  broker's **1-hour** visibility timeout, and the monitor counts it as running all that time. Two steps:
+  1. **Orphaned tasks:** the job asks the live workers what they are executing or have reserved. An `unacked`
+     message older than `ORPHANED_TASK_MIN_AGE_SECONDS` (300) that no live worker holds is put back on its
+     queue at once (kombu's own restore). Skipped for a queue none of whose workers replied, so a live task
+     is never handed out twice; the visibility timeout stays the last resort. Logs WARNING
+     `orphaned_tasks_restored {json}`.
+  2. **Missing checks:** a document whose extraction finished more than `STUCK_CHECK_MINUTES` (15) ago but
+     still lacks a check, while that check's queue is empty and idle, gets just that check's task queued
+     again (its message was lost outright). A `document_checks_requeued` audit row per attempt; after
+     `STUCK_DOCUMENT_MAX_REQUEUES` (3) the missing checks are recorded as `failed` with an explanation so the
+     case can still be scored and decided. Logs WARNING `stuck_checks_requeued {json}`.
+- **Memory budget for rendered pages** (`app/services/forensics/pdf_render.py`). Every page-image check holds
+  all of its document's rendered pages (an A4 page at 200 DPI is ~11.6 MB) for the whole task, so a few long
+  PDFs at once used to exceed a worker's memory limit (exit 137). Each render now reserves its estimated
+  size from a per-process budget, **half the container's memory limit** (split between prefork processes,
+  `RENDER_MEMORY_BUDGET_MB` overrides), and waits while it is used up: a burst of large documents is
+  processed a few at a time instead of crashing the worker. A document larger than the whole budget takes
+  all of it and runs alone. Released when the task ends; active in workers only. Logs INFO
+  `render_budget_wait` when a render had to wait.
 - **Fair-share per company** (`app/tasks/fairshare.py`). Each task is published with a priority computed
   from how much work *its company* already has outstanding (queued + running) on that queue:
   `priority = min(9, outstanding // FAIR_SHARE_BUCKET_SIZE)` (bucket default 5). Celery's Redis transport

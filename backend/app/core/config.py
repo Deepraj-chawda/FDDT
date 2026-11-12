@@ -154,6 +154,15 @@ class Settings(BaseSettings):
     stuck_document_processing_minutes: int = Field(default=30, alias="STUCK_DOCUMENT_PROCESSING_MINUTES")
     stuck_document_max_requeues: int = Field(default=3, alias="STUCK_DOCUMENT_MAX_REQUEUES")
     stuck_document_batch_size: int = Field(default=200, alias="STUCK_DOCUMENT_BATCH_SIZE")
+    # Same job: a task the broker still counts as running (unacknowledged)
+    # that no live worker is executing for longer than this is an orphan of a
+    # crashed/OOM-killed worker and is put back on its queue at once, instead
+    # of waiting for the broker's 1-hour visibility timeout. 0 = off.
+    orphaned_task_min_age_seconds: int = Field(default=300, alias="ORPHANED_TASK_MIN_AGE_SECONDS")
+    # Same job: a check that is still missing this many minutes after its
+    # document finished extraction, while that check's queue is empty and idle,
+    # is queued again (its message was lost). 0 = off.
+    stuck_check_minutes: int = Field(default=15, alias="STUCK_CHECK_MINUTES")
 
     # --- Sign-in throttling (app/services/login_throttle.py, Redis) ---
     # After this many failed sign-ins for one email address, that address is

@@ -42,7 +42,12 @@ import time
 
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import before_task_publish, task_postrun, task_prerun
+from celery.signals import (
+    before_task_publish,
+    task_postrun,
+    task_prerun,
+    worker_init,
+)
 
 from app.core.config import settings
 
@@ -194,3 +199,30 @@ def _release_fair_share(task=None, **_kwargs):
     company = getattr(request, fairshare.COMPANY_HEADER, None) or headers.get(fairshare.COMPANY_HEADER)
     queue = getattr(request, fairshare.QUEUE_HEADER, None) or headers.get(fairshare.QUEUE_HEADER)
     fairshare.task_finished(queue, company)
+
+
+# ---------------------------------------------------------------------------
+# Memory budget for rendered PDF pages (app/services/forensics/pdf_render.py)
+# ---------------------------------------------------------------------------
+# One budget per worker container. A threads pool shares it between its
+# threads; a prefork pool creates it in the parent before forking, and the
+# children share it through shared memory (they inherit it; nothing to do in
+# worker_process_init).
+
+
+@worker_init.connect
+def _enable_render_budget(sender=None, **_kwargs):
+    from app.services.forensics import pdf_render
+
+    pool = str(getattr(sender, "pool_cls", "") or "")
+    if "prefork" in pool.lower():
+        pdf_render.enable_render_budget(shared_processes=max(1, int(getattr(sender, "concurrency", 1) or 1)))
+    else:
+        pdf_render.enable_render_budget()
+
+
+@task_postrun.connect
+def _release_render_budget(**_kwargs):
+    from app.services.forensics import pdf_render
+
+    pdf_render.release_render_budget()

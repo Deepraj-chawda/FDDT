@@ -24,7 +24,7 @@ import base64
 import uuid
 from typing import TYPE_CHECKING
 
-from app.services.forensics.pdf_render import render_pdf_pages
+from app.services.forensics.pdf_render import render_pdf_page
 
 if TYPE_CHECKING:
     from app.services.storage_service import StorageService
@@ -64,18 +64,13 @@ def crop_and_upload_signature(
     except Exception:  # noqa: BLE001
         return None
 
-    page_number = int(bounding_box.get("page", 1))
-    pages = render_pdf_pages(pdf_bytes)
-    if not pages:
+    # Only the page the box is on (falls back to page 1 if it doesn't exist).
+    # This runs inside the "Save reference signature" request: rendering the
+    # whole document first made the save take seconds on a long PDF.
+    page = render_pdf_page(pdf_bytes, int(bounding_box.get("page", 1)))
+    if page is None or page.image is None:
         return None
-
-    target_pages = [p for p in pages if p.page_number == page_number]
-    if not target_pages:
-        target_pages = [pages[0]]
-
-    img = target_pages[0].image
-    if img is None:
-        return None
+    img = page.image
 
     h, w = img.shape[:2]
 

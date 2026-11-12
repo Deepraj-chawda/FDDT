@@ -1,0 +1,7 @@
+# Files that run inside Linux containers must keep LF line endings, whatever
+# the checkout's core.autocrlf: a CRLF start-worker.sh fails with
+# "set: Illegal option -" and every worker crash-loops.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.template text eol=lf
+*.ini text eol=lf

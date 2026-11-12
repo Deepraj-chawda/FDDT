@@ -123,30 +123,26 @@ export function NewCasePage() {
 
   const uploadAll = async (caseId: string) => {
     if (!token) return
-    const results = await Promise.all(
+    await Promise.all(
       fileEntries.map(async (entry, index) => {
-        if (entry.progress === 100) return null // already uploaded (a retry)
+        if (entry.done) return // already uploaded (a retry)
         try {
           setEntryProgress(index, 0)
           const doc = await uploadDocument(caseId, entry.file, token, (percent) =>
             setEntryProgress(index, percent)
           )
-          return doc
+          // Each document becomes available (e.g. for a reference signature)
+          // as soon as ITS upload is confirmed — not after the slowest file.
+          setFileEntries((prev) => prev.map((e, i) => (i === index ? { ...e, done: true } : e)))
+          setUploadedDocs((prev) => (prev.some((d) => d.id === doc.id) ? prev : [...prev, doc]))
         } catch (err) {
           setEntryError(
             index,
             err instanceof ApiError ? err.message : "Upload failed"
           )
-          return null
         }
       })
     )
-    // Accumulate successfully-uploaded docs (deduplicating by id on retry).
-    const newDocs = results.filter((d): d is CaseDocument => d !== null)
-    setUploadedDocs((prev) => {
-      const existingIds = new Set(prev.map((d) => d.id))
-      return [...prev, ...newDocs.filter((d) => !existingIds.has(d.id))]
-    })
   }
 
   const onSubmit = async (values: CaseTypeFormValues) => {
@@ -175,9 +171,12 @@ export function NewCasePage() {
     }
   }
 
-  const uploadedCount = fileEntries.filter((f) => f.progress === 100).length
+  // Counted from the server's confirmation, not from "all bytes sent": the
+  // success screen (and its "View Case Details") must not appear before the
+  // documents exist.
+  const uploadedCount = fileEntries.filter((f) => f.done).length
   const failedCount = fileEntries.filter((f) => f.error).length
-  const pendingCount = fileEntries.filter((f) => f.progress !== 100 && !f.error).length
+  const pendingCount = fileEntries.filter((f) => !f.done && !f.error).length
   const allDone =
     createdCase !== null && fileEntries.length > 0 && uploadedCount === fileEntries.length
 
@@ -194,6 +193,90 @@ export function NewCasePage() {
     setActiveRefDoc(null)
     setCreatedRefs([])
   }
+
+  // Optional, per-document. Shown as soon as the first document is confirmed —
+  // during the upload too — so a reference can be set without waiting for the
+  // slowest file.
+  const referencePanel =
+    uploadedDocs.length > 0 ? (
+      <div className="rounded-lg border border-border bg-muted/20 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <PinIcon className="size-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            Set reference signature{" "}
+            <span className="text-muted-foreground">(optional)</span>
+          </span>
+        </div>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          {hasPdf
+            ? "Optionally set a reference signature on a PDF below: draw a box around its signature or stamp and type the signer's name. You can skip this step. "
+            : "None of these documents is a PDF, so a reference signature can't be drawn. "}
+          The saved signature is kept in the signature library and, for now, is
+          compared only against signatures detected on the other documents in this
+          case. This comparison is advisory — for reviewer use only.
+        </p>
+        <div className="flex flex-col gap-2">
+          {uploadedDocs.map((doc) => {
+            const docRefs = createdRefs.filter((r) => r.source_document_id === doc.id)
+            const canDraw = isPdfDocument(doc)
+            return (
+              <div
+                key={doc.id}
+                className="rounded-md border bg-background px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-[13px] text-foreground">
+                    {doc.original_filename}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 shrink-0 text-[11px]"
+                    disabled={!canDraw}
+                    title={
+                      canDraw
+                        ? undefined
+                        : "Reference signatures can only be drawn on PDF documents"
+                    }
+                    onClick={() => setActiveRefDoc(doc)}
+                  >
+                    {docRefs.length > 0
+                      ? "Add another reference"
+                      : "Set as reference signature"}
+                  </Button>
+                </div>
+                {docRefs.map((r) => (
+                  <div
+                    key={r.id}
+                    className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]"
+                  >
+                    <span className="flex items-center gap-1 text-success">
+                      <CheckCircle2Icon className="size-3.5" />
+                      Reference saved: <strong>{r.person_name}</strong>
+                    </span>
+                    <span className="rounded border border-border px-1.5 py-px text-muted-foreground">
+                      Saved to signature library
+                    </span>
+                    {r.signature_image_url ? (
+                      <span className="text-muted-foreground">
+                        Comparing against other documents in this case — results
+                        appear in the case's Checks panel.
+                      </span>
+                    ) : (
+                      <span className="text-warning">
+                        The selected region couldn't be extracted from this file, so
+                        no comparison will run for it.
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    ) : null
 
   return (
     <div className="min-h-svh bg-background">
@@ -235,86 +318,7 @@ export function NewCasePage() {
                     </p>
                   </div>
 
-                  {/* Signature reference creation — optional, per-document */}
-                  {uploadedDocs.length > 0 && (
-                    <div className="rounded-lg border border-border bg-muted/20 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <PinIcon className="size-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">
-                          Set reference signature{" "}
-                          <span className="text-muted-foreground">(optional)</span>
-                        </span>
-                      </div>
-                      <p className="mb-3 text-[11px] text-muted-foreground">
-                        {hasPdf
-                          ? "Optionally set a reference signature on a PDF below: draw a box around its signature or stamp and type the signer's name. You can skip this step. "
-                          : "None of these documents is a PDF, so a reference signature can't be drawn. "}
-                        The saved signature is kept in the signature library and, for now, is
-                        compared only against signatures detected on the other documents in this
-                        case. This comparison is advisory — for reviewer use only.
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {uploadedDocs.map((doc) => {
-                          const docRefs = createdRefs.filter((r) => r.source_document_id === doc.id)
-                          const canDraw = isPdfDocument(doc)
-                          return (
-                            <div
-                              key={doc.id}
-                              className="rounded-md border bg-background px-3 py-2"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="truncate text-[13px] text-foreground">
-                                  {doc.original_filename}
-                                </span>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 shrink-0 text-[11px]"
-                                  disabled={!canDraw}
-                                  title={
-                                    canDraw
-                                      ? undefined
-                                      : "Reference signatures can only be drawn on PDF documents"
-                                  }
-                                  onClick={() => setActiveRefDoc(doc)}
-                                >
-                                  {docRefs.length > 0
-                                    ? "Add another reference"
-                                    : "Set as reference signature"}
-                                </Button>
-                              </div>
-                              {docRefs.map((r) => (
-                                <div
-                                  key={r.id}
-                                  className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]"
-                                >
-                                  <span className="flex items-center gap-1 text-success">
-                                    <CheckCircle2Icon className="size-3.5" />
-                                    Reference saved: <strong>{r.person_name}</strong>
-                                  </span>
-                                  <span className="rounded border border-border px-1.5 py-px text-muted-foreground">
-                                    Saved to signature library
-                                  </span>
-                                  {r.signature_image_url ? (
-                                    <span className="text-muted-foreground">
-                                      Comparing against other documents in this case — results
-                                      appear in the case's Checks panel.
-                                    </span>
-                                  ) : (
-                                    <span className="text-warning">
-                                      The selected region couldn't be extracted from this file, so
-                                      no comparison will run for it.
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {referencePanel}
 
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -334,6 +338,7 @@ export function NewCasePage() {
                   </div>
                 </div>
               ) : (
+                <div className="flex flex-col gap-5">
                 <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)} noValidate>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="caseType">Case type</Label>
@@ -410,6 +415,9 @@ export function NewCasePage() {
                     )}
                   </div>
                 </form>
+                  {/* While the rest upload, references can already be set on confirmed PDFs. */}
+                  {referencePanel}
+                </div>
               )}
             </CardContent>
           </Card>
