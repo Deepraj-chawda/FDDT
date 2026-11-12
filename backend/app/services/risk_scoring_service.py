@@ -508,6 +508,22 @@ def latest_assessment(
     ).scalars().first()
 
 
+def analysis_incomplete_detail(
+    db: Session, company_id: uuid.UUID, case_id: uuid.UUID, consequence: str
+) -> str | None:
+    """None once a case is fully analysed: every automated check has finished
+    AND it has a risk assessment. Otherwise the 409 message for an action that
+    must wait (approve, reject, escalate, report export), e.g.
+    consequence="this case can't be rejected yet"."""
+    pipeline = pipeline_status(db, company_id, case_id)
+    if pipeline.complete and latest_assessment(db, company_id, case_id) is not None:
+        return None
+    detail = f"Automated checks are still running, so {consequence}."
+    if pipeline.pending:
+        detail += " Waiting on: " + "; ".join(pipeline.pending[:5]) + "."
+    return detail
+
+
 def score_case(db: Session, company_id: uuid.UUID, case_id: uuid.UUID) -> CaseRiskAssessment | None:
     """Score `case_id` (of `company_id`, against that company's own rules) if
     its pipeline is complete. Returns the (new or unchanged-latest)

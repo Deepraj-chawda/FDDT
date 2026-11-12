@@ -153,11 +153,29 @@ def test_reject_requires_a_reason_and_records_it(client, reviewer_headers, revie
     assert action.action_type == CaseActionType.reject and action.notes == "Invoice total was altered."
 
 
-def test_a_reviewer_can_reject_before_the_pipeline_finishes(client, reviewer_headers, db_session, plain_user):
+@pytest.mark.parametrize("action,verb", [("reject", "rejected"), ("escalate", "escalated")])
+def test_cannot_reject_or_escalate_before_the_case_is_analysed(
+    client, reviewer_headers, db_session, plain_user, action, verb
+):
+    """Like approve: no decision on a half-checked case."""
+    seed_risk_rules(db_session, db_session.info["test_company_id"])
     case = make_case(db_session, plain_user)
     add_document(db_session, case, plain_user, "a.pdf", complete=False)
-    res = client.post(f"/cases/{case.id}/reject", json={"reason": "Obvious forgery."}, headers=reviewer_headers)
-    assert res.status_code == 200 and res.json()["status"] == "rejected"
+    res = client.post(f"/cases/{case.id}/{action}", json={"reason": "Obvious forgery."}, headers=reviewer_headers)
+    assert res.status_code == 409
+    assert f"can't be {verb} yet" in res.json()["detail"] and "Text extraction" in res.json()["detail"]
+    db_session.expire_all()
+    assert db_session.get(Case, case.id).assigned_tier == CaseTier.l1
+    assert db_session.query(CaseAction).filter_by(case_id=case.id).count() == 0
+
+
+@pytest.mark.parametrize("action", ["reject", "escalate"])
+def test_cannot_reject_or_escalate_an_unscored_case_even_if_checks_finished(
+    client, reviewer_headers, db_session, plain_user, action
+):
+    case = make_case(db_session, plain_user)
+    add_document(db_session, case, plain_user, "a.pdf")  # complete, but score_case never ran
+    assert client.post(f"/cases/{case.id}/{action}", json={"reason": "x"}, headers=reviewer_headers).status_code == 409
 
 
 # ---------------------------------------------------------------------- escalate

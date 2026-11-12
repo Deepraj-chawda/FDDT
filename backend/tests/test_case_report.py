@@ -159,6 +159,20 @@ def tampered_case(db_session, fake_storage, seeded_user):
     return case, doc
 
 
+def _finish_remaining_checks(db, doc) -> None:
+    """Complete the checks `tampered_case` leaves out, so the case counts as
+    fully analysed (pipeline finished + assessed) for the API's 409 gate. Only
+    for tests that go through the API; the content tests keep the fixture's
+    exact set of checks."""
+    for check_type in (
+        DocumentCheckType.field_validation,
+        DocumentCheckType.issuer_verification,
+        DocumentCheckType.duplicate_detection,
+    ):
+        _add_check(db, doc, check_type, "pass", [])
+    db.commit()
+
+
 # ---------------------------------------------------------------------------
 # Content
 # ---------------------------------------------------------------------------
@@ -279,7 +293,8 @@ def test_report_labels_each_actor_with_their_reviewer_tier(
 ):
     """Escalated by an L1, resolved by an L2: the audit trail and the decision
     line name the tier of each actor, not a generic "Reviewer"."""
-    case, _ = tampered_case
+    case, doc = tampered_case
+    _finish_remaining_checks(db_session, doc)
     case.status = CaseStatus.pending_manual_review
     db_session.commit()
     assert client.post(f"/cases/{case.id}/escalate", json={"reason": "needs L2"}, headers=reviewer_headers).status_code == 200
@@ -577,6 +592,7 @@ def test_create_report_stores_under_reports_prefix_and_keeps_history(
     client, db_session, fake_storage, reviewer_headers, reviewer_user, tampered_case
 ):
     case, doc = tampered_case
+    _finish_remaining_checks(db_session, doc)
     original_blob = doc.blob_storage_path.rsplit("/documents/", 1)[-1]
     original_before = fake_storage.uploads[original_blob]
 
@@ -605,6 +621,22 @@ def test_create_report_stores_under_reports_prefix_and_keeps_history(
     history = client.get(f"/cases/{case.id}/reports", headers=reviewer_headers).json()
     assert [r["id"] for r in history] == [second.json()["id"], body["id"]]  # newest first, none overwritten
     assert blob in fake_storage.uploads
+
+
+def test_report_cannot_be_exported_until_the_case_is_fully_analysed(
+    client, db_session, fake_storage, reviewer_headers, tampered_case
+):
+    case, doc = tampered_case  # assessed, but three checks have not finished
+    res = client.post(f"/cases/{case.id}/reports", headers=reviewer_headers)
+    assert res.status_code == 409
+    assert "a report can't be exported yet" in res.json()["detail"]
+    assert "Field validation of 'tampered.pdf'" in res.json()["detail"]
+    assert db_session.execute(select(CaseReport).where(CaseReport.case_id == case.id)).first() is None
+    # Earlier reports stay listable meanwhile.
+    assert client.get(f"/cases/{case.id}/reports", headers=reviewer_headers).status_code == 200
+
+    _finish_remaining_checks(db_session, doc)
+    assert client.post(f"/cases/{case.id}/reports", headers=reviewer_headers).status_code == 201
 
 
 def test_submitters_cannot_export_or_list_reports(client, plain_headers, tampered_case):

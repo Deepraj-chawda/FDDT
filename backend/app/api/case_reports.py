@@ -5,7 +5,9 @@ Company reviewers only, like the other case actions (a platform admin may list
 and download existing reports — audited support access — but not generate) — a submitter never sees
 a case's risk reasons or forensic findings, which is what the report is
 made of. Generating a report adds a new history row each time; earlier
-reports stay downloadable.
+reports stay downloadable. A report can only be generated once the case is
+fully analysed (every automated check finished and a risk assessment exists),
+so no report is ever made of a half-checked case.
 """
 import uuid
 
@@ -21,6 +23,7 @@ from app.models.case_risk_assessment import CaseRiskAssessment
 from app.models.user import User, UserRole
 from app.schemas.case_report import CaseReportResponse
 from app.services.case_report_service import generate_case_report
+from app.services.risk_scoring_service import analysis_incomplete_detail
 from app.services.storage_service import (
     StorageOperationError,
     StorageService,
@@ -81,12 +84,14 @@ def _to_response(
         "Company reviewers only. Renders the per-case forensic report PDF, stores it in Blob "
         "Storage under the company's `companies/{company_id}/cases/{case_id}/reports/` prefix, records a `case_reports` row (with the file's SHA-256) and "
         "returns it with a signed download URL. Every call creates a new report; earlier ones "
-        "are kept."
+        "are kept. Requires the case to be fully analysed: the automated pipeline finished and a "
+        "risk assessment exists (409 otherwise)."
     ),
     responses={
         401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
         403: {"description": "Requires a reviewer (L1 or L2) or `admin` role."},
         404: {"description": "No such case."},
+        409: {"description": "Automated checks are still running, or the case has no risk assessment yet."},
         502: {"description": "Blob Storage failed while saving or signing the report."},
     },
 )
@@ -98,6 +103,9 @@ def create_case_report(
 ) -> CaseReportResponse:
     db = scope.db
     case = _get_case(scope)
+    detail = analysis_incomplete_detail(db, case.company_id, case.id, "a report can't be exported yet")
+    if detail:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail)
     try:
         report = generate_case_report(db, case, actor, storage)
     except StorageOperationError as exc:
