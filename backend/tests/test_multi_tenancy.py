@@ -256,6 +256,25 @@ def test_platform_admin_reads_any_case_and_each_access_is_audited(
     assert b_view["total"] == 5  # the 4 above + this audit-log read itself (also audited)
 
 
+def test_a_background_refresh_of_a_case_page_is_not_a_new_platform_access(
+    client, db_session, tenants, platform_admin_headers
+):
+    b_case, _ = _case_with_document(client, tenants["b"]["headers"]["user"], "b-invoice.pdf")
+    refresh = {**platform_admin_headers, "X-Background-Refresh": "1"}
+
+    # The header never hides a first read...
+    assert client.get(f"/cases/{b_case}", headers=refresh).status_code == 200
+    assert len(_platform_access_rows(db_session)) == 1
+    # ...but the page's polling of what is already on screen adds nothing.
+    for _ in range(3):
+        assert client.get(f"/cases/{b_case}", headers=refresh).status_code == 200
+    assert len(_platform_access_rows(db_session)) == 1
+    # A different read, or a deliberate (unmarked) view, is still recorded.
+    client.get(f"/cases/{b_case}/audit-log", headers=refresh)
+    client.get(f"/cases/{b_case}", headers=platform_admin_headers)
+    assert len(_platform_access_rows(db_session)) == 3
+
+
 def test_company_users_never_see_platform_admin_access(client, db_session, tenants, platform_admin_headers):
     """Not in Audit History, not in the event-type filter, not in the case
     timeline, not in a generated report — for any company role."""

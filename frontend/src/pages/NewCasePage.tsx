@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
 import { z } from "zod"
 
-import { createCase, uploadDocument } from "@/api/cases"
+import { createCase, discardEmptyCase, uploadDocument } from "@/api/cases"
 import { ApiError } from "@/api/client"
 import { Button } from "@/components/ui/button"
 import { Nav } from "@/design-system/Nav"
@@ -121,11 +121,13 @@ export function NewCasePage() {
     )
   }
 
-  const uploadAll = async (caseId: string) => {
-    if (!token) return
-    await Promise.all(
+  // Resolves to how many of the case's documents the server now holds
+  // (earlier attempts included).
+  const uploadAll = async (caseId: string): Promise<number> => {
+    if (!token) return 0
+    const results = await Promise.all(
       fileEntries.map(async (entry, index) => {
-        if (entry.done) return // already uploaded (a retry)
+        if (entry.done) return true // already uploaded (a retry)
         try {
           setEntryProgress(index, 0)
           const doc = await uploadDocument(caseId, entry.file, token, (percent) =>
@@ -135,14 +137,17 @@ export function NewCasePage() {
           // as soon as ITS upload is confirmed — not after the slowest file.
           setFileEntries((prev) => prev.map((e, i) => (i === index ? { ...e, done: true } : e)))
           setUploadedDocs((prev) => (prev.some((d) => d.id === doc.id) ? prev : [...prev, doc]))
+          return true
         } catch (err) {
           setEntryError(
             index,
             err instanceof ApiError ? err.message : "Upload failed"
           )
+          return false
         }
       })
     )
+    return results.filter(Boolean).length
   }
 
   const onSubmit = async (values: CaseTypeFormValues) => {
@@ -161,7 +166,19 @@ export function NewCasePage() {
         activeCase = await createCase(values.caseType, token)
         setCreatedCase(activeCase)
       }
-      await uploadAll(activeCase.id)
+      const accepted = await uploadAll(activeCase.id)
+      if (accepted === 0) {
+        // Every file was rejected: withdraw the case rather than leave an
+        // empty one in the queue. The next attempt opens a fresh case. If
+        // the discard itself fails, keep the case so a retry reuses it
+        // instead of creating a second empty one.
+        try {
+          await discardEmptyCase(activeCase.id, token)
+          setCreatedCase(null)
+        } catch {
+          // kept for the retry
+        }
+      }
     } catch (err) {
       setFormError(
         err instanceof ApiError ? err.message : "Something went wrong. Please try again."

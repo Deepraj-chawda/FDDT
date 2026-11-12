@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiFetch, ApiError, parseErrorDetail } from "@/api/client"
+import { API_BASE_URL, apiFetch, ApiError, BACKGROUND_REFRESH_HEADERS, parseErrorDetail } from "@/api/client"
 import { withSession } from "@/lib/session"
 import type { BulkUploadDetail, BulkUploadSummary } from "@/types/bulkUpload"
 import type { CaseType } from "@/types/case"
@@ -52,9 +52,13 @@ export function getBulkUpload(
   id: string,
   token: string,
   companyId: string | null = null,
+  background = false,
 ): Promise<BulkUploadDetail> {
   const query = companyId ? `?company_id=${encodeURIComponent(companyId)}` : ""
-  return apiFetch<BulkUploadDetail>(`/bulk-uploads/${id}${query}`, { token })
+  return apiFetch<BulkUploadDetail>(`/bulk-uploads/${id}${query}`, {
+    token,
+    headers: background ? BACKGROUND_REFRESH_HEADERS : undefined,
+  })
 }
 
 export function listBulkUploads(

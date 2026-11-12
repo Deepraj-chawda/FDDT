@@ -68,6 +68,11 @@ class CaseListItem(BaseModel):
     submitted_by: UserSummary | None = None
     created_at: datetime
     document_count: int
+    document_names: list[str] = Field(
+        default_factory=list,
+        description="The original filenames of the case's first few documents (upload order, at "
+        "most 3); `document_count` is the full count.",
+    )
     flag: CaseFlagSchema
     can_act: bool = Field(
         description="Whether the caller may approve/reject/escalate this case given its tier. "

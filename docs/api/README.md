@@ -8,7 +8,7 @@ definitions, so it cannot drift from the code:
 | Interactive docs (Swagger UI) | `http://localhost:8000/docs` while the backend runs |
 | ReDoc | `http://localhost:8000/redoc` |
 | Machine-readable schema | `http://localhost:8000/openapi.json` |
-| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 42 paths / 52 operations / 70 schemas) |
+| Snapshot committed to the repo | [`openapi.json`](openapi.json) (OpenAPI 3.1, 46 paths / 56 operations / 73 schemas) |
 
 Every operation carries a `summary`, a `description` (rules, side effects, role requirements) and its
 error responses; every request field has a description. Import `openapi.json` into Postman,

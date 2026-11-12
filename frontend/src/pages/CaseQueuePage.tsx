@@ -45,7 +45,9 @@ interface QueueCase {
   type: string
   typeCategory: "invoice" | "contract" | "bank" | "identity" | "tax"
   docCount: number
-  flag: "Low risk" | "Medium risk" | "High risk" | "Analyzing"
+  // "Not shared": a submitter's own view — the risk tier is never disclosed
+  // to them (the API masks it), so nothing scoring-related is implied.
+  flag: "Low risk" | "Medium risk" | "High risk" | "Analyzing" | "Not shared"
   score: number | null
   // Escalated = still-open case assigned to the L2 tier (NOT a status); for
   // Reviewer L2/admin such cases arrive first from the API.
@@ -71,12 +73,16 @@ const TIER_PILL_STYLES: Record<QueueCase["flag"], { pill: string; dot: string }>
   "Medium risk": { pill: "bg-amber-50 text-amber-700 border-amber-200/90", dot: "bg-amber-500" },
   "High risk": { pill: "bg-rose-50 text-rose-700 border-rose-200/90", dot: "bg-rose-600" },
   Analyzing: { pill: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-400 animate-pulse" },
+  "Not shared": { pill: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-300" },
 }
 
 function TierPill({ flag, score }: { flag: QueueCase["flag"]; score: number | null }) {
   const style = TIER_PILL_STYLES[flag]
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${style.pill}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${style.pill}`}
+      title={flag === "Not shared" ? "Risk scores are visible to the review team only." : undefined}
+    >
       <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
       {flag}
       {score !== null && <span className="font-mono text-[10px] opacity-70">{score}</span>}
@@ -95,14 +101,15 @@ function formatRelativeTime(date: Date): string {
   return `${diffDays}d ago`
 }
 
-function mapApiCaseToQueueCase(c: CaseListItem): QueueCase {
+function mapApiCaseToQueueCase(c: CaseListItem, riskHidden: boolean): QueueCase {
   let typeCategory: QueueCase["typeCategory"] = "invoice"
   if (c.case_type.includes("bank")) typeCategory = "bank"
   else if (c.case_type.includes("tax") || c.case_type.includes("school")) typeCategory = "tax"
   else if (c.case_type.includes("procurement") || c.case_type.includes("quotation")) typeCategory = "contract"
 
-  const flag: QueueCase["flag"] =
-    c.flag?.flag === "high"
+  const flag: QueueCase["flag"] = riskHidden
+    ? "Not shared"
+    : c.flag?.flag === "high"
       ? "High risk"
       : c.flag?.flag === "medium"
         ? "Medium risk"
@@ -189,6 +196,9 @@ export function CaseQueuePage() {
   const navigate = useNavigate()
   const { token, user } = useAuth()
   const acting = useActingCompany()
+  // Submitters never learn risk tiers (the API masks them): no risk column
+  // values, risk filter or high-risk counts that would read as "not scored".
+  const riskHidden = user?.role === "user"
   const tabs = (user && QUEUE_TABS[user.role]) || []
   const [view, setView] = React.useState<QueueView | null>(null)
   const activeView: QueueView = view ?? tabs[0]?.view ?? "all"
@@ -237,7 +247,10 @@ export function CaseQueuePage() {
     enabled,
   })
 
-  const pageCases = React.useMemo(() => (casePage?.items ?? []).map(mapApiCaseToQueueCase), [casePage])
+  const pageCases = React.useMemo(
+    () => (casePage?.items ?? []).map((c) => mapApiCaseToQueueCase(c, riskHidden)),
+    [casePage, riskHidden],
+  )
   const total = casePage?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const filtered = Boolean(debouncedSearch || statusFilter || typeFilter || flagFilter)
@@ -246,6 +259,7 @@ export function CaseQueuePage() {
   const highRiskCount = summary?.high_risk_open ?? 0
   const escalatedCount = summary?.escalated ?? 0
   const awaitingReviewCount = summary?.awaiting_review ?? 0
+  const analyzingCount = summary?.analyzing ?? 0
   const clearedCount = summary?.approved ?? 0
   const autoClearedRate = activeCasesCount > 0 ? Math.round((clearedCount / activeCasesCount) * 1000) / 10 : null
   const tabCount = (v: QueueView) =>
@@ -255,7 +269,7 @@ export function CaseQueuePage() {
   const exportCsv = async () => {
     setExporting(true)
     try {
-      const all = (await listAllCases(token as string, query, acting.platformCompanyParam)).map(mapApiCaseToQueueCase)
+      const all = (await listAllCases(token as string, query, acting.platformCompanyParam)).map((c) => mapApiCaseToQueueCase(c, riskHidden))
       const isAdmin = acting.isPlatformAdmin
       const header = [
         "Case ID", "Type", "Documents", "Risk", "Risk score", "Status", "Escalated to L2",
@@ -322,8 +336,12 @@ export function CaseQueuePage() {
             <div className="inline-flex items-center gap-2 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-medium text-slate-700">
               <span className="text-slate-400 font-normal">Active cases:</span>
               <span className="font-bold text-slate-900">{activeCasesCount}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-              <span className="text-rose-600 font-semibold">{highRiskCount} High risk</span>
+              {!riskHidden && (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <span className="text-rose-600 font-semibold">{highRiskCount} High risk</span>
+                </>
+              )}
             </div>
             <button
               className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200/80 shadow-xs text-xs font-semibold transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -356,7 +374,23 @@ export function CaseQueuePage() {
             </div>
           </div>
 
-          {/* Card 2: High-risk flagged */}
+          {/* Card 2: High-risk flagged (a submitter: still being analyzed — tiers aren't shared with them) */}
+          {riskHidden ? (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Analyzing</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
+                <ClockIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{analyzingCount}</div>
+              <div className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1">
+                <span>Automated checks still running</span>
+              </div>
+            </div>
+          </div>
+          ) : (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">High-risk flagged</span>
@@ -372,6 +406,7 @@ export function CaseQueuePage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Card 3: Awaiting review */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 custom-shadow-card flex flex-col justify-between">
@@ -496,7 +531,8 @@ export function CaseQueuePage() {
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
 
-              {/* Risk / Flag Dropdown */}
+              {/* Risk / Flag Dropdown (not for submitters: every case would match "Analyzing") */}
+              {!riskHidden && (
               <div className="relative w-full col-span-2 sm:col-span-1 sm:w-auto">
                 <select
                   value={flagFilter}
@@ -515,6 +551,7 @@ export function CaseQueuePage() {
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               </div>
+              )}
 
               {/* Reset Action */}
               <button

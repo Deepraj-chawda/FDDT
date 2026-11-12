@@ -89,7 +89,8 @@ export function PlatformCompaniesPage() {
         </button>
       }
     >
-      <div className="mb-3"><StatusLine ok={notice} error={error} /></div>
+      {/* While the new/edit modal is open its own error line shows the error — not here as well. */}
+      <div className="mb-3"><StatusLine ok={notice} error={adding || editing ? null : error} /></div>
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[550px]">
@@ -155,7 +156,7 @@ export function PlatformCompaniesPage() {
       </div>
 
       {adding && (
-        <Modal title="New company" description="Creates an isolated tenant seeded with the default risk rules." onClose={() => setAdding(false)} busy={create.isPending}>
+        <Modal title="New company" description="Creates an isolated tenant seeded with the default risk rules." onClose={() => { setAdding(false); setError(null) }} busy={create.isPending}>
           <form
             className="flex flex-col gap-4"
             noValidate
@@ -181,7 +182,7 @@ export function PlatformCompaniesPage() {
             </div>
             <StatusLine error={error} />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setAdding(false)} className="rounded-lg px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+              <button type="button" onClick={() => { setAdding(false); setError(null) }} className="rounded-lg px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
               <button type="submit" disabled={create.isPending} className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
                 {create.isPending && <Loader2Icon className="size-3.5 animate-spin" />} Create company
               </button>

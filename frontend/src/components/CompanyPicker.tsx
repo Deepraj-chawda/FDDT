@@ -5,7 +5,7 @@ import { useActingCompany } from "@/hooks/useActingCompany"
 // Platform admins only: choose which company a company-scoped screen shows.
 // Renders nothing for company users (they only ever see their own company).
 export function CompanyPicker({ note = "Read-only support access. Every view is recorded in the platform audit log (the company does not see it)." }: { note?: string }) {
-  const { isPlatformAdmin, companies, companyId, setCompanyId } = useActingCompany()
+  const { isPlatformAdmin, companies, companiesLoading, companyId, setCompanyId } = useActingCompany()
   if (!isPlatformAdmin) return null
   return (
     <div className="mb-5 flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -18,9 +18,10 @@ export function CompanyPicker({ note = "Read-only support access. Every view is 
           value={companyId ?? ""}
           onChange={(e) => setCompanyId(e.target.value)}
           aria-label="Active company"
+          disabled={companiesLoading}
           className="max-w-full sm:max-w-xs truncate rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
         >
-          {companies.length === 0 && <option value="">No companies yet</option>}
+          {companies.length === 0 && <option value="">{companiesLoading ? "Loading companies…" : "No companies yet"}</option>}
           {companies.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
