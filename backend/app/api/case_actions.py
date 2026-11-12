@@ -8,9 +8,10 @@ gets 403 on every action here (they can still GET it — see
 app/api/case_access.py). All rules are enforced HERE, server-side — the UI's
 disabled buttons and confirmation step are conveniences, not the guard:
 
-  approve   - only once the automated pipeline has finished AND a risk
-              assessment exists (never approve a half-checked case). No hard
-              block on a high-risk case (a reviewer may have verified
+  All three - only once the case is fully analysed: the automated pipeline
+              has finished AND a risk assessment exists (409 otherwise). No
+              decision is taken on a half-checked case.
+  approve   - No hard block on a high-risk case (a reviewer may have verified
               something the system couldn't), but anything above "low"
               requires a written justification, which is stored.
   reject    - a reason is required.
@@ -43,7 +44,7 @@ from app.schemas.case import (
     RejectRequest,
 )
 from app.services import workflow_service
-from app.services.risk_scoring_service import latest_assessment, pipeline_status
+from app.services.risk_scoring_service import analysis_incomplete_detail, latest_assessment
 from app.services.workflow_service import InvalidCaseTransition
 
 router = APIRouter(prefix="/cases", tags=["case-actions"])
@@ -65,6 +66,13 @@ def _get_case(db: Session, case_id: uuid.UUID, actor: User) -> Case:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Case not found")
     ensure_can_act(actor, case)
     return case
+
+
+def _require_analysed(db: Session, case: Case, consequence: str) -> None:
+    """409 until every automated check has finished and the case is scored."""
+    detail = analysis_incomplete_detail(db, case.company_id, case.id, consequence)
+    if detail:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail)
 
 
 def _decision(db: Session, case: Case, action: CaseAction, actor: User) -> CaseDecisionResponse:
@@ -115,13 +123,8 @@ def approve_case(
     if case.status in (CaseStatus.approved, CaseStatus.rejected, CaseStatus.closed):
         raise HTTPException(status.HTTP_409_CONFLICT, f"This case is already {case.status.value}.")
 
-    pipeline = pipeline_status(db, case.company_id, case.id)
+    _require_analysed(db, case, "this case can't be approved yet")
     assessment = latest_assessment(db, case.company_id, case.id)
-    if not pipeline.complete or assessment is None:
-        detail = "Automated checks are still running, so this case can't be approved yet."
-        if pipeline.pending:
-            detail += " Waiting on: " + "; ".join(pipeline.pending[:5]) + "."
-        raise HTTPException(status.HTTP_409_CONFLICT, detail)
 
     note = (payload.note or "").strip() or None
     if assessment.tier != RiskTier.low and (note is None or len(note) < _MIN_JUSTIFICATION_CHARS):
@@ -151,14 +154,15 @@ def approve_case(
     response_model=CaseDecisionResponse,
     summary="Reject a case",
     description=(
-        "Company reviewers only (platform admins: 403). A `reason` is required. Rejecting an already-decided case is a "
+        "Company reviewers only (platform admins: 403). A `reason` is required. Requires the automated pipeline to "
+        "have finished and a risk assessment to exist (409 otherwise). Rejecting an already-decided case is a "
         "409. Writes a `case_actions` row and an audit event."
     ),
     responses={
         401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
         403: {"description": "Requires a company reviewer role; a `reviewer_l1` also gets 403 on a case escalated to L2."},
         404: {"description": "No such case in your company."},
-        409: {"description": "Invalid state transition (e.g. already decided)."},
+        409: {"description": "Checks still running, or an invalid state transition (e.g. already decided)."},
     },
 )
 def reject_case(
@@ -168,6 +172,7 @@ def reject_case(
     db: Session = Depends(get_tenant_db),
 ) -> CaseDecisionResponse:
     case = _get_case(db, case_id, actor)
+    _require_analysed(db, case, "this case can't be rejected yet")
     try:
         action = workflow_service.reject_case(db, case, actor, reason=payload.reason)
     except InvalidCaseTransition as exc:
@@ -183,13 +188,14 @@ def reject_case(
         "`reviewer_l1` only (`reviewer_l2` and platform admins: 403). Moves the case to the L2 tier (`assigned_tier` = `l2`); `status` is "
         "unchanged. A `reviewer_l1` then keeps read access but can no longer act on it. There is "
         "no de-escalation — an L2 reviewer approves or rejects it. A `reason` is required. "
+        "Requires the automated pipeline to have finished and a risk assessment to exist (409 otherwise). "
         "Escalating a decided case is a 409."
     ),
     responses={
         401: {"description": "Missing, invalid or expired bearer token, or the user is inactive."},
         403: {"description": "Requires the `reviewer_l1` role, on a case not yet escalated to L2."},
         404: {"description": "No such case in your company."},
-        409: {"description": "Invalid state transition (e.g. already decided)."},
+        409: {"description": "Checks still running, or an invalid state transition (e.g. already decided)."},
     },
 )
 def escalate_case(
@@ -202,6 +208,7 @@ def escalate_case(
     # After the lookup, so another company's case is still a 404.
     if has_rank(actor.role, UserRole.reviewer_l2):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "A Reviewer L2 resolves cases directly and cannot escalate them.")
+    _require_analysed(db, case, "this case can't be escalated yet")
     try:
         action = workflow_service.escalate_case(db, case, actor, reason=payload.reason)
     except InvalidCaseTransition as exc:

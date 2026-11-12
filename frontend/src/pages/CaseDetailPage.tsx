@@ -269,7 +269,13 @@ export function CaseDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {canExport && caseId && token && <CaseReportExport caseId={caseId} token={token} />}
+            {canExport && caseId && token && (
+              <CaseReportExport
+                caseId={caseId}
+                token={token}
+                analysed={Boolean(caseDetail?.pipeline.complete && caseDetail.assessment !== null)}
+              />
+            )}
             {isSupportView && caseDetail && token && <CaseDeleteControl caseDetail={caseDetail} token={token} />}
             {caseDetail && <TierBadge tier={caseDetail.assigned_tier} />}
           </div>

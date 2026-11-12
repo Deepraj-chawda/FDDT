@@ -10,6 +10,10 @@
  * poll-until-ready step. Each click adds a NEW report to the case's history
  * (a report is a point-in-time record and is never overwritten).
  *
+ * Export is disabled until the case is fully analysed (every automated check
+ * finished and a risk assessment exists); the backend refuses earlier
+ * exports with a 409. Earlier reports in History stay downloadable.
+ *
  * The annotated pages inside that PDF are a separate artifact from the
  * live overlays drawn in PdfOverlayViewer: those stay dynamic and never
  * save anything; the report burns findings into its own rendered copies.
@@ -38,7 +42,16 @@ function formatSize(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
-export function CaseReportExport({ caseId, token }: { caseId: string; token: string }) {
+export function CaseReportExport({
+  caseId,
+  token,
+  analysed,
+}: {
+  caseId: string
+  token: string
+  /** Every automated check finished and the case has a risk assessment. */
+  analysed: boolean
+}) {
   const queryClient = useQueryClient()
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const [justCreated, setJustCreated] = React.useState<CaseReport | null>(null)
@@ -72,11 +85,18 @@ export function CaseReportExport({ caseId, token }: { caseId: string; token: str
     <div className="relative flex flex-col items-end gap-1">
       <div className="flex items-center gap-1.5">
         <button
-          className="inline-flex items-center space-x-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors disabled:opacity-60 disabled:cursor-wait"
+          className={cn(
+            "inline-flex items-center space-x-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors disabled:opacity-60 disabled:hover:bg-white",
+            generate.isPending ? "disabled:cursor-wait" : "disabled:cursor-not-allowed",
+          )}
           type="button"
           onClick={() => generate.mutate()}
-          disabled={generate.isPending}
-          title="Generate a standalone PDF report of this case"
+          disabled={!analysed || generate.isPending}
+          title={
+            analysed
+              ? "Generate a standalone PDF report of this case"
+              : "Available once the automated analysis is complete"
+          }
         >
           {generate.isPending ? (
             <Loader2Icon className="w-4 h-4 animate-spin text-slate-500" />

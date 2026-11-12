@@ -211,8 +211,11 @@ From the case detail page, a reviewer can do the following. On a case escalated 
 can; a Reviewer L1 sees a read-only panel explaining that the case is with L2, and the backend refuses the
 actions too. Platform admins can never act on a case.
 
-- **Approve.** Disabled until every automated check has finished and the case has a risk assessment (a
-  list of what's still pending is shown). Approving a **low-risk** case is a single click. Approving
+**All three actions — and Export report — stay disabled until the case is fully analysed:** every
+automated check has finished and the case has a risk assessment. Until then the panel lists what's still
+pending. No decision is taken on a half-checked case.
+
+- **Approve.** Approving a **low-risk** case is a single click. Approving
   anything **medium or high** opens a confirmation showing the score and every triggered reason, and
   requires a **written justification of at least 10 characters** — you may have verified something the
   system couldn't, but that reasoning is recorded with the decision and shown in the audit history.
@@ -242,7 +245,9 @@ are recorded only in the platform log.
 ## Exporting the forensic report
 
 From a case's detail page, a reviewer can generate a standalone PDF report — **Export report** —
-built to be understood by someone who has never used the application. It contains:
+built to be understood by someone who has never used the application. The button is enabled once the case
+is fully analysed (every automated check finished and the case scored); earlier reports in **History**
+stay downloadable meanwhile. It contains:
 
 1. Case details (number, type, status, submitter, documents, decision).
 2. Executive summary (score, tier, decision, pointers to the sections below).

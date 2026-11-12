@@ -107,9 +107,9 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 ### Reviewer decisions — tag `case-actions`
 | Method & path | Summary | Access |
 |---|---|---|
-| `POST /cases/{case_id}/approve` | Approve a case (justification required above low risk) | reviewer; L2 case: `reviewer_l2` |
-| `POST /cases/{case_id}/reject` | Reject a case (reason required) | reviewer; L2 case: `reviewer_l2` |
-| `POST /cases/{case_id}/escalate` | Escalate a case to the L2 tier (reason required; one-way) | `reviewer_l1` on an L1 case |
+| `POST /cases/{case_id}/approve` | Approve a case (justification required above low risk; 409 until fully analysed) | reviewer; L2 case: `reviewer_l2` |
+| `POST /cases/{case_id}/reject` | Reject a case (reason required; 409 until fully analysed) | reviewer; L2 case: `reviewer_l2` |
+| `POST /cases/{case_id}/escalate` | Escalate a case to the L2 tier (reason required; one-way; 409 until fully analysed) | `reviewer_l1` on an L1 case |
 
 ### Documents — tag `documents`
 | Method & path | Summary | Access |
@@ -130,7 +130,7 @@ notes in [architecture/overview.md](../architecture/overview.md#security-posture
 ### Reports — tag `case-reports`
 | Method & path | Summary | Access |
 |---|---|---|
-| `POST /cases/{case_id}/reports` | Generate a case report (PDF) | reviewer |
+| `POST /cases/{case_id}/reports` | Generate a case report (PDF; 409 until fully analysed) | reviewer |
 | `GET /cases/{case_id}/reports` | List a case's generated reports | reviewer; PA read |
 
 > Organisation-wide MIS/compliance reporting (`app/api/reports.py`) is a stub with no routes.

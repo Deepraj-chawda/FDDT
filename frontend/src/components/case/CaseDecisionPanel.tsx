@@ -13,8 +13,9 @@
  *
  * Every rule is enforced server-side (backend/app/api/case_actions.py); the
  * disabled states and dialogs here just make it obvious to the reviewer:
- *  - Approve is disabled until the automated checks have finished and the
- *    case has a risk assessment (with a list of what's still running).
+ *  - Approve, Reject and Escalate are all disabled until the case is fully
+ *    analysed: the automated checks have finished and the case has a risk
+ *    assessment (with a list of what's still running).
  *  - Approving a LOW-risk case is one click. Anything above low opens a
  *    confirmation that shows the tier/score and requires a written
  *    justification, which is stored with the decision.
@@ -228,7 +229,11 @@ export function CaseDecisionPanel({
   const decided = caseDetail.status === "approved" || caseDetail.status === "rejected" || caseDetail.status === "closed"
   const escalated = caseDetail.assigned_tier === "l2"
   const tier = assessment?.tier
-  const canApprove = pipeline.complete && assessment !== null
+  // Fully analysed = every automated check finished AND a risk assessment
+  // exists. No decision (approve, reject or escalate) before that; the
+  // backend enforces the same rule with a 409.
+  const analysed = pipeline.complete && assessment !== null
+  const waitTitle = "Available once the automated analysis is complete"
 
   const onSuccess = () => {
     setDialog(null)
@@ -334,12 +339,15 @@ export function CaseDecisionPanel({
         </p>
       ) : (
         <>
-          {!canApprove && (
+          {!analysed && (
             <div
               role="status"
               className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-snug text-amber-800"
             >
-              <strong>Approve is unavailable while automated checks are still running.</strong>
+              <strong>
+                {canEscalate ? "Approve, Reject and Escalate are" : "Approve and Reject are"} unavailable while the
+                automated analysis is still running.
+              </strong>
               {pipeline.pending.length > 0 && (
                 <ul className="mt-1 list-disc pl-4">
                   {pipeline.pending.slice(0, 4).map((p) => (
@@ -354,10 +362,10 @@ export function CaseDecisionPanel({
           <div className={cn("mt-3 grid grid-cols-1 gap-2 lg:grid-cols-1", canEscalate ? "sm:grid-cols-3 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-2")}>
             <Button
               type="button"
-              disabled={!canApprove || approve.isPending}
+              disabled={!analysed || approve.isPending}
               onClick={onApproveClick}
               className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-              title={canApprove ? undefined : "Wait for the automated checks to finish"}
+              title={analysed ? undefined : waitTitle}
             >
               {approve.isPending ? <Loader2Icon className="size-4 animate-spin" /> : <CheckCircle2Icon className="size-4" />}
               Approve
@@ -365,8 +373,10 @@ export function CaseDecisionPanel({
             <Button
               type="button"
               variant="outline"
+              disabled={!analysed || reject.isPending}
               onClick={() => openDialog("reject")}
               className="gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50"
+              title={analysed ? undefined : waitTitle}
             >
               <XCircleIcon className="size-4" />
               Reject
@@ -375,9 +385,10 @@ export function CaseDecisionPanel({
               <Button
                 type="button"
                 variant="outline"
+                disabled={!analysed || escalate.isPending}
                 onClick={() => openDialog("escalate")}
                 className="gap-1.5"
-                title="Hand this case to a Reviewer L2"
+                title={analysed ? "Hand this case to a Reviewer L2" : waitTitle}
               >
                 <FlameIcon className="size-4" />
                 Escalate

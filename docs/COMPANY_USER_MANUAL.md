@@ -256,7 +256,7 @@ In the top-right header of the Case Detail screen, three decision actions are av
 
 ### Exporting Case Forensic Reports
 
-Click **Export report** at any time on the Case Detail page to generate an official, courtroom-ready **PDF Forensic Report**:
+Once the case is fully analysed (every automated check finished and a risk score calculated), click **Export report** on the Case Detail page to generate an official, courtroom-ready **PDF Forensic Report**. Until then the button is disabled, as are **Approve**, **Reject** and **Escalate**:
 - Includes complete executive summary, breakdown of all automated checks, risk scoring explanation, audit trail, SHA-256 cryptographic document hashes, and high-resolution visual evidence pages with highlighted anomaly boxes.
 
 ---
