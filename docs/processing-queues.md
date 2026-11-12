@@ -82,7 +82,10 @@
   (`cpus:` / `FORENSICS_WORKER_CPUS`), not the host's core count — `nproc` ignores container limits and
   would oversubscribe (2 replicas each starting 4 processes on a 4-core host). Pool sizes:
   `EXTRACTION_WORKER_CONCURRENCY`, `VISION_WORKER_CONCURRENCY`, `FORENSICS_WORKER_CONCURRENCY`
-  (0 = per CPU of the limit).
+  (0 = per CPU of the limit, read from cgroup v2 `cpu.max` or v1 `cpu.cfs_quota_us` (Azure Container
+  Apps uses v1), capped by the memory limit ÷ `FORENSICS_MEMORY_PER_PROCESS_MB` (768); the chosen value is
+  logged at start. Before v1 was read, a 0.5-CPU / 1 GiB Container Apps worker fell back to the host's
+  `nproc` = 4 and its processes were OOM-killed).
 - **Monitoring**: Platform › Processing queues (`GET /platform/queues`) — waiting (all priority levels),
   running, oldest waiting task, average / p95 / max wait, run time, consumers online, limiter counters
   (throttled calls, seconds waited, Azure 429s) and **outstanding work per company** (the fair-share

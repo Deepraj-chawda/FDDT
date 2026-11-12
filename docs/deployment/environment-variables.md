@@ -60,7 +60,8 @@ not call Azure.
 | `DEFAULT_COMPANY_NAME` | `Default Company` | Name of the company the multi-tenancy migration assigns pre-existing data to (used once, by the migration) |
 | `PLATFORM_ACCESS_AUDIT_DEDUP_SECONDS` | `0` | 0 = every platform-admin read of company data writes its own (platform-only) audit row; > 0 collapses identical reads within that window |
 | `EXTRACTION_WORKER_CONCURRENCY` / `VISION_WORKER_CONCURRENCY` | `4` / `4` | Threads per extraction / vision worker (`start-worker.sh`). Size to just saturate the Azure caps |
-| `FORENSICS_WORKER_CONCURRENCY` | `0` | Prefork processes per forensics worker; 0 = one per CPU of the container's limit |
+| `FORENSICS_WORKER_CONCURRENCY` | `0` | Prefork processes per forensics worker; 0 = automatic: one per CPU of the container's limit (cgroup v2 `cpu.max` or v1 `cpu.cfs_quota_us`, which Azure Container Apps uses), capped by its memory limit ÷ `FORENSICS_MEMORY_PER_PROCESS_MB`. `start-worker.sh` logs the value it chose |
+| `FORENSICS_MEMORY_PER_PROCESS_MB` | `768` | Memory one forensics process may need (interpreter, OpenCV, PyMuPDF, rendered pages); caps the automatic concurrency so a small container doesn't start more processes than fit |
 | `FAIR_SHARE_BUCKET_SIZE` | `5` | A company's tasks drop one priority level per this many outstanding tasks on a queue |
 | `QUEUE_ALERT_OLDEST_WAITING_SECONDS` | `300` | The per-minute `queue_metrics` job logs a WARNING `queue_alert {json}` line when a queue's oldest waiting task is older than this; 0 = off |
 | `USAGE_RECONCILIATION_HOUR_UTC` | `2` | Hour (UTC) of the nightly usage-counter reconciliation (Celery beat) |
