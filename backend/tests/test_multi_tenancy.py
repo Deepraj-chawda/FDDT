@@ -256,23 +256,33 @@ def test_platform_admin_reads_any_case_and_each_access_is_audited(
     assert b_view["total"] == 5  # the 4 above + this audit-log read itself (also audited)
 
 
-def test_a_background_refresh_of_a_case_page_is_not_a_new_platform_access(
+def test_an_open_case_page_is_one_platform_access_not_one_per_request(
     client, db_session, tenants, platform_admin_headers
 ):
-    b_case, _ = _case_with_document(client, tenants["b"]["headers"]["user"], "b-invoice.pdf")
+    b_user = tenants["b"]["headers"]["user"]
+    b_case, _ = _case_with_document(client, b_user, "b-invoice.pdf")
     refresh = {**platform_admin_headers, "X-Background-Refresh": "1"}
 
-    # The header never hides a first read...
+    # The header never hides the first access to a case...
     assert client.get(f"/cases/{b_case}", headers=refresh).status_code == 200
     assert len(_platform_access_rows(db_session)) == 1
-    # ...but the page's polling of what is already on screen adds nothing.
+    # ...and the page's polling plus its marked companion reads (audit log,
+    # signature matches) of the SAME case add nothing.
     for _ in range(3):
         assert client.get(f"/cases/{b_case}", headers=refresh).status_code == 200
+    assert client.get(f"/cases/{b_case}/audit-log", headers=refresh).status_code == 200
+    assert client.get(f"/cases/{b_case}/signature-matches", headers=refresh).status_code == 200
     assert len(_platform_access_rows(db_session)) == 1
-    # A different read, or a deliberate (unmarked) view, is still recorded.
-    client.get(f"/cases/{b_case}/audit-log", headers=refresh)
+
+    # A deliberate (unmarked) view is still recorded, every time.
     client.get(f"/cases/{b_case}", headers=platform_admin_headers)
-    assert len(_platform_access_rows(db_session)) == 3
+    assert len(_platform_access_rows(db_session)) == 2
+
+    # Another case is another access, marked or not.
+    b_case2, _ = _case_with_document(client, b_user, "b-invoice-2.pdf")
+    assert client.get(f"/cases/{b_case2}", headers=refresh).status_code == 200
+    rows = _platform_access_rows(db_session)
+    assert len(rows) == 3 and str(rows[-1].case_id) == b_case2
 
 
 def test_company_users_never_see_platform_admin_access(client, db_session, tenants, platform_admin_headers):

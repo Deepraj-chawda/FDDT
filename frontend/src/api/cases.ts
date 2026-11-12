@@ -110,8 +110,13 @@ export function restoreCase(caseId: string, token: string): Promise<void> {
   return apiFetch<void>(`/cases/${caseId}/restore`, { method: "POST", token })
 }
 
-export function getCaseAuditLog(caseId: string, token: string): Promise<AuditLogEntry[]> {
-  return apiFetch<AuditLogEntry[]>(`/cases/${caseId}/audit-log`, { token })
+/** `background`: a companion read of a case page already being viewed (the
+ * case read itself is the audited access). */
+export function getCaseAuditLog(caseId: string, token: string, background = false): Promise<AuditLogEntry[]> {
+  return apiFetch<AuditLogEntry[]>(`/cases/${caseId}/audit-log`, {
+    token,
+    headers: background ? BACKGROUND_REFRESH_HEADERS : undefined,
+  })
 }
 
 /**
@@ -197,10 +202,11 @@ export function getDocumentFileUrl(
   caseId: string,
   documentId: string,
   token: string,
+  background = false,
 ): Promise<{ file_url: string }> {
   return apiFetch<{ file_url: string }>(
     `/cases/${caseId}/documents/${documentId}/file-url`,
-    { token },
+    { token, headers: background ? BACKGROUND_REFRESH_HEADERS : undefined },
   )
 }
 
