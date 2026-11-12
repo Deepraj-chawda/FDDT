@@ -70,7 +70,7 @@ sub-checks' `regions`, visual-review boxes, and cross-document regions (only tho
 
 | Component | Props | Purpose |
 |---|---|---|
-| `SettingsShell` | `active: SettingsTab` (`"issuers" \| "risk-rules" \| "users"`), `title?`, `description`, `actions?`, `children`; also exports `StatusLine({error, ok})` | Shared page frame and tab bar for the company settings screens (Issuer Registry, Risk Rules); shows the company picker to platform admins ("Changes apply to this company only and are recorded in its audit log.") |
+| `SettingsShell` | `active: SettingsTab` (`"issuers" \| "risk-rules"`), `title?`, `description`, `actions?`, `children`; also exports `StatusLine({error, ok})` | Shared page frame and tab bar for the company settings screens (Issuer Registry, Risk Rules); shows the company picker to platform admins ("Changes apply to this company only and are recorded in its audit log.") |
 | `Modal` | `title`, `description?`, `children`, `onClose`, `busy?`, `wide?` | Generic dialog used by the settings pages |
 | `AddRuleModal` | `onClose()`, `onCreated(rule: RiskRule)` (token comes from `useAuth`) | Builds a risk rule from `GET /settings/risk-rule-options` (no hand-written JSON), then `POST /settings/risk-rules` — or, on the Rule templates page, `POST /platform/risk-rule-templates` |
 | `AddUserModal` | `onClose()`, `onCreated(user: AdminUser)` | `POST /settings/users` with company + role (or a platform admin); can generate a random 14-character initial password |

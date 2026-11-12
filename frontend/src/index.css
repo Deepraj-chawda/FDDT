@@ -172,6 +172,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* The sticky top nav (h-16) would cover anything scrolled to the top edge
+     (anchor links, scrollIntoView, focus moves): stop scrolling below it. */
+  html {
+    scroll-padding-top: 5rem;
+  }
   body {
     @apply bg-background text-foreground font-sans;
   }

@@ -27,6 +27,8 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   visual_inconsistency_review_completed: "Visual inconsistency review complete",
   visual_inconsistency_review_failed: "Visual inconsistency review failed",
   font_consistency_completed: "Font consistency check complete",
+  analysis_integrity_completed: "Analysis integrity check complete",
+  analysis_integrity_failed: "Analysis integrity check failed",
   font_consistency_failed: "Font consistency check failed",
   spelling_check_completed: "Spelling check complete",
   spelling_check_failed: "Spelling check failed",
@@ -69,7 +71,11 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
 }
 
 export function auditLabel(eventType: string): string {
-  return AUDIT_EVENT_LABELS[eventType] ?? eventType.replace(/_/g, " ")
+  const label = AUDIT_EVENT_LABELS[eventType]
+  if (label) return label
+  // An event with no label yet still reads like its neighbours: "Some event done".
+  const words = eventType.replace(/_/g, " ")
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 export function auditTone(eventType: string): AuditTone {

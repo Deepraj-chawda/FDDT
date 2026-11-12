@@ -151,9 +151,10 @@ export function Nav({ active, onNewUploadClick }: NavProps) {
             <button
               type="button"
               onClick={onNewUploadClick ?? (() => navigate("/cases/new"))}
+              aria-label="New upload"
               className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-[#0b1930] hover:bg-[#14233e] px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-white shadow-sm transition active:scale-95"
             >
-              <UploadCloudIcon className="size-3.5" />
+              <UploadCloudIcon className="size-3.5" aria-hidden="true" />
               <span className="hidden xs:inline sm:inline">New upload</span>
             </button>
           )}

@@ -6,7 +6,8 @@ import { ApiError } from "@/api/client"
 import { listUsers, resetUserPassword, updateUser } from "@/api/settings"
 import { AddUserModal } from "@/components/settings/AddUserModal"
 import { Modal } from "@/components/settings/Modal"
-import { SettingsShell, StatusLine } from "@/components/settings/SettingsShell"
+import { PlatformShell } from "@/components/platform/PlatformShell"
+import { StatusLine } from "@/components/settings/SettingsShell"
 import { useActingCompany } from "@/hooks/useActingCompany"
 import { useAuth } from "@/hooks/useAuth"
 import { FieldError, invalidFieldClass } from "@/components/ui/field-error"
@@ -257,8 +258,9 @@ export function SettingsUsersPage() {
   }
 
   return (
-    <SettingsShell
+    <PlatformShell
       active="users"
+      title="Users"
       actions={
         <button
           type="button"
@@ -507,6 +509,6 @@ export function SettingsUsersPage() {
           }}
         />
       )}
-    </SettingsShell>
+    </PlatformShell>
   )
 }

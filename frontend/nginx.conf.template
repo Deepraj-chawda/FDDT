@@ -4,7 +4,9 @@ server {
     index index.html;
     server_tokens off;
 
-    # Browser hardening for every response (the API adds its own as well).
+    # Browser hardening for every response. The API sets three of these itself
+    # (it can be reached without this proxy); drop the API's copies below so a
+    # proxied response carries each header once, not "nosniff, nosniff".
     # HSTS: the public endpoint is HTTPS-only (TLS ends at the Container Apps
     # ingress). The CSP only restricts what is safe without auditing every
     # script/style source: no framing (clickjacking), no plugins, no <base>
@@ -15,6 +17,9 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
     add_header Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Referrer-Policy;
 
     # Request-body ceilings at the proxy, an outer backstop only. The API
     # enforces each company's own upload limits (companies.max_file_size_mb /

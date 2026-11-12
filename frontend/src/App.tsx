@@ -82,7 +82,9 @@ function App() {
 
               {/* Platform — platform admins only (users, companies, billing, queues) */}
               <Route element={<RoleRoute platformAdmin="only" label="Platform admin" />}>
-                <Route path="/settings/users" element={<SettingsUsersPage />} />
+                <Route path="/platform/users" element={<SettingsUsersPage />} />
+                {/* Old address of the Users screen (it now sits with the other platform tabs). */}
+                <Route path="/settings/users" element={<Navigate to="/platform/users" replace />} />
                 <Route path="/platform" element={<Navigate to="/platform/companies" replace />} />
                 <Route path="/platform/companies" element={<PlatformCompaniesPage />} />
                 <Route path="/platform/usage" element={<PlatformUsagePage />} />
