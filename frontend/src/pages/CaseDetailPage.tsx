@@ -140,10 +140,13 @@ export function CaseDetailPage() {
     },
   })
 
+  // The companion reads (audit log, signature matches) wait for the case
+  // itself and are marked as background: for a platform admin, one open case
+  // page is ONE audited access — the case read — not one per request.
   const { data: auditLog, isLoading: isAuditLoading } = useQuery({
     queryKey: ["caseAuditLog", caseId, token],
-    queryFn: () => getCaseAuditLog(caseId!, token!),
-    enabled: isReady,
+    queryFn: () => getCaseAuditLog(caseId!, token!, true),
+    enabled: isReady && caseDetail !== undefined,
   })
 
   // In-case signature comparison results — fetched case-wide and filtered
@@ -151,9 +154,8 @@ export function CaseDetailPage() {
   // at this phase (library-scope comparison not built yet per SPECIFICATION.md §2.3).
   const { data: signatureMatches = [] } = useQuery<SignatureMatch[]>({
     queryKey: ["signatureMatches", caseId, token],
-    queryFn: () =>
-      getSignatureMatches(caseId!, token!, queryClient.getQueryData(["signatureMatches", caseId, token]) !== undefined),
-    enabled: isReady,
+    queryFn: () => getSignatureMatches(caseId!, token!, true),
+    enabled: isReady && caseDetail !== undefined,
     // Refetch so results appear after the Celery task completes —
     // comparison is enqueued async after reference creation.
     // Stop polling once the automated pipeline is complete.
@@ -183,7 +185,8 @@ export function CaseDetailPage() {
   const activeDocId = activeDoc?.id
   const retryViewer = React.useCallback(() => {
     if (!caseId || !token || !activeDocId) return
-    getDocumentFileUrl(caseId, activeDocId, token)
+    // A refreshed URL for a document of the case already on screen.
+    getDocumentFileUrl(caseId, activeDocId, token, true)
       .then(({ file_url }) => setViewerFile({ docId: activeDocId, url: file_url }))
       .catch((error) => console.error("Couldn't refresh the document URL:", error))
   }, [caseId, token, activeDocId])
@@ -737,7 +740,7 @@ export function CaseDetailPage() {
           </section>
         </div>
 
-        <ActivityTimeline entries={auditLog ?? []} isLoading={isAuditLoading} showDetails={isSupportView} />
+        <ActivityTimeline entries={auditLog ?? []} isLoading={isAuditLoading || !caseDetail} showDetails={isSupportView} />
       </main>
 
       <footer className="mt-auto border-t border-slate-200 bg-white py-3 px-6 text-center text-xs text-slate-400">
