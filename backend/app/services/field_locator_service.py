@@ -341,13 +341,43 @@ def attach_field_locations(pages: list[OCRPage], extracted_fields: dict[str, Any
 
     located += _locate_line_items(pages_words, extracted_fields.get("line_items") or [], used)
 
-    words = extracted_fields.get("amount_in_words")
-    if isinstance(words, dict) and words.get("text") and not words.get("bounding_box"):
-        candidate = _fuzzy_line(pages, str(words["text"]))
-        if candidate is not None:
-            words["bounding_box"] = _as_box(candidate)
-            located += 1
+    pairs = extracted_fields.get("amounts_in_words")
+    legacy = extracted_fields.get("amount_in_words")
+    if not isinstance(pairs, list):
+        pairs = [legacy] if isinstance(legacy, dict) else []
+    for words in pairs:
+        if not isinstance(words, dict) or not words.get("text"):
+            continue
+        if not words.get("bounding_box"):
+            candidate = _fuzzy_line(pages, str(words["text"]))
+            if candidate is not None:
+                words["bounding_box"] = _as_box(candidate)
+                located += 1
+        located += _locate_paired_figure(pages_words, words)
     return located
+
+
+def _locate_paired_figure(pages_words: list[list[_W]], words: dict[str, Any]) -> int:
+    """Boxes the figure printed for an amount in words (`figure`), when the
+    layout pairing did not already: the occurrence of that number nearest
+    the words' own box on the same page — never one from another page."""
+    figure = words.get("figure")
+    box = words.get("bounding_box")
+    if words.get("figure_bounding_box") or not isinstance(figure, (int, float)) or isinstance(figure, bool) or not isinstance(box, dict):
+        return 0
+    page, y, x = box.get("page"), box.get("y"), box.get("x")
+    if not isinstance(page, int) or not isinstance(y, (int, float)) or not isinstance(x, (int, float)):
+        return 0
+    candidates = [
+        c for page_words in pages_words for c in _numeric_matches(page_words, float(figure), None) if c.page == page
+    ]
+    if not candidates:
+        return 0
+    nearest = min(candidates, key=lambda c: (abs(c.y - y), abs(c.x - x)))
+    if abs(nearest.y - y) > 0.05:
+        return 0  # not on the words' row
+    words["figure_bounding_box"] = _as_box(nearest)
+    return 1
 
 
 def _locate_line_items(pages_words: list[list[_W]], line_items: list[Any], used: set) -> int:

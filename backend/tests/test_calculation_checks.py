@@ -270,6 +270,13 @@ def test_no_words_is_skipped():
         ("AED 55,500 only", None),
         ("فقط خمسة آلاف درهم", None),
         ("Payment overdue", None),
+        # Three amounts run together (what a single-slot extraction produced for a
+        # quotation with total, VAT and grand total in words) are not one number.
+        ("Twenty-Nine Thousand Six Hundred Dirhams One Thousand Four Hundred Eighty Dirhams "
+         "Thirty-One Thousand Eighty Dirhams", None),
+        ("Twenty-Nine Thousand Six Hundred One Thousand Four Hundred Eighty", None),
+        ("Nine Hundred Eighty Thirty", None),
+        ("Six Hundred One Thousand Four Hundred", 601_400),
     ],
 )
 def test_parse_english_amount(text, value):
@@ -279,12 +286,13 @@ def test_parse_english_amount(text, value):
 # --- extraction schema and page locations ------------------------------------------
 
 
-def test_extraction_schema_requires_line_items_and_amount_in_words():
+def test_extraction_schema_requires_line_items_and_amounts_in_words():
     # Azure OpenAI's strict JSON mode needs every property listed as required.
     schema = _analysis_json_schema()
-    assert {"line_items", "amount_in_words"} <= set(schema["required"])
-    item = schema["properties"]["line_items"]["items"]
-    assert set(item["required"]) == set(item["properties"])
+    assert {"line_items", "amounts_in_words"} <= set(schema["required"])
+    for name in ("line_items", "amounts_in_words"):
+        item = schema["properties"][name]["items"]
+        assert set(item["required"]) == set(item["properties"])
 
 
 def _word(text: str, x: float, y: float) -> OCRWord:

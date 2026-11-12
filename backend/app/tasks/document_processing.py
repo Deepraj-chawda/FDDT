@@ -199,7 +199,9 @@ def process_document(document_id: str, company_id: str | None = None) -> None:
                 # Numbers as printed, for the arithmetic checks in
                 # app/services/field_validation_service.py.
                 "line_items": [item.model_dump() for item in analysis.line_items],
-                "amount_in_words": analysis.amount_in_words.model_dump(),
+                # Each with the figure printed for it; re-paired from the page
+                # layout in enrich_extracted_fields below.
+                "amounts_in_words": [words.model_dump() for words in analysis.amounts_in_words],
             }
             # Where on the page each value was read from — stored on the field
             # as a normalized `bounding_box` so field-level exceptions can be
