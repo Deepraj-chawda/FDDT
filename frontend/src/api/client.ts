@@ -4,6 +4,14 @@ import { withSession } from "@/lib/session"
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api"
 
+/** True when a request failed before a response arrived, or the response broke
+ * off part-way (a dropped connection, a download cut short): `fetch` throws a
+ * plain `TypeError` for those, never an `ApiError`. Such a request may well
+ * succeed when sent again; an HTTP error (404, 403, 500) is final. */
+export function isNetworkError(error: unknown): boolean {
+  return !(error instanceof ApiError) && error instanceof TypeError
+}
+
 export class ApiError extends Error {
   status: number
   /** Machine-readable reason, when the backend sends `detail: {code, message}`

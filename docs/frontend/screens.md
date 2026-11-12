@@ -128,6 +128,7 @@ through child components, the decision endpoints and report endpoints.
 - *Bottom:* `ActivityTimeline` (the case's audit trail, newest first).
 **Roles:** everyone can open a case they may see (a foreign case is a 404 → "Case not found"; a 422 — the
 id in the URL isn't a valid case id — shows the same). Any other failure (a 500, a network error) shows
+the page first retries a **network** failure (a dropped or cut-short download) twice by itself, after 1.5 s and 3 s, keeping its loading state (header "Still loading…" with a one-line note, placeholder cards); only then, or at once for an HTTP error, it shows
 "Couldn't load this case" with the error code and a **Retry** button, since retrying may succeed. A `user`
 receives no assessment, no tier and only approve/reject actions; decision and report controls are
 reviewer only. A platform admin gets an amber **"Support view — read-only"** banner and no decision or

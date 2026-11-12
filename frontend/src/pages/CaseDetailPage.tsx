@@ -11,7 +11,7 @@ import { Link, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 
 import { getCase, getCaseAuditLog, getDocumentFileUrl, getSignatureMatches } from "@/api/cases"
-import { ApiError } from "@/api/client"
+import { ApiError, isNetworkError } from "@/api/client"
 import { useAuth } from "@/hooks/useAuth"
 import { Nav } from "@/design-system/Nav"
 import { InfoChip } from "@/design-system/InfoChip"
@@ -95,10 +95,20 @@ export function CaseDetailPage() {
     error: caseError,
     refetch: refetchCase,
     isFetching: isCaseFetching,
+    failureCount: caseFailureCount,
   } = useQuery({
     queryKey: ["case", caseId, token],
     queryFn: () => getCase(caseId!, token!),
     enabled: isReady,
+    // A large case (hundreds of KB to a few MB of JSON) occasionally arrives
+    // cut short on a flaky connection. That is a network failure, not an API
+    // error, so try again twice (after 1.5 s, then 3 s) before showing
+    // "Couldn't load this case". HTTP errors (404, 403, 500) are final and
+    // are shown at once. While retrying, the page keeps its loading state
+    // (header "Loading…" / "Still loading…", placeholder cards), never a
+    // blank screen.
+    retry: (failureCount, error) => isNetworkError(error) && failureCount < 2,
+    retryDelay: (attempt) => 1500 * (attempt + 1),
     // Poll while the automated pipeline is still running so "Analyzing"
     // resolves into a tier (and Approve unlocks) without a manual refresh.
     // Stop polling once the pipeline finishes, or as soon as the case reaches
@@ -255,8 +265,13 @@ export function CaseDetailPage() {
               Case Investigation
             </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-              {isCaseLoading ? "Loading..." : caseDetail?.case_number ?? "—"}
+              {isCaseLoading ? (caseFailureCount > 0 ? "Still loading…" : "Loading...") : caseDetail?.case_number ?? "—"}
             </h1>
+            {isCaseLoading && caseFailureCount > 0 && (
+              <p role="status" className="text-xs text-slate-500 mt-1">
+                The connection dropped while loading this case; trying again…
+              </p>
+            )}
             {caseDetail && (
               <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
                 <span>{caseDetail.submitted_by?.full_name || caseDetail.submitted_by?.email}</span>
